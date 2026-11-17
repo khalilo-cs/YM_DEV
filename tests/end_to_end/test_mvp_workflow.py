@@ -101,8 +101,14 @@ def test_mvp_end_to_end_with_learning_and_skill_reuse(platform, wf, tmp_path, no
 
 def test_failed_verification_rolls_back_exactly(platform, wf, tmp_path):
     """Environment drift between simulation and verification: a test that starts failing after N runs."""
+    import os
+    import tempfile
     root = make_renamed_api_project(tmp_path / "proj")
-    counter = tmp_path / "runs.txt"
+    # An external, shared resource the sandbox may legitimately write to (world-writable on purpose:
+    # sandboxed code runs as an unprivileged uid and cannot write into root's private tmp dirs).
+    shared = tempfile.mkdtemp(prefix="ydv-shared-")
+    os.chmod(shared, 0o777)  # noqa: S103
+    counter = os.path.join(shared, "runs.txt")
     write(root, "tests/test_env.py",
           f"from pathlib import Path\n\n\ndef test_env():\n    p = Path({str(counter)!r})\n"
           "    n = int(p.read_text()) + 1 if p.exists() else 1\n    p.write_text(str(n))\n    assert n <= 3\n")

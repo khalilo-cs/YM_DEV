@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from yemendev.core.contracts import (
     InvalidInputError,
     NotFoundError,
     PermissionDeniedError,
+    PreconditionFailedError,
     canonical_json,
     iso,
     new_id,
@@ -53,6 +55,8 @@ class Platform:
         self.faults = faults
         self.db = Database(settings.db_path)
         self.db.migrate()
+        for f in settings.data_dir.glob("yemendev.sqlite3*"):
+            os.chmod(f, 0o600)  # audit F3: platform DB must not be world-readable
         self.audit = AuditLog(self.db, load_or_create_key(settings.keys_dir / "audit.key"))
         self.policy = PolicyEngine()
         self.guard = Guard(self.policy, self.audit)
@@ -79,11 +83,7 @@ class Platform:
         root = root.resolve()
         if not root.is_dir():
             raise InvalidInputError("project path is not a directory")
-        if root == Path("/") or root == Path.home().resolve():
-            raise InvalidInputError("refusing to register the filesystem root or home directory as a project")
-        data_dir = self.settings.data_dir.resolve()
-        if root.is_relative_to(data_dir) or data_dir.is_relative_to(root):
-            raise InvalidInputError("project path must not contain or be inside the platform data directory")
+        self._check_root(root)
         allowed = [r.resolve() for r in self.settings.allowed_project_roots]
         if allowed and not any(root.is_relative_to(a) for a in allowed):
             raise PermissionDeniedError("project path is outside the allowed project roots")
@@ -107,6 +107,24 @@ class Platform:
             raise NotFoundError("project not found")
         return Project(**dict(r))
 
+    def _check_root(self, root: Path) -> None:
+        data_dir = self.settings.data_dir.resolve()
+        ws = self.settings.workspaces_dir.resolve()
+        if root == Path("/") or root == Path.home().resolve():
+            raise InvalidInputError("refusing to use the filesystem root or home directory as a project")
+        for d in (data_dir, ws):
+            if root.is_relative_to(d) or d.is_relative_to(root):
+                raise InvalidInputError("project path must not contain or be inside platform directories")
+
+    def project_root(self, project_id: str) -> Path:
+        """Re-validate the stored root on every use (audit F4: root swapped for a symlink after registration)."""
+        stored = Path(self.project(project_id).root_path)
+        if stored.is_symlink() or not stored.is_dir() or stored.resolve() != stored:
+            raise PreconditionFailedError("project root changed since registration (missing, moved or replaced "
+                                          "by a symlink); re-register the project after review")
+        self._check_root(stored)
+        return stored
+
     def projects(self) -> list[Project]:
         with self.db.read() as conn:
             return [Project(**dict(r)) for r in conn.execute("SELECT * FROM projects ORDER BY created_at")]
@@ -114,7 +132,8 @@ class Platform:
     def scan_project(self, actor: Actor, project_id: str, task_id: str | None = None) -> tuple[str, ProjectSnapshot]:
         self.guard.require(actor, Action.SCAN_PROJECT, project_id)
         p = self.project(project_id)
-        snap = self.scanner.scan(Path(p.root_path))
+        root = self.project_root(project_id)
+        snap = self.scanner.scan(root)
         sid = new_id("scn")
         with self.db.transaction() as conn:
             conn.execute("INSERT INTO project_scans(id, project_id, created_at, tree_hash, snapshot_json)"
@@ -128,7 +147,7 @@ class Platform:
                 limitations=["static analysis only; no code executed", "Python imports only"],
             ))
         record_scan(self.memory, project_id, snap, ev.id)
-        self.memory.revalidate(project_id, Path(p.root_path))
+        self.memory.revalidate(project_id, root)
         self.audit.record(actor=actor.ref, action=Action.SCAN_PROJECT.value, target=project_id, outcome="ok",
                           details={"scan_id": sid, "evidence_id": ev.id})
         return sid, snap
@@ -181,7 +200,9 @@ class Platform:
             "pending_approvals": pending,
             "models": self.models.status(),
             "sandbox": {"network_isolation_mode": self.settings.sandbox.network_isolation,
-                        "network_namespace_available": network_namespace_available()},
+                        "network_namespace_available": network_namespace_available(),
+                        "privilege_separation": self.settings.sandbox.sandbox_identity() is not None,
+                        "privilege_separation_mode": self.settings.sandbox.privilege_separation},
             "offline_capable": True,
             "generated_at": iso(),
         }

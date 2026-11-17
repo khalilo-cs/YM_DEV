@@ -23,7 +23,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from yemendev.core.contracts import YemenDevError, new_id
+from yemendev.core.contracts import NotFoundError, YemenDevError, digest, new_id
 from yemendev.core.faults import InjectedFault
 from yemendev.diagnostics.engine import DiagnosticReport, diagnose
 from yemendev.evidence.store import EvidenceBody
@@ -36,7 +36,7 @@ from yemendev.memory.model import MemoryCategory, MemoryWrite
 from yemendev.orion.tasks import TERMINAL, StepStatus, Task, TaskStatus, TaskStore
 from yemendev.platform import Platform
 from yemendev.recovery.engine import PhaseResult
-from yemendev.recovery.model import RepairPlan
+from yemendev.recovery.model import PlanSource, RepairPlan
 from yemendev.recovery.model_proposer import propose_with_model
 from yemendev.recovery.proposers import propose_from_skills
 from yemendev.sandbox.testrunner import TestRunReport, run_pytest
@@ -72,6 +72,9 @@ class RepairWorkflow:
         self.p.project(project_id)
         params: dict[str, Any] = {"python_version": list(sys.version_info[:2])}
         if human_plan is not None:
+            # Regression (audit F1): the client must not choose the plan's provenance. Anything submitted
+            # with a task is human-authored by the task creator, so a *different* human must approve it.
+            human_plan = human_plan.model_copy(update={"source": PlanSource.HUMAN, "source_ref": actor.ref})
             params["human_plan"] = human_plan.model_dump(mode="json")
         t = self.tasks.create(project_id, self.KIND, actor.ref, params)
         self.p.audit.record(actor=actor.ref, action=Action.CREATE_TASK.value, target=t.id, outcome="ok",
@@ -116,6 +119,9 @@ class RepairWorkflow:
     def cancel(self, actor: Actor, task_id: str) -> Task:
         self.p.guard.require(actor, Action.CANCEL_TASK, task_id)
         t = self.tasks.cancel(task_id)
+        # Regression (audit F5): approvals of a cancelled task must not stay usable.
+        for a in self.p.approvals.for_task(task_id):
+            self.p.approvals.revoke(a.id, reason="task cancelled")
         self.p.audit.record(actor=actor.ref, action=Action.CANCEL_TASK.value, target=task_id, outcome="ok")
         return t
 
@@ -159,7 +165,7 @@ class RepairWorkflow:
         return rec.output
 
     def _root(self, t: Task) -> Path:
-        return Path(self.p.project(t.project_id).root_path)
+        return self.p.project_root(t.project_id)
 
     def _pyver(self, t: Task) -> tuple[int, int]:
         v = t.params.get("python_version", list(sys.version_info[:2]))
@@ -265,7 +271,7 @@ class RepairWorkflow:
 
     def _authorize(self, actor: Actor, t: Task) -> Any:
         plan = self._plan(t)
-        dg = plan.operation_digest()
+        dg = self._digest(t, plan)
         decision = self.p.policy.evaluate(actor, Action.APPLY_PATCH)
         if not decision.allowed:
             raise Stop(TaskStatus.FAILED, f"actor may not apply patches: {decision.reason}")
@@ -297,6 +303,11 @@ class RepairWorkflow:
         return {"approval_id": req.id, "digest": dg}
 
     @staticmethod
+    def _digest(t: Task, plan: RepairPlan) -> str:
+        """Approval digest binds task, project and the exact file changes."""
+        return digest({"task": t.id, "project": t.project_id, "plan": plan.operation_digest()})
+
+    @staticmethod
     def _requester(t: Task, plan: RepairPlan) -> Actor:
         """A human-authored plan is requested by its author, so a *different* human must approve it."""
         if plan.source.value == "human":
@@ -307,7 +318,7 @@ class RepairWorkflow:
     def _execute(self, actor: Actor, t: Task) -> Any:
         plan = self._plan(t)
         auth = self._out(t.id, "authorize")
-        if auth["digest"] != plan.operation_digest():
+        if auth["digest"] != self._digest(t, plan):
             raise Stop(TaskStatus.FAILED, "approved digest does not match plan")
         root = self._root(t)
         cid = f"ckpt_{t.id}"
@@ -367,12 +378,17 @@ class RepairWorkflow:
                    if diag.hypotheses else None)
         out: dict[str, Any] = {"verified": verified}
         if plan.source.value == "skill":
-            sid, ver = plan.source_ref.split("@")
-            done = any(r.get("evidence_id") == ev_id for v in self.p.skills.validations(sid, int(ver))
-                       for r in v.results)
-            if not done:
-                self.p.skills.record_field_outcome(sid, int(ver), verified, ev_id)
-            out["skill_field_outcome"] = verified
+            # Regression (audit F2): a bad skill reference must not fail a task whose change is already
+            # verified; it is recorded instead.
+            sid, _, ver = plan.source_ref.partition("@")
+            try:
+                done = any(r.get("evidence_id") == ev_id for v in self.p.skills.validations(sid, int(ver))
+                           for r in v.results)
+                if not done:
+                    self.p.skills.record_field_outcome(sid, int(ver), verified, ev_id)
+                out["skill_field_outcome"] = verified
+            except (NotFoundError, ValueError):
+                out["skill_field_outcome"] = "skill reference not found"
         if not verified:
             self._remember_failure(t, "repair failed verification and was rolled back", {"plan_id": plan.id})
             return out

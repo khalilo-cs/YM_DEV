@@ -36,6 +36,7 @@ class ApprovalStatus(StrEnum):
     DENIED = "denied"
     EXPIRED = "expired"
     CONSUMED = "consumed"
+    REVOKED = "revoked"
 
 
 class ApprovalRequest(BaseModel):
@@ -142,6 +143,15 @@ class ApprovalService:
             if cur.rowcount != 1:
                 raise ConflictError("approval changed state concurrently or expired")
         return self.get(approval_id)
+
+    def revoke(self, approval_id: str, reason: str) -> None:
+        """Revoke a pending/approved request (e.g. its task was cancelled). No-op otherwise."""
+        with self._db.transaction() as conn:
+            conn.execute(
+                "UPDATE approval_requests SET status = ?, decision_reason = ? WHERE id = ? AND status IN (?, ?)",
+                (ApprovalStatus.REVOKED.value, reason[:2000], approval_id, ApprovalStatus.PENDING.value,
+                 ApprovalStatus.APPROVED.value),
+            )
 
     def consume(self, approval_id: str, *, action: Action, target: str, operation_digest: str) -> ApprovalRequest:
         """Atomically consume an approval for exactly this operation, or raise."""

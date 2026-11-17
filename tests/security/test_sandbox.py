@@ -98,3 +98,40 @@ def test_required_isolation_refuses_when_unavailable(tmp_path, monkeypatch):
     s = SandboxSettings(network_isolation="required")
     with Workspace(make_passing_project(tmp_path / "p"), s) as ws, pytest.raises(UnavailableError):
         ws.run([sys.executable, "-c", "pass"])
+
+
+def test_unreachable_workspace_parent_fails_clearly(tmp_path, settings):
+    """Regression (audit): a 0700 parent made every sandboxed run fail with an opaque 'no report'."""
+    from yemendev.core.contracts import UnavailableError
+    if settings.sandbox_identity() is None:
+        pytest.skip("no privilege separation on this host")
+    private = tmp_path / "private"
+    private.mkdir(mode=0o700)
+    with pytest.raises(UnavailableError, match="cannot traverse"):
+        Workspace(make_passing_project(tmp_path / "p"), settings, base_dir=private)
+
+
+def test_privilege_separation_applied_and_platform_state_unreachable(tmp_path, settings):
+    """Regression (audit CRITICAL): sandboxed tests wrote an admin token into the platform DB."""
+    from yemendev.core.config import Settings
+    if settings.sandbox_identity() is None:
+        pytest.skip("no privilege separation on this host (platform not root, no run_as_uid)")
+    st = Settings(data_dir=tmp_path / "data")
+    st.ensure_dirs()
+    secret = st.keys_dir / "audit.key"
+    secret.write_bytes(b"k" * 32)
+    code = (f"import os\nprint('uid', os.getuid())\n"
+            f"try:\n open({str(secret)!r},'rb').read(); print('READ_KEY')\nexcept OSError as e: print('DENIED')\n")
+    with Workspace(make_passing_project(tmp_path / "p"), settings, base_dir=st.workspaces_dir) as ws:
+        assert not ws.root.is_relative_to(st.data_dir)
+        r = ws.run([sys.executable, "-c", code])
+    assert r.run_as_uid == 65534 and "uid 65534" in r.stdout
+    assert "DENIED" in r.stdout and "READ_KEY" not in r.stdout
+
+
+def test_privilege_separation_required_refuses_when_unavailable(tmp_path, monkeypatch):
+    from yemendev.core.contracts import UnavailableError
+    s = SandboxSettings(privilege_separation="required")
+    monkeypatch.setattr(SandboxSettings, "sandbox_identity", lambda self: None)
+    with pytest.raises(UnavailableError):
+        Workspace(make_passing_project(tmp_path / "p"), s)

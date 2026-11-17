@@ -10,8 +10,13 @@ See ADR-0005. Isolation provided:
 * network namespace via ``unshare --net`` (loopback only) when available. Whether it
   was applied is reported in ``ExecutionResult.network_isolated``.
 
-NOT provided: filesystem isolation from files readable by the OS user, syscall
-filtering, or a container/VM boundary. Documented in docs/THREAT_MODEL.md (RISK-001).
+* privilege separation: when the platform runs as root (or ``run_as_uid`` is set),
+  untrusted code runs as an unprivileged uid (default 65534) and cannot read the
+  platform's 0700 data directory. Recorded in ``ExecutionResult.run_as_uid``.
+
+NOT provided: syscall filtering or a container/VM boundary; world-readable host files
+remain readable. Without privilege separation (non-root, no run_as_uid) untrusted code
+runs as the platform user and CAN access platform state - see RISK-001. Documented in docs/THREAT_MODEL.md (RISK-001).
 """
 
 from __future__ import annotations
@@ -42,6 +47,7 @@ class ExecutionResult(BaseModel):
     duration_seconds: float
     timed_out: bool
     network_isolated: bool
+    run_as_uid: int | None
     limits: dict[str, Any]
     output_truncated: bool
 
@@ -55,7 +61,11 @@ _LAUNCHER = (
     "resource.setrlimit(resource.RLIMIT_CPU,(cpu,cpu))\n"
     "resource.setrlimit(resource.RLIMIT_FSIZE,(fsz,fsz))\n"
     "resource.setrlimit(resource.RLIMIT_CORE,(0,0))\n"
-    "argv=sys.argv[5:]\n"
+    "uid,gid=int(sys.argv[4]),int(sys.argv[5])\n"
+    "if uid>=0:\n"
+    "    os.setgroups([]);os.setgid(gid);os.setuid(uid)\n"
+    "    assert os.getuid()==uid and os.geteuid()==uid, 'privilege drop failed'\n"
+    "argv=sys.argv[7:]\n"
     "os.execvp(argv[0],argv)\n"
 )
 
@@ -75,9 +85,12 @@ def network_namespace_available() -> bool:
         return False
 
 
-@lru_cache(maxsize=1)
-def _unshare_prefix() -> list[str]:
+@lru_cache(maxsize=2)
+def _unshare_prefix(dropping_privileges: bool = False) -> list[str]:
     exe = shutil.which("unshare") or "unshare"
+    if dropping_privileges:
+        # inside a --map-root-user namespace the target uid is unmapped; plain --net (as root) is required
+        return [exe, "--net"]
     try:
         if subprocess.run([exe, "--net", "--map-root-user", "true"], capture_output=True, timeout=10).returncode == 0:
             return [exe, "--net", "--map-root-user"]
@@ -109,6 +122,43 @@ class Workspace:
         self.home = self._tmp / "home"
         self.home.mkdir()
         shutil.copytree(self.source, self.root, symlinks=False, ignore=_ignore)
+        self.identity = settings.sandbox_identity()
+        if self.identity is None and settings.privilege_separation == "required":
+            self.cleanup()
+            raise UnavailableError("privilege separation is required but the platform cannot switch users "
+                                   "(not running as root and no run_as_uid configured)")
+        self._chown_tree()
+        self._check_reachable()
+
+    def _check_reachable(self) -> None:
+        """Fail clearly if the sandbox uid cannot traverse to its workspace (instead of an opaque test failure)."""
+        if self.identity is None:
+            return
+        uid = self.identity[0]
+        for anc in self._tmp.parents:
+            st = anc.stat()
+            if st.st_uid != uid and not st.st_mode & 0o001:
+                self.cleanup()
+                raise UnavailableError(f"sandbox uid {uid} cannot traverse workspace parent directory {anc}; "
+                                       "configure a workspaces directory that is traversable (mode o+x)")
+
+    def _chown_tree(self) -> None:
+        if self.identity is None:
+            return
+        uid, gid = self.identity
+        for dirpath, dirnames, filenames in os.walk(self._tmp):
+            os.chown(dirpath, uid, gid)
+            for n in (*dirnames, *filenames):
+                os.chown(os.path.join(dirpath, n), uid, gid, follow_symlinks=False)
+
+    def write(self, rel: str, data: bytes) -> None:
+        """Write a file into the workspace (owned by the sandbox identity)."""
+        from yemendev.recovery.checkpoint import atomic_write
+
+        target = self.path(rel)
+        atomic_write(target, data)
+        if self.identity is not None:
+            os.chown(target, *self.identity)
 
     def __enter__(self) -> Workspace:
         return self
@@ -141,11 +191,12 @@ class Workspace:
         isolate = s.network_isolation != "disabled" and network_namespace_available()
         if s.network_isolation == "required" and not isolate:
             raise UnavailableError("network isolation is required but not available on this host")
+        uid, gid = self.identity if self.identity is not None else (-1, -1)
         launcher = [
             sys.executable, "-I", "-c", _LAUNCHER, str(s.max_memory_mb * 1024 * 1024),
-            str(int(timeout) + 5), str(s.max_file_size_mb * 1024 * 1024), "--",
+            str(int(timeout) + 5), str(s.max_file_size_mb * 1024 * 1024), str(uid), str(gid), "--",
         ]
-        full = [*(_unshare_prefix() if isolate else []), *launcher, *argv]
+        full = [*(_unshare_prefix(self.identity is not None) if isolate else []), *launcher, *argv]
         env = {
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             "HOME": str(self.home),
@@ -188,5 +239,5 @@ class Workspace:
             argv=list(argv), returncode=None if timed_out else proc.returncode,
             stdout=out[-cap:].decode("utf-8", "replace"), stderr=err[-cap:].decode("utf-8", "replace"),
             duration_seconds=round(duration, 3), timed_out=timed_out, network_isolated=isolate,
-            limits=limits, output_truncated=truncated,
+            run_as_uid=self.identity[0] if self.identity else None, limits=limits, output_truncated=truncated,
         )

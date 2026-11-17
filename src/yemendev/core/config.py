@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
@@ -24,6 +25,27 @@ class SandboxSettings(BaseModel):
     # "disabled": do not isolate (recorded in evidence).
     network_isolation: str = Field(default="best_effort")
     python_executable: str = Field(default=sys.executable)
+    # Run untrusted code as this uid/gid. None = auto: 65534 (nobody) when the platform runs as root.
+    run_as_uid: int | None = None
+    run_as_gid: int | None = None
+    # "required": refuse to run untrusted code as the platform's own user.
+    # "best_effort": drop privileges when possible; record whether it happened.
+    privilege_separation: str = Field(default="best_effort")
+
+    @field_validator("privilege_separation")
+    @classmethod
+    def _check_priv(cls, v: str) -> str:
+        if v not in {"required", "best_effort"}:
+            raise ValueError("privilege_separation must be required|best_effort")
+        return v
+
+    def sandbox_identity(self) -> tuple[int, int] | None:
+        """(uid, gid) untrusted code runs as, or None if it would run as the platform user."""
+        if self.run_as_uid is not None:
+            return self.run_as_uid, self.run_as_gid if self.run_as_gid is not None else self.run_as_uid
+        if os.geteuid() == 0:
+            return 65534, 65534
+        return None
 
     @field_validator("network_isolation")
     @classmethod
@@ -63,9 +85,14 @@ class Settings(BaseModel):
     def checkpoints_dir(self) -> Path:
         return self.data_dir / "checkpoints"
 
+    # Sandbox workspaces must NOT live inside data_dir: untrusted code runs there.
+    workspaces_root: Path | None = None
+
     @property
     def workspaces_dir(self) -> Path:
-        return self.data_dir / "workspaces"
+        if self.workspaces_root is not None:
+            return self.workspaces_root
+        return Path(tempfile.gettempdir()) / f"yemendev-workspaces-{os.geteuid()}"
 
     @classmethod
     def from_env(cls, data_dir: Path | None = None) -> Settings:
@@ -85,6 +112,12 @@ class Settings(BaseModel):
         return cls(data_dir=dd.resolve(), allowed_project_roots=roots, sandbox=sandbox, model=model)
 
     def ensure_dirs(self) -> None:
-        for d in (self.data_dir, self.keys_dir, self.checkpoints_dir, self.workspaces_dir):
+        for d in (self.data_dir, self.keys_dir, self.checkpoints_dir):
             d.mkdir(parents=True, exist_ok=True)
-        os.chmod(self.keys_dir, 0o700)
+            os.chmod(d, 0o700)  # platform state is private to the platform's OS user
+        ws = self.workspaces_dir
+        if ws.resolve().is_relative_to(self.data_dir.resolve()):
+            raise ValueError("workspaces directory must be outside the data directory")
+        ws.mkdir(parents=True, exist_ok=True)
+        # world-traversable (each workspace inside is 0700 and owned by the sandbox uid), not listable
+        os.chmod(ws, 0o711)  # noqa: S103 - traverse-only; sandbox uid must reach its own 0700 workspace

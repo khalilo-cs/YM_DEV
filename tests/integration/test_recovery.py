@@ -19,7 +19,10 @@ S = SandboxSettings(timeout_seconds=60)
 def env(tmp_path):
     root = make_renamed_api_project(tmp_path / "proj")
     faults = FaultInjector()
-    eng = RecoveryEngine(S, CheckpointStore(tmp_path / "ckpt"), tmp_path, faults)
+    from yemendev.core.config import Settings
+    st = Settings(data_dir=tmp_path / "data")
+    st.ensure_dirs()
+    eng = RecoveryEngine(S, CheckpointStore(tmp_path / "ckpt"), st.workspaces_dir, faults)
     with Workspace(root, S) as ws:
         baseline = run_pytest(ws)
     return root, eng, baseline, faults

@@ -85,7 +85,7 @@ class RecoveryEngine:
         self.prepare(root, plan)
         with Workspace(root, self.sandbox, base_dir=self.workspaces_dir) as ws:
             for p in plan.patches:
-                atomic_write(ws.path(p.path), p.new_content.encode("utf-8"))
+                ws.write(p.path, p.new_content.encode("utf-8"))
             report = run_pytest(ws)
         return self._judge(baseline, report)
 
