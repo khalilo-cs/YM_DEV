@@ -1,0 +1,162 @@
+"""Ordered, append-only schema migrations.
+
+Rules: never edit a released migration; add a new one. Each migration runs in its own
+transaction and is recorded in ``schema_migrations``.
+"""
+
+from __future__ import annotations
+
+MIGRATIONS: list[tuple[int, str, str]] = [
+    (
+        1,
+        "initial_core_schema",
+        """
+        CREATE TABLE projects (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            root_path TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            created_by TEXT NOT NULL
+        );
+
+        -- One row per scan (a "project version" as observed at a point in time).
+        CREATE TABLE project_scans (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            tree_hash TEXT NOT NULL,
+            snapshot_json TEXT NOT NULL
+        );
+        CREATE INDEX ix_scans_project_time ON project_scans(project_id, created_at);
+
+        CREATE TABLE memory_records (
+            id TEXT PRIMARY KEY,
+            project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+            category TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value_json TEXT NOT NULL,
+            status TEXT NOT NULL,
+            confidence REAL NOT NULL,
+            source TEXT NOT NULL,
+            evidence_ids_json TEXT NOT NULL,
+            validity_json TEXT NOT NULL,
+            version INTEGER NOT NULL,
+            supersedes TEXT REFERENCES memory_records(id),
+            contradicts_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            validated_at TEXT,
+            revalidate_after TEXT
+        );
+        CREATE INDEX ix_memory_lookup ON memory_records(project_id, subject, key, status);
+        CREATE INDEX ix_memory_category ON memory_records(project_id, category);
+
+        CREATE TABLE tasks (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            params_json TEXT NOT NULL,
+            current_step TEXT,
+            error TEXT,
+            lease_owner TEXT,
+            lease_expires_at TEXT
+        );
+        CREATE INDEX ix_tasks_status ON tasks(status);
+
+        CREATE TABLE task_steps (
+            task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            status TEXT NOT NULL,
+            attempt INTEGER NOT NULL,
+            started_at TEXT,
+            finished_at TEXT,
+            output_json TEXT,
+            error TEXT,
+            PRIMARY KEY (task_id, name)
+        );
+
+        CREATE TABLE approval_requests (
+            id TEXT PRIMARY KEY,
+            action TEXT NOT NULL,
+            target TEXT NOT NULL,
+            operation_digest TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            requested_by TEXT NOT NULL,
+            task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            status TEXT NOT NULL,
+            decided_by TEXT,
+            decided_at TEXT,
+            decision_reason TEXT,
+            consumed_at TEXT
+        );
+        CREATE INDEX ix_approvals_status ON approval_requests(status);
+
+        -- Append-only; no UPDATE/DELETE path exists in application code.
+        CREATE TABLE evidence_records (
+            id TEXT PRIMARY KEY,
+            task_id TEXT,
+            action TEXT NOT NULL,
+            actor TEXT NOT NULL,
+            target TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            outcome TEXT NOT NULL,
+            body_json TEXT NOT NULL,
+            content_hash TEXT NOT NULL
+        );
+        CREATE INDEX ix_evidence_task ON evidence_records(task_id);
+
+        -- Hash-chained, HMAC-keyed audit log.
+        CREATE TABLE audit_events (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT,
+            id TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            actor TEXT NOT NULL,
+            action TEXT NOT NULL,
+            target TEXT NOT NULL,
+            outcome TEXT NOT NULL,
+            details_json TEXT NOT NULL,
+            prev_hash TEXT NOT NULL,
+            hash TEXT NOT NULL
+        );
+
+        CREATE TABLE skills (
+            id TEXT NOT NULL,
+            version INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            spec_json TEXT NOT NULL,
+            content_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (id, version)
+        );
+        CREATE INDEX ix_skills_status ON skills(status);
+
+        CREATE TABLE skill_validation_runs (
+            id TEXT PRIMARY KEY,
+            skill_id TEXT NOT NULL,
+            skill_version INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            passed INTEGER NOT NULL,
+            results_json TEXT NOT NULL,
+            content_hash TEXT NOT NULL,
+            FOREIGN KEY (skill_id, skill_version) REFERENCES skills(id, version)
+        );
+
+        CREATE TABLE api_tokens (
+            id TEXT PRIMARY KEY,
+            token_hash TEXT NOT NULL UNIQUE,
+            actor_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            revoked_at TEXT
+        );
+        """,
+    ),
+]
