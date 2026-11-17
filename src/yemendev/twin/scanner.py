@@ -208,12 +208,13 @@ class ProjectScanner:
                     resolve(a.name, node.lineno)
             elif isinstance(node, ast.ImportFrom):
                 if node.level:
-                    base_parts = pkg_parts[: len(pkg_parts) - (node.level - 1)] if node.level > 1 else pkg_parts
-                    if node.level - 1 > len(pkg_parts):
+                    if node.level > len(pkg_parts):
+                        # Relative import beyond the top-level package: cannot be resolved.
                         edges.append(Edge(source=m.name, target=f"{'.' * node.level}{node.module or ''}",
                                           kind=EdgeKind.INTERNAL_IMPORT, certainty=Certainty.UNKNOWN,
                                           line=node.lineno))
                         continue
+                    base_parts = pkg_parts[: len(pkg_parts) - (node.level - 1)]
                     base = ".".join([*base_parts, *( [node.module] if node.module else [])])
                     for a in node.names:
                         full = f"{base}.{a.name}" if base else a.name

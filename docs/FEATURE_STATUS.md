@@ -13,5 +13,7 @@ TESTED = automated tests pass. VERIFIED = exercised end-to-end in a real workflo
 | Evidence records | TESTED | `evidence/store.py` | `tests/unit/test_evidence.py` | Hash detects edits, not deletion |
 | Living memory (provenance, contradiction, staleness) | TESTED | `memory/` | `tests/unit/test_memory.py` | Relevance is keyword overlap, not semantic |
 | API tokens | IMPLEMENTED | `security/tokens.py` | none yet | - |
-| Project scanner / graph | IMPLEMENTED | `twin/` | none yet (stage 2) | - |
+| Project scanner (files, languages, AST imports, declared deps, secret-file detection) | TESTED | `twin/scanner.py` | `tests/unit/test_scanner.py` | Python-only import analysis; other languages counted, not parsed |
+| Dependency graph (impact, Tarjan cycles, critical modules) | TESTED | `twin/graph.py` | `tests/unit/test_scanner.py` | Static imports only (not runtime); report is O(N·E) |
+| Scan -> memory with file-hash validity | TESTED | `twin/memory_sync.py` | `tests/unit/test_scanner.py` | - |
 | Everything else | NOT STARTED | - | - | - |
