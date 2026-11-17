@@ -323,6 +323,11 @@ def create_app(platform: Platform) -> FastAPI:
         read(a, "audit")
         return platform.audit.verify().model_dump()
 
+    @app.get("/api/v1/integrity/verify")
+    def integrity_verify(a: Who) -> dict[str, Any]:
+        read(a, "audit")
+        return platform.verify_integrity()
+
     @app.get("/api/v1/models")
     def models(a: Who) -> list[Any]:
         read(a, "models")

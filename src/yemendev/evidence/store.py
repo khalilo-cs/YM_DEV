@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import platform
 import sys
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -49,8 +50,9 @@ def runtime_environment() -> dict[str, Any]:
 
 
 class EvidenceStore:
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: Database, on_record: Callable[[EvidenceRecord], object] | None = None) -> None:
         self._db = db
+        self._on_record = on_record
 
     def record(
         self, *, action: str, actor: str, target: str, outcome: str, body: EvidenceBody,
@@ -68,7 +70,14 @@ class EvidenceStore:
                 " content_hash) VALUES (?,?,?,?,?,?,?,?,?)",
                 (eid, task_id, action, actor, target, created, outcome, body_json, content_hash),
             )
-        return self.get(eid)
+        rec = self.get(eid)
+        if self._on_record is not None:
+            self._on_record(rec)  # anchor in the audit chain so deletion is detectable
+        return rec
+
+    def all_hashes(self) -> dict[str, str]:
+        with self._db.read() as conn:
+            return {r["id"]: r["content_hash"] for r in conn.execute("SELECT id, content_hash FROM evidence_records")}
 
     def _from_row(self, r: Any) -> EvidenceRecord:
         expected = sha256_text(canonical_json([r["id"], r["task_id"], r["action"], r["actor"], r["target"],

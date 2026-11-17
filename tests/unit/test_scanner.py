@@ -146,3 +146,19 @@ def test_scan_recorded_in_memory_goes_stale_on_change(db, project_row, tmp_path)
     assert mem.revalidate(project_row, root)["marked_stale"] == 1
     stale = [r for r in mem.query(project_row, include_inactive=True) if r.status is MemoryStatus.STALE]
     assert [r.subject for r in stale] == ["module:pkg.a"]
+
+
+def test_regression_fast_transitive_counts_match_bfs():
+    """Regression (audit): report() did one BFS per node (quadratic). Fast path must equal BFS exactly."""
+    import random
+
+    from yemendev.twin.model import Edge
+    rng = random.Random(1234)
+    for trial in range(60):
+        n = rng.randint(1, 40)
+        nodes = [f"m{i}" for i in range(n)]
+        edges = [Edge(source=rng.choice(nodes), target=rng.choice(nodes), kind=EdgeKind.INTERNAL_IMPORT,
+                      certainty=Certainty.OBSERVED) for _ in range(rng.randint(0, n * 3))]
+        g = DependencyGraph(nodes, edges)
+        fast = g.transitive_dependent_counts()
+        assert fast == {x: len(g.impacted_by(x)) for x in nodes}, f"trial {trial}"

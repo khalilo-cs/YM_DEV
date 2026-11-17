@@ -61,7 +61,9 @@ class Platform:
         self.policy = PolicyEngine()
         self.guard = Guard(self.policy, self.audit)
         self.approvals = ApprovalService(self.db, self.policy, settings.approval_ttl_seconds)
-        self.evidence = EvidenceStore(self.db)
+        self.evidence = EvidenceStore(self.db, on_record=lambda r: self.audit.record(
+            actor=r.actor, action="evidence.recorded", target=r.id, outcome=r.outcome,
+            details={"content_hash": r.content_hash, "task_id": r.task_id}))
         self.memory = MemoryEngine(self.db)
         self.skills = SkillEngine(self.db)
         self.tokens = TokenStore(self.db)
@@ -185,6 +187,28 @@ class Platform:
         self.audit.record(actor=actor.ref, action=Action.ACTIVATE_SKILL.value, target=req.target, outcome="ok",
                           details={"approval_id": approval_id, "decided_by": req.decided_by})
         return out
+
+    def verify_integrity(self) -> dict[str, Any]:
+        """Cross-check: audit chain valid; every anchored evidence record exists, is unmodified, and is anchored."""
+        audit = self.audit.verify()
+        anchored: dict[str, str] = {}
+        after = 0
+        while batch := self.audit.list(limit=1000, after_seq=after):
+            for e in batch:
+                if e.action == "evidence.recorded":
+                    anchored[e.target] = str(e.details.get("content_hash"))
+            after = batch[-1].seq
+        stored = self.evidence.all_hashes()
+        problems = list(audit.problems)
+        problems += [f"evidence {i} missing (deleted)" for i in anchored if i not in stored]
+        problems += [f"evidence {i} hash differs from audit anchor" for i, h in anchored.items()
+                     if i in stored and stored[i] != h]
+        problems += [f"evidence {i} not anchored in audit log" for i in stored if i not in anchored]
+        for i in stored:
+            if not self.evidence.get(i).hash_valid:
+                problems.append(f"evidence {i} content does not match its hash (modified)")
+        return {"valid": not problems, "audit_events": audit.events_checked, "evidence_records": len(stored),
+                "audit_head": audit.head_hash, "problems": problems}
 
     def status(self) -> dict[str, Any]:
         with self.db.read() as conn:

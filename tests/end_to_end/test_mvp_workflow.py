@@ -227,3 +227,29 @@ def test_crash_at_any_point_then_resume(settings, faults, tmp_path, point):
     approvals = plat.approvals.for_task(t.id)
     assert len(approvals) == 1 and approvals[0].status is ApprovalStatus.CONSUMED  # never re-requested or reused
     assert plat.audit.verify().valid
+
+
+def test_concurrent_advance_only_one_worker_runs(platform, wf, tmp_path):
+    import threading
+
+    from yemendev.core.contracts import ConflictError
+    proj = platform.register_project(ALICE, "c", str(make_renamed_api_project(tmp_path / "p")))
+    t = wf.create(ALICE, proj.id, human_plan=human_fix(tmp_path / "p"))
+    results, errors = [], []
+
+    def go():
+        try:
+            results.append(RepairWorkflow(platform).advance(ALICE, t.id))
+        except ConflictError as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=go) for _ in range(4)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    ran = [r for r in results if r.ran_steps]
+    assert len(ran) == 1, "exactly one worker may execute steps"
+    assert len(errors) + len(results) == 4
+    steps = wf.tasks.steps(t.id)
+    assert all(s.attempt == 1 for s in steps), [(s.name, s.attempt) for s in steps]

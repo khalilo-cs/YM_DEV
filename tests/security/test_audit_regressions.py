@@ -87,3 +87,17 @@ def test_critical_sandboxed_tests_cannot_touch_platform_db(platform, wf, tmp_pat
         assert conn.execute("SELECT COUNT(*) FROM api_tokens WHERE id='tok_evil'").fetchone()[0] == 0
     ev = [e for e in platform.evidence.list(limit=1000) if e.action == "tests.baseline"][-1]
     assert "tests.test_evil::test_evil" in ev.body.tests["runs"][0]["failing"]
+
+
+def test_evidence_deletion_and_tampering_detected(platform, wf, tmp_path):
+    """Audit finding: evidence content hashes detected edits but not deletion."""
+    proj = platform.register_project(ALICE, "ok", str(make_passing_project(tmp_path / "ok")))
+    wf.advance(ALICE, wf.create(ALICE, proj.id).id)
+    assert platform.verify_integrity()["valid"]
+    ids = list(platform.evidence.all_hashes())
+    with platform.db.transaction() as conn:
+        conn.execute("DELETE FROM evidence_records WHERE id = ?", (ids[0],))
+        conn.execute("UPDATE evidence_records SET outcome = 'forged' WHERE id = ?", (ids[1],))
+    probs = platform.verify_integrity()["problems"]
+    assert any("missing (deleted)" in p for p in probs)
+    assert any("modified" in p for p in probs)
