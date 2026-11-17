@@ -12,6 +12,7 @@ license = { text = "Apache-2.0" }
 dependencies = [
     "pydantic>=2.6,<3",
     "fastapi>=0.110",
+    "uvicorn>=0.29",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +30,7 @@ yemendev = ["py.typed"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -p no:cacheprovider"
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated:DeprecationWarning"]
 
 [tool.ruff]
 line-length = 120

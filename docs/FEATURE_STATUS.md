@@ -12,7 +12,7 @@ TESTED = automated tests pass. VERIFIED = exercised end-to-end in a real workflo
 | Bound single-use approvals | TESTED | `governance/approvals.py` | `tests/security/test_governance.py` | - |
 | Evidence records | TESTED | `evidence/store.py` | `tests/unit/test_evidence.py` | Hash detects edits, not deletion |
 | Living memory (provenance, contradiction, staleness) | TESTED | `memory/` | `tests/unit/test_memory.py` | Relevance is keyword overlap, not semantic |
-| API tokens | IMPLEMENTED | `security/tokens.py` | none yet | - |
+| API tokens (hashed at rest, revocable) | TESTED | `security/tokens.py` | `tests/integration/test_api.py` | No expiry yet |
 | Project scanner (files, languages, AST imports, declared deps, secret-file detection) | TESTED | `twin/scanner.py` | `tests/unit/test_scanner.py` | Python-only import analysis; other languages counted, not parsed |
 | Dependency graph (impact, Tarjan cycles, critical modules) | TESTED | `twin/graph.py` | `tests/unit/test_scanner.py` | Static imports only (not runtime); report is O(N·E) |
 | Scan -> memory with file-hash validity | TESTED | `twin/memory_sync.py` | `tests/unit/test_scanner.py` | - |
@@ -30,7 +30,9 @@ TESTED = automated tests pass. VERIFIED = exercised end-to-end in a real workflo
 | Crash resume at 9 fault points incl. half-written project | VERIFIED (local) | `orion/workflow.py`, `recovery/engine.py` | `test_crash_at_any_point_then_resume` | Fault injection simulates crashes in-process, not real power loss |
 | Skill activation via bound approval | TESTED | `platform.py` | `test_mvp_end_to_end_with_learning_and_skill_reuse` | - |
 | MOSAIC model adapter (OpenAI-compatible) + schema-validated output | IMPLEMENTED | `mosaic/adapters.py`, `recovery/model_proposer.py` | **no tests yet** | **Requires a model**; none available here |
-| Everything else | NOT STARTED | - | - | - |
+| HTTP API /api/v1 (auth, roles, error envelope, body limit incl. chunked) | VERIFIED (local) | `api/app.py` | `tests/integration/test_api.py` + real `uvicorn` smoke test with curl | No TLS (loopback by default); no rate limiting yet |
+| CLI (token-authenticated) | TESTED | `cli/main.py` | `tests/integration/test_cli.py` | - |
+| Everything else (risk engine, sync, UI, benchmarks, i18n, desktop, mobile) | NOT STARTED | - | - | - |
 
 ## MVP acceptance (directive section 20)
 
