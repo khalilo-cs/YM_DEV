@@ -16,4 +16,7 @@ TESTED = automated tests pass. VERIFIED = exercised end-to-end in a real workflo
 | Project scanner (files, languages, AST imports, declared deps, secret-file detection) | TESTED | `twin/scanner.py` | `tests/unit/test_scanner.py` | Python-only import analysis; other languages counted, not parsed |
 | Dependency graph (impact, Tarjan cycles, critical modules) | TESTED | `twin/graph.py` | `tests/unit/test_scanner.py` | Static imports only (not runtime); report is O(N·E) |
 | Scan -> memory with file-hash validity | TESTED | `twin/memory_sync.py` | `tests/unit/test_scanner.py` | - |
+| Sandbox workspace (copy-on-run, rlimits, pgroup kill, netns, scrubbed env) | TESTED | `sandbox/workspace.py` | `tests/security/test_sandbox.py` (network test ran, not skipped) | Process-level only; can read host files readable by the OS user (RISK-001) |
+| pytest runner with JUnit parsing | TESTED | `sandbox/testrunner.py` | `tests/integration/test_testrunner_diagnostics.py` | A malicious project can forge its own report (documented by a test); verification proves only that the project's own suite reports passing |
+| Diagnostics (reproducibility, locations, unverified hypotheses) | TESTED | `diagnostics/engine.py` | `tests/integration/test_testrunner_diagnostics.py` | Rule-based; pytest output parsing only |
 | Everything else | NOT STARTED | - | - | - |
