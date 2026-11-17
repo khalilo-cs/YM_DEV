@@ -27,7 +27,7 @@ def make_renamed_api_project(root: Path) -> Path:
           "    for x in xs:\n        p = mathutils.mul(p, x)\n    return p\n")
     write(root, "tests/test_api.py",
           "from calc.api import product, total\n\n\ndef test_total():\n    assert total([1, 2, 3]) == 6\n\n\n"
-          "def test_product():\n    assert product([2, 3]) == 6\n")
+          "def test_product():\n    assert product([2, 4]) == 8\n")
     return root
 
 

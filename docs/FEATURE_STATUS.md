@@ -19,4 +19,10 @@ TESTED = automated tests pass. VERIFIED = exercised end-to-end in a real workflo
 | Sandbox workspace (copy-on-run, rlimits, pgroup kill, netns, scrubbed env) | TESTED | `sandbox/workspace.py` | `tests/security/test_sandbox.py` (network test ran, not skipped) | Process-level only; can read host files readable by the OS user (RISK-001) |
 | pytest runner with JUnit parsing | TESTED | `sandbox/testrunner.py` | `tests/integration/test_testrunner_diagnostics.py` | A malicious project can forge its own report (documented by a test); verification proves only that the project's own suite reports passing |
 | Diagnostics (reproducibility, locations, unverified hypotheses) | TESTED | `diagnostics/engine.py` | `tests/integration/test_testrunner_diagnostics.py` | Rule-based; pytest output parsing only |
+| Repair plans (validated paths, original-hash preconditions, operation digest) | TESTED | `recovery/model.py` | `tests/integration/test_recovery.py` | Full-content patches only |
+| Checkpoints + atomic writes + verified byte-exact rollback | TESTED | `recovery/checkpoint.py` | `tests/integration/test_recovery.py` | Local filesystem only |
+| Recovery lifecycle mechanics (prepare/simulate/execute/verify/rollback, crash-state reconcile) | TESTED | `recovery/engine.py` | `tests/integration/test_recovery.py` | Authorization + evidence wiring is stage 5 |
+| Skill engine (lifecycle, validation, regression, field outcomes, one active version) | TESTED | `learning/skills.py` | `tests/unit/test_skills.py` | Only `token_rename` skill kind exists |
+| Experience -> candidate skill extraction | TESTED | `learning/experience.py` | `tests/unit/test_skills.py` | Only single consistent identifier renames are extracted |
+| Skill-based repair proposer | IMPLEMENTED | `recovery/proposers.py` | exercised in stage 5 E2E | Never patches test files |
 | Everything else | NOT STARTED | - | - | - |
