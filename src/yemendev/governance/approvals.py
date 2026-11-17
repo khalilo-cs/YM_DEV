@@ -9,6 +9,7 @@ human actors can decide.
 
 from __future__ import annotations
 
+import builtins
 from datetime import timedelta
 from enum import StrEnum
 
@@ -100,6 +101,12 @@ class ApprovalService:
         q += " ORDER BY created_at DESC LIMIT ?"
         with self._db.read() as conn:
             rows = conn.execute(q, (*args, max(1, min(limit, 500)))).fetchall()
+        return [self._expire_if_needed(_row(r)) for r in rows]
+
+    def for_task(self, task_id: str) -> builtins.list[ApprovalRequest]:
+        with self._db.read() as conn:
+            rows = conn.execute("SELECT * FROM approval_requests WHERE task_id = ? ORDER BY created_at",
+                                (task_id,)).fetchall()
         return [self._expire_if_needed(_row(r)) for r in rows]
 
     def _expire_if_needed(self, req: ApprovalRequest) -> ApprovalRequest:

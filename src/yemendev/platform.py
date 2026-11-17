@@ -1,0 +1,191 @@
+"""Composition root: builds every engine from Settings. The only module that wires engines together."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel
+
+from yemendev.core.config import Settings
+from yemendev.core.contracts import (
+    ConflictError,
+    InvalidInputError,
+    NotFoundError,
+    PermissionDeniedError,
+    canonical_json,
+    iso,
+    new_id,
+)
+from yemendev.core.faults import NO_FAULTS, FaultInjector
+from yemendev.evidence.store import EvidenceBody, EvidenceStore
+from yemendev.governance.actors import Actor
+from yemendev.governance.approvals import ApprovalRequest, ApprovalService
+from yemendev.governance.guard import Guard
+from yemendev.governance.policy import Action, PolicyEngine
+from yemendev.learning.skills import Skill, SkillEngine
+from yemendev.memory.engine import MemoryEngine
+from yemendev.mosaic.adapters import ModelRegistry, OpenAICompatibleAdapter
+from yemendev.recovery.checkpoint import CheckpointStore
+from yemendev.recovery.engine import RecoveryEngine
+from yemendev.security.audit import AuditLog
+from yemendev.security.keys import load_or_create_key
+from yemendev.security.tokens import TokenStore
+from yemendev.storage.db import Database
+from yemendev.twin.memory_sync import record_scan
+from yemendev.twin.model import ProjectSnapshot
+from yemendev.twin.scanner import ProjectScanner
+
+
+class Project(BaseModel):
+    id: str
+    name: str
+    root_path: str
+    created_at: str
+    created_by: str
+
+
+class Platform:
+    def __init__(self, settings: Settings, faults: FaultInjector = NO_FAULTS) -> None:
+        settings.ensure_dirs()
+        self.settings = settings
+        self.faults = faults
+        self.db = Database(settings.db_path)
+        self.db.migrate()
+        self.audit = AuditLog(self.db, load_or_create_key(settings.keys_dir / "audit.key"))
+        self.policy = PolicyEngine()
+        self.guard = Guard(self.policy, self.audit)
+        self.approvals = ApprovalService(self.db, self.policy, settings.approval_ttl_seconds)
+        self.evidence = EvidenceStore(self.db)
+        self.memory = MemoryEngine(self.db)
+        self.skills = SkillEngine(self.db)
+        self.tokens = TokenStore(self.db)
+        self.scanner = ProjectScanner()
+        self.models = ModelRegistry([OpenAICompatibleAdapter(settings.model)])
+        self.recovery = RecoveryEngine(settings.sandbox, CheckpointStore(settings.checkpoints_dir),
+                                       settings.workspaces_dir, faults)
+
+    # ---- projects --------------------------------------------------------------------
+    def register_project(self, actor: Actor, name: str, path: str) -> Project:
+        self.guard.require(actor, Action.REGISTER_PROJECT, path)
+        if not name.strip() or len(name) > 200:
+            raise InvalidInputError("invalid project name")
+        root = Path(path).expanduser()
+        if not root.is_absolute():
+            raise InvalidInputError("project path must be absolute")
+        if root.is_symlink():
+            raise InvalidInputError("project root must not be a symlink")
+        root = root.resolve()
+        if not root.is_dir():
+            raise InvalidInputError("project path is not a directory")
+        if root == Path("/") or root == Path.home().resolve():
+            raise InvalidInputError("refusing to register the filesystem root or home directory as a project")
+        data_dir = self.settings.data_dir.resolve()
+        if root.is_relative_to(data_dir) or data_dir.is_relative_to(root):
+            raise InvalidInputError("project path must not contain or be inside the platform data directory")
+        allowed = [r.resolve() for r in self.settings.allowed_project_roots]
+        if allowed and not any(root.is_relative_to(a) for a in allowed):
+            raise PermissionDeniedError("project path is outside the allowed project roots")
+        p = Project(id=new_id("prj"), name=name.strip(), root_path=str(root), created_at=iso(), created_by=actor.ref)
+        try:
+            with self.db.transaction() as conn:
+                conn.execute("INSERT INTO projects(id, name, root_path, created_at, created_by) VALUES (?,?,?,?,?)",
+                             (p.id, p.name, p.root_path, p.created_at, p.created_by))
+        except Exception as exc:
+            if "UNIQUE" in str(exc):
+                raise ConflictError("a project with this path is already registered") from exc
+            raise
+        self.audit.record(actor=actor.ref, action=Action.REGISTER_PROJECT.value, target=p.id, outcome="ok",
+                          details={"name": p.name})
+        return p
+
+    def project(self, project_id: str) -> Project:
+        with self.db.read() as conn:
+            r = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
+        if r is None:
+            raise NotFoundError("project not found")
+        return Project(**dict(r))
+
+    def projects(self) -> list[Project]:
+        with self.db.read() as conn:
+            return [Project(**dict(r)) for r in conn.execute("SELECT * FROM projects ORDER BY created_at")]
+
+    def scan_project(self, actor: Actor, project_id: str, task_id: str | None = None) -> tuple[str, ProjectSnapshot]:
+        self.guard.require(actor, Action.SCAN_PROJECT, project_id)
+        p = self.project(project_id)
+        snap = self.scanner.scan(Path(p.root_path))
+        sid = new_id("scn")
+        with self.db.transaction() as conn:
+            conn.execute("INSERT INTO project_scans(id, project_id, created_at, tree_hash, snapshot_json)"
+                         " VALUES (?,?,?,?,?)", (sid, project_id, iso(), snap.tree_hash, snap.model_dump_json()))
+        ev = self.evidence.record(
+            action="project.scan", actor=actor.ref, target=project_id, outcome="ok", task_id=task_id,
+            body=EvidenceBody(
+                inputs={"root": p.root_path},
+                after_state={"scan_id": sid, "tree_hash": snap.tree_hash, "files": len(snap.files),
+                             "modules": len(snap.modules), "edges": len(snap.edges), "findings": len(snap.findings)},
+                limitations=["static analysis only; no code executed", "Python imports only"],
+            ))
+        record_scan(self.memory, project_id, snap, ev.id)
+        self.memory.revalidate(project_id, Path(p.root_path))
+        self.audit.record(actor=actor.ref, action=Action.SCAN_PROJECT.value, target=project_id, outcome="ok",
+                          details={"scan_id": sid, "evidence_id": ev.id})
+        return sid, snap
+
+    def latest_scan(self, project_id: str) -> tuple[str, ProjectSnapshot]:
+        with self.db.read() as conn:
+            r = conn.execute("SELECT id, snapshot_json FROM project_scans WHERE project_id = ? ORDER BY created_at"
+                             " DESC LIMIT 1", (project_id,)).fetchone()
+        if r is None:
+            raise NotFoundError("project has not been scanned")
+        return r["id"], ProjectSnapshot(**json.loads(r["snapshot_json"]))
+
+    # ---- skills (activation requires a bound human approval) --------------------------
+    def request_skill_activation(self, actor: Actor, skill_id: str, version: int) -> ApprovalRequest:
+        self.guard.require(actor, Action.ACTIVATE_SKILL, skill_id)
+        s = self.skills.check_activatable(skill_id, version)
+        req = self.approvals.request(
+            action=Action.ACTIVATE_SKILL, target=f"{skill_id}@{version}",
+            operation_digest=self.skills.activation_digest(s),
+            summary=f"Activate skill '{s.spec.name}' v{version}: {s.spec.description}", requested_by=actor)
+        self.audit.record(actor=actor.ref, action="approval.request", target=req.id, outcome="pending",
+                          details={"skill": skill_id, "version": version})
+        return req
+
+    def activate_skill(self, actor: Actor, approval_id: str) -> Skill:
+        self.guard.require(actor, Action.ACTIVATE_SKILL, approval_id)
+        req = self.approvals.get(approval_id)
+        skill_id, _, ver = req.target.rpartition("@")
+        if not skill_id or not ver.isdigit():
+            raise InvalidInputError("approval is not a skill activation")
+        s = self.skills.check_activatable(skill_id, int(ver))
+        self.approvals.consume(approval_id, action=Action.ACTIVATE_SKILL, target=req.target,
+                               operation_digest=self.skills.activation_digest(s))
+        out = self.skills.activate(skill_id, int(ver))
+        self.audit.record(actor=actor.ref, action=Action.ACTIVATE_SKILL.value, target=req.target, outcome="ok",
+                          details={"approval_id": approval_id, "decided_by": req.decided_by})
+        return out
+
+    def status(self) -> dict[str, Any]:
+        with self.db.read() as conn:
+            counts = {t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]  # noqa: S608 - fixed names
+                      for t in ("projects", "tasks", "approval_requests", "evidence_records", "skills",
+                                "memory_records", "audit_events")}
+            pending = conn.execute("SELECT COUNT(*) FROM approval_requests WHERE status = 'pending'").fetchone()[0]
+        from yemendev.sandbox.workspace import network_namespace_available
+
+        return {
+            "schema_version": self.db.schema_version(),
+            "counts": counts,
+            "pending_approvals": pending,
+            "models": self.models.status(),
+            "sandbox": {"network_isolation_mode": self.settings.sandbox.network_isolation,
+                        "network_namespace_available": network_namespace_available()},
+            "offline_capable": True,
+            "generated_at": iso(),
+        }
+
+    def config_digest(self) -> str:
+        return canonical_json({"sandbox": self.settings.sandbox.model_dump(), "model_configured":
+                               bool(self.settings.model.base_url)})

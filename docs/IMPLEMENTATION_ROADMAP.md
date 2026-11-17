@@ -9,7 +9,7 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 2 | Project intelligence: scanner, dependency extraction, import graph, memory population | **Done - 43 tests total** |
 | 3 | Sandbox execution, pytest runner (JUnit parsing), diagnostics | **Done - 62 tests total** |
 | 4 | Verified repair lifecycle + skill engine | **Done - 86 tests total** |
-| 5 | ORION persistent orchestration, crash resume, fault injection | Next |
-| 6 | HTTP API + CLI | Planned |
+| 5 | ORION persistent orchestration, crash resume, fault injection | **Done - 102 tests total; MVP criteria 1-18 demonstrated** |
+| 6 | HTTP API + CLI | Next |
 | 7 | Independent audit of stages 1-6, fixes, regression tests | Planned |
 | later | Model adapters w/ real model, risk engine, sync queue, UI (web/desktop/mobile), benchmarks, i18n | Not started |
