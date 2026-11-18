@@ -68,8 +68,8 @@ class RepairWorkflow:
 
     # ---- public API ------------------------------------------------------------------
     def create(self, actor: Actor, project_id: str, human_plan: RepairPlan | None = None) -> Task:
-        self.p.guard.require(actor, Action.CREATE_TASK, project_id)
         self.p.project(project_id)
+        self.p.guard.require(actor, Action.CREATE_TASK, project_id, project_id=project_id)
         params: dict[str, Any] = {"python_version": list(sys.version_info[:2])}
         if human_plan is not None:
             # Regression (audit F1): the client must not choose the plan's provenance. Anything submitted
@@ -81,10 +81,19 @@ class RepairWorkflow:
                             details={"project_id": project_id, "human_plan": human_plan is not None})
         return t
 
+    def visible_tasks(self, actor: Actor, project_id: str | None = None) -> list[Task]:
+        self.p.guard.require(actor, Action.READ, "tasks")
+        return [t for t in self.tasks.list(project_id=project_id) if self.p.guard.can_read(actor, t.project_id)]
+
+    def get_task(self, actor: Actor, task_id: str) -> Task:
+        t = self.tasks.get(task_id)
+        self.p.guard.require(actor, Action.READ, task_id, project_id=t.project_id)
+        return t
+
     def advance(self, actor: Actor, task_id: str, worker: str | None = None) -> AdvanceResult:
         """Run steps until the task finishes or needs a human. Safe to call repeatedly."""
-        self.p.guard.require(actor, Action.ADVANCE_TASK, task_id)
         t = self.tasks.get(task_id)
+        self.p.guard.require(actor, Action.ADVANCE_TASK, task_id, project_id=t.project_id)
         if t.status in TERMINAL:
             return AdvanceResult(task=t, ran_steps=[], message=f"task already {t.status.value}")
         t = self.tasks.acquire(task_id, worker or new_id("wrk"))
@@ -117,7 +126,7 @@ class RepairWorkflow:
             return AdvanceResult(task=self.tasks.get(task_id), ran_steps=ran, message="internal error")
 
     def cancel(self, actor: Actor, task_id: str) -> Task:
-        self.p.guard.require(actor, Action.CANCEL_TASK, task_id)
+        self.p.guard.require(actor, Action.CANCEL_TASK, task_id, project_id=self.tasks.get(task_id).project_id)
         t = self.tasks.cancel(task_id)
         # Regression (audit F5): approvals of a cancelled task must not stay usable.
         for a in self.p.approvals.for_task(task_id):
@@ -185,7 +194,7 @@ class RepairWorkflow:
         return {"scan_id": sid, "tree_hash": snap.tree_hash}
 
     def _baseline(self, actor: Actor, t: Task) -> Any:
-        self.p.guard.require(actor, Action.RUN_SANDBOXED, t.project_id)
+        self.p.guard.require(actor, Action.RUN_SANDBOXED, t.project_id, project_id=t.project_id)
         runs = []
         for _ in range(BASELINE_RUNS):
             with Workspace(self._root(t), self.p.settings.sandbox, base_dir=self.p.settings.workspaces_dir) as ws:
@@ -243,7 +252,7 @@ class RepairWorkflow:
         return {"plans": [p.model_dump(mode="json") for p in plans], "notes": notes}
 
     def _simulate(self, actor: Actor, t: Task) -> Any:
-        self.p.guard.require(actor, Action.RUN_SANDBOXED, t.project_id)
+        self.p.guard.require(actor, Action.RUN_SANDBOXED, t.project_id, project_id=t.project_id)
         baseline = self._baseline_report(t)
         root = self._root(t)
         results = []
@@ -272,7 +281,10 @@ class RepairWorkflow:
     def _authorize(self, actor: Actor, t: Task) -> Any:
         plan = self._plan(t)
         dg = self._digest(t, plan)
-        decision = self.p.policy.evaluate(actor, Action.APPLY_PATCH)
+        eff = self.p.guard.effective(actor, t.project_id)
+        if eff is None:
+            raise Stop(TaskStatus.FAILED, "actor has no access to this project")
+        decision = self.p.policy.evaluate(eff, Action.APPLY_PATCH)
         if not decision.allowed:
             raise Stop(TaskStatus.FAILED, f"actor may not apply patches: {decision.reason}")
         existing = [a for a in self.p.approvals.for_task(t.id)
@@ -358,7 +370,7 @@ class RepairWorkflow:
 
     def _rollback(self, actor: Actor, t: Task) -> Any:
         system = Actor(id="orion", kind=ActorKind.SYSTEM, role=Role.OPERATOR)
-        self.p.guard.require(system, Action.ROLLBACK_OWN_CHANGE, t.project_id)
+        self.p.guard.require(system, Action.ROLLBACK_OWN_CHANGE, t.project_id, project_id=t.project_id)
         cid = self._out(t.id, "execute")["checkpoint_id"]
         restored = self.p.recovery.rollback(cid)
         self.p.evidence.record(action="repair.rollback", actor=system.ref, target=t.project_id, outcome="restored",

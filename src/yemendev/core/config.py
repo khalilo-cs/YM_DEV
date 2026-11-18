@@ -70,6 +70,11 @@ class Settings(BaseModel):
     # Projects may only be registered under these roots (empty = any directory).
     allowed_project_roots: list[Path] = Field(default_factory=list)
     approval_ttl_seconds: int = Field(default=3600, ge=30, le=7 * 86400)
+    token_ttl_days: int = Field(default=90, ge=1, le=366)
+    # API rate limits (per credential / per client IP for failed authentication). In-process only.
+    rate_limit_per_minute: int = Field(default=600, ge=1)
+    rate_limit_burst: int = Field(default=120, ge=1)
+    auth_failures_per_minute: int = Field(default=30, ge=1)
     sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
 
@@ -109,7 +114,12 @@ class Settings(BaseModel):
             model=env.get("YEMENDEV_MODEL_NAME") or None,
             api_key_env=env.get("YEMENDEV_MODEL_API_KEY_ENV") or None,
         )
-        return cls(data_dir=dd.resolve(), allowed_project_roots=roots, sandbox=sandbox, model=model)
+        limits = {k: int(env[e]) for k, e in [("rate_limit_per_minute", "YEMENDEV_RATE_LIMIT_PER_MINUTE"),
+                                                ("rate_limit_burst", "YEMENDEV_RATE_LIMIT_BURST"),
+                                                ("auth_failures_per_minute", "YEMENDEV_AUTH_FAILURES_PER_MINUTE"),
+                                                ("token_ttl_days", "YEMENDEV_TOKEN_TTL_DAYS")] if env.get(e)}
+        return cls.model_validate({"data_dir": dd.resolve(), "allowed_project_roots": roots, "sandbox": sandbox,
+                                   "model": model, **limits})
 
     def ensure_dirs(self) -> None:
         for d in (self.data_dir, self.keys_dir, self.checkpoints_dir):

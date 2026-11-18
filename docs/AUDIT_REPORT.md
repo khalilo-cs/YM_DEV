@@ -11,8 +11,8 @@ probed with `curl`, performance measurement, `pip-audit`, a secret scan and lint
 |---|---|---|---|
 | Critical | 1 | 1 | 0 |
 | High | 2 | 2 | 0 |
-| Medium | 6 | 5 | 1 (per-project authorization) |
-| Low / design limits | 5 | 1 | 4 (documented) |
+| Medium | 6 | 6 (A-11 in stage 9) | 0 |
+| Low / design limits | 5 | 2 (A-14 partially: TLS still absent) | 3 (documented) |
 
 Test suite after fixes: **136 passed, 0 failed** (`pytest`), `ruff` clean, `mypy --strict` clean,
 `pip-audit`: no known vulnerabilities.
@@ -31,10 +31,10 @@ Test suite after fixes: **136 passed, 0 failed** (`pytest`), `ruff` clean, `mypy
 | A-08 | Medium | Forged skill reference made a task `FAILED` *after* its change was applied and verified (status lies). | Attack script. | Learn step records the bad ref instead of failing (and A-02 removes the vector). | covered by A-02 test |
 | A-09 | Medium | Graph metrics quadratic (one BFS per node): 0.68 s @2k modules, ~17 s projected @10k. | `perf.py` measurement. | SCC condensation + bitsets: 0.02 s @2k, 0.17 s @10k. Checked equal to BFS on 60 random graphs. | `test_regression_fast_transitive_counts_match_bfs` |
 | A-10 | Low | Unreachable workspace parent gave an opaque "pytest produced no report". | Found while fixing A-01. | Explicit precondition with a clear error. | `test_unreachable_workspace_parent_fails_clearly` |
-| A-11 | Medium (open) | Authorization is global per role; no per-project scoping. A viewer sees all projects' evidence. | Review. | **Not fixed** - needs a workspace/membership model. | - |
+| A-11 | Medium | Authorization was global per role; no per-project scoping. | Review. | **Fixed in stage 9** (ADR-0007): memberships, token-role ceiling, scoped lists/decisions, admin-only audit. | `tests/security/test_authorization.py` |
 | A-12 | Low (open) | A malicious project controls its own test results (can forge a passing JUnit report). | `test_project_that_forges_a_passing_report_is_not_trusted` documents it. | Inherent: verification = "the project's own suite says it passes". Stated in every verify evidence record. | documents behaviour |
 | A-13 | Low (open) | Without root or `run_as_uid`, A-01 protection is unavailable (best-effort mode records it; `required` refuses). | Design. | `GET /system/status` reports `privilege_separation`. Container backend planned. | `test_privilege_separation_required_refuses_when_unavailable` |
-| A-14 | Low (open) | No API rate limiting, no token expiry, no TLS (loopback-only by default; `serve` refuses public bind without `--allow-remote`). | Review. | Documented. | - |
+| A-14 | Low | No API rate limiting, no token expiry, no TLS. | Review. | **Stage 9:** rate limiting + failed-auth lockout, mandatory token expiry (ADR-0008). TLS still not provided (loopback-only default; `serve` refuses public bind without `--allow-remote`). | `test_rate_limit_per_credential_and_auth_failure_lockout`, `test_expired_and_revoked_tokens_rejected` |
 | A-15 | Low (open) | Audit chain tail truncation detectable only against an externally recorded head hash. | `test_detects_truncation_against_recorded_head`. | `--expected-head` option; export head regularly. | existing |
 
 ## Defects found earlier by tests during stages 1-6 (also fixed, with regression tests)

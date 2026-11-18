@@ -1,6 +1,6 @@
 # Feature Status
 
-Last reviewed: 2026-11-17 (stage 7 independent audit). Statuses:
+Last reviewed: 2026-11-18 (stage 9). Statuses:
 **NOT STARTED · IMPLEMENTED** (code exists, no/insufficient tests) **· TESTED** (automated tests pass)
 **· VERIFIED** (exercised end-to-end in a real workflow, with evidence) **· EXPERIMENTAL · BLOCKED**.
 
@@ -14,8 +14,10 @@ Last reviewed: 2026-11-17 (stage 7 independent audit). Statuses:
 | HMAC-chained audit log | TESTED | `security/audit.py` | `tests/security/test_audit.py` | Tail truncation needs external head (A-15) |
 | Evidence records anchored in audit chain; integrity cross-check | TESTED | `evidence/store.py`, `Platform.verify_integrity` | `test_evidence_deletion_and_tampering_detected` | - |
 | Secret redaction | TESTED | `security/redaction.py` | `tests/unit/test_redaction.py` | Pattern-based |
-| API tokens (hashed, revocable) | TESTED | `security/tokens.py` | `tests/integration/test_api.py` | No expiry (A-14) |
-| Policy engine, roles, agent restrictions | TESTED | `governance/policy.py` | `tests/security/test_governance.py` | Global per role - **no per-project scoping (A-11)** |
+| API tokens (hashed, revocable, mandatory expiry) | TESTED | `security/tokens.py` | `tests/security/test_authorization.py` incl. legacy-token migration | - |
+| Policy engine, roles, agent restrictions | TESTED | `governance/policy.py` | `tests/security/test_governance.py` | Static policy table |
+| Per-project authorization (memberships, token-role ceiling, scoped lists) | VERIFIED (local) | `governance/membership.py`, `governance/guard.py`, `platform.py` | `tests/security/test_authorization.py` (every API surface), CLI test; mutation check (scoping disabled → 3 tests fail) | Only global admins manage members |
+| API rate limiting + failed-auth lockout | VERIFIED (local) | `security/ratelimit.py`, `api/app.py` | unit + API tests; real `uvicorn` + `curl` | Per process; client IP = proxy IP behind a reverse proxy |
 | Bound, single-use, expiring, revocable approvals; no self-approval | VERIFIED (local) | `governance/approvals.py` | governance + E2E + audit regression tests | - |
 | Living memory (provenance, contradiction, staleness, history) | TESTED | `memory/` | `tests/unit/test_memory.py` | Keyword relevance only |
 
@@ -46,7 +48,7 @@ Last reviewed: 2026-11-17 (stage 7 independent audit). Statuses:
 | ORION persistent tasks, leases, single active worker | TESTED | `orion/tasks.py` | crash tests, `test_concurrent_advance_only_one_worker_runs` | Time-based lease (15 min) |
 | RACE-X repair workflow | VERIFIED (local) | `orion/workflow.py` | `tests/end_to_end/test_mvp_workflow.py` | Synchronous per `advance` call; no background scheduler |
 | Crash resume (9 fault points, half-written project) | VERIFIED (local) | `orion/workflow.py` | `test_crash_at_any_point_then_resume` + manual probe | Injected exceptions, not real power loss |
-| HTTP API `/api/v1` | VERIFIED (local) | `api/app.py` | `tests/integration/test_api.py`; real `uvicorn` + `curl` | No TLS, no rate limiting |
+| HTTP API `/api/v1` | VERIFIED (local) | `api/app.py` | `tests/integration/test_api.py`; real `uvicorn` + `curl` | No TLS (loopback by default) |
 | CLI | TESTED | `cli/main.py` | `tests/integration/test_cli.py` | - |
 
 ## Research & benchmarking
@@ -60,7 +62,7 @@ Last reviewed: 2026-11-17 (stage 7 independent audit). Statuses:
 Predictive risk engine · anomaly detection · counterfactual/compound failure simulation (beyond
 fault points) · digital immune system · continuity passport · synchronization queue · continuity
 debt metric · comparative benchmark baselines · web/desktop/mobile UI · i18n (Arabic/English) · PostgreSQL ·
-OpenTelemetry · Tree-sitter/LSP · container sandbox backend · per-project authorization.
+OpenTelemetry · Tree-sitter/LSP · container sandbox backend.
 
 ## MVP acceptance (directive §20)
 

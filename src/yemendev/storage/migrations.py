@@ -159,4 +159,24 @@ MIGRATIONS: list[tuple[int, str, str]] = [
         );
         """,
     ),
+    (
+        2,
+        "project_members_and_token_expiry",
+        """
+        CREATE TABLE project_members (
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            actor_ref TEXT NOT NULL,
+            role TEXT NOT NULL,
+            granted_by TEXT NOT NULL,
+            granted_at TEXT NOT NULL,
+            PRIMARY KEY (project_id, actor_ref)
+        );
+        CREATE INDEX ix_members_actor ON project_members(actor_ref);
+
+        ALTER TABLE api_tokens ADD COLUMN expires_at TEXT;
+        -- Existing tokens get a 90-day lifetime from the moment of migration (same ISO format as iso()).
+        UPDATE api_tokens SET expires_at = strftime('%Y-%m-%dT%H:%M:%f', 'now', '+90 days') || '000+00:00'
+            WHERE expires_at IS NULL
+        """,
+    ),
 ]

@@ -114,6 +114,9 @@ def test_full_workflow_over_http(ctx, tmp_path):
     plan = {"id": "pln_h", "description": "rename", "source": "human", "source_ref": "alice", "patches": [
         {"path": "calc/api.py", "original_sha256": sha256_bytes(api.read_bytes()),
          "new_content": api.read_text().replace("add_numbers", "add")}]}
+    for who, role in (("human:bob", "operator"), ("human:vic", "viewer")):
+        assert c.post(f"/api/v1/projects/{pid}/members", json={"actor_ref": who, "role": role},
+                      headers=admin).status_code == 201
     tid = c.post("/api/v1/tasks", json={"project_id": pid, "plan": plan}, headers=admin).json()["id"]
     r = c.post(f"/api/v1/tasks/{tid}/advance", headers=admin).json()
     assert r["task"]["status"] == "waiting_approval"
@@ -128,11 +131,12 @@ def test_full_workflow_over_http(ctx, tmp_path):
     assert [s["name"] for s in t["steps"]][-1] == "learn"
     ev = c.get(f"/api/v1/evidence?task_id={tid}", headers=viewer).json()
     assert {"repair.execute", "repair.verify"} <= {e["action"] for e in ev}
-    assert c.get("/api/v1/audit/verify", headers=viewer).json()["valid"]
+    assert c.get("/api/v1/audit/verify", headers=viewer).status_code == 403  # audit spans all projects
+    assert c.get("/api/v1/audit/verify", headers=admin).json()["valid"]
     g = c.get(f"/api/v1/projects/{pid}/graph", headers=viewer).json()
     assert ["calc.api", "calc.mathutils"] in [list(e) for e in g["edges"]]
     mem = c.get(f"/api/v1/projects/{pid}/memory?category=experience", headers=viewer).json()
     assert len(mem) == 1
     st = c.get("/api/v1/system/status", headers=viewer).json()
     assert st["counts"]["tasks"] == 1 and st["models"][0]["available"] is False
-    assert "ydv_" not in json.dumps(c.get("/api/v1/audit?limit=1000", headers=viewer).json())
+    assert "ydv_" not in json.dumps(c.get("/api/v1/audit?limit=1000", headers=admin).json())

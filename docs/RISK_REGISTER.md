@@ -10,4 +10,4 @@
 | RISK-006 | Over-/under-redaction of secrets | Medium | Medium | Token-based key matching + value patterns; regression tests | Partially mitigated |
 | RISK-007 | Target project deps missing from sandbox interpreter -> false "failures" | High | Medium | Configurable interpreter; diagnostics distinguish collection errors | Open |
 | RISK-008 | No local model available -> no generative repair | Certain (here) | Medium | Deterministic skill-based repair path; model adapter optional | Accepted |
-| RISK-009 | No per-project authorization: any viewer reads all projects' evidence | Medium | Medium | Planned stage 9 | Open |
+| RISK-009 | No per-project authorization: any viewer reads all projects' evidence | Medium | Medium | Memberships + scoped access (stage 9, ADR-0007) | Mitigated |

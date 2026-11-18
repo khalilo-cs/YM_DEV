@@ -50,7 +50,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         print("already initialised (tokens exist). Use `token issue` with an admin token, or --force.")
         return 1
     actor_id = args.actor or getpass.getuser()
-    tid, tok = p.tokens.issue(actor_id, Role.ADMIN)
+    tid, tok = p.tokens.issue(actor_id, Role.ADMIN, ttl_seconds=p.settings.token_ttl_days * 86400)
     p.audit.record(actor=f"human:{actor_id}", action="token.issue", target=tid, outcome="ok",
                    details={"role": "admin", "via": "init"})
     print(f"data dir: {p.settings.data_dir}")
@@ -68,9 +68,9 @@ def cmd_token_issue(args: argparse.Namespace) -> int:
     p = _platform(args)
     a = _actor(p, args)
     p.guard.require(a, Action.ISSUE_TOKEN, args.actor_id)
-    tid, tok = p.tokens.issue(args.actor_id, Role(args.role))
+    tid, tok = p.tokens.issue(args.actor_id, Role(args.role), ttl_seconds=args.ttl_days * 86400)
     p.audit.record(actor=a.ref, action=Action.ISSUE_TOKEN.value, target=tid, outcome="ok",
-                   details={"for": args.actor_id, "role": args.role})
+                   details={"for": args.actor_id, "role": args.role, "ttl_days": args.ttl_days})
     print(f"token for '{args.actor_id}' ({args.role}), shown once:\n{tok}")
     return 0
 
@@ -89,16 +89,22 @@ def cmd_project(args: argparse.Namespace) -> int:
     if args.pcmd == "add":
         _print(p.register_project(a, args.name, str(Path(args.path).absolute())).model_dump())
     elif args.pcmd == "list":
-        p.guard.require(a, Action.READ, "projects")
-        _print([x.model_dump() for x in p.projects()])
+        _print([x.model_dump() for x in p.visible_projects(a)])
     elif args.pcmd == "scan":
         sid, snap = p.scan_project(a, args.project_id)
         _print({"scan_id": sid, "files": len(snap.files), "modules": len(snap.modules), "languages": snap.languages,
                 "findings": [f.model_dump() for f in snap.findings], "sensitive_files": snap.sensitive_files})
     elif args.pcmd == "graph":
-        p.guard.require(a, Action.READ, args.project_id)
+        p.require_read(a, args.project_id)
         _, snap = p.latest_scan(args.project_id)
         _print(DependencyGraph.from_snapshot(snap).report().model_dump())
+    elif args.pcmd == "grant":
+        _print(p.grant_member(a, args.project_id, args.actor_ref, Role(args.role)).model_dump())
+    elif args.pcmd == "revoke":
+        p.revoke_member(a, args.project_id, args.actor_ref)
+        print("revoked")
+    elif args.pcmd == "members":
+        _print([m.model_dump() for m in p.list_members(a, args.project_id)])
     return 0
 
 
@@ -115,14 +121,12 @@ def cmd_task(args: argparse.Namespace) -> int:
         r = wf.advance(a, args.task_id)
         _print({"task_id": args.task_id, "status": r.task.status.value, "ran": r.ran_steps, "message": r.message})
     elif args.tcmd == "show":
-        p.guard.require(a, Action.READ, args.task_id)
-        t = wf.tasks.get(args.task_id)
+        t = wf.get_task(a, args.task_id)
         _print({**t.model_dump(), "steps": [{"name": s.name, "status": s.status.value, "attempt": s.attempt}
                                             for s in wf.tasks.steps(args.task_id)]})
     elif args.tcmd == "list":
-        p.guard.require(a, Action.READ, "tasks")
         _print([{"id": t.id, "project_id": t.project_id, "status": t.status.value, "step": t.current_step}
-                for t in wf.tasks.list()])
+                for t in wf.visible_tasks(a)])
     elif args.tcmd == "cancel":
         _print(wf.cancel(a, args.task_id).model_dump())
     return 0
@@ -132,13 +136,9 @@ def cmd_approvals(args: argparse.Namespace) -> int:
     p = _platform(args)
     a = _actor(p, args)
     if args.acmd == "list":
-        p.guard.require(a, Action.READ, "approvals")
-        _print([x.model_dump() for x in p.approvals.list()])
+        _print([x.model_dump() for x in p.visible_approvals(a)])
     else:
-        r = p.approvals.decide(args.approval_id, a, args.acmd == "approve", args.reason or "")
-        p.audit.record(actor=a.ref, action=Action.DECIDE_APPROVAL.value, target=args.approval_id,
-                       outcome=r.status.value)
-        _print(r.model_dump())
+        _print(p.decide_approval(a, args.approval_id, args.acmd == "approve", args.reason or "").model_dump())
     return 0
 
 
@@ -163,7 +163,7 @@ def cmd_skills(args: argparse.Namespace) -> int:
 def cmd_audit(args: argparse.Namespace) -> int:
     p = _platform(args)
     a = _actor(p, args)
-    p.guard.require(a, Action.READ, "audit")
+    p.guard.require(a, Action.READ_AUDIT, "audit")
     v = p.audit.verify(expected_head=args.expected_head)
     _print(v.model_dump())
     return 0 if v.valid else 2
@@ -217,6 +217,7 @@ def build_parser() -> argparse.ArgumentParser:
     t = ts.add_parser("issue")
     t.add_argument("actor_id")
     t.add_argument("--role", choices=[r.value for r in Role], default="operator")
+    t.add_argument("--ttl-days", type=int, default=90, help="token lifetime in days (1-366)")
     t.set_defaults(fn=cmd_token_issue)
 
     s = sub.add_parser("project")
@@ -225,8 +226,15 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("name")
     x.add_argument("path")
     ps.add_parser("list")
-    for name in ("scan", "graph"):
+    for name in ("scan", "graph", "members"):
         ps.add_parser(name).add_argument("project_id")
+    x = ps.add_parser("grant", help="grant a human access to a project")
+    x.add_argument("project_id")
+    x.add_argument("actor_ref", help="e.g. human:bob")
+    x.add_argument("--role", choices=[r.value for r in Role], default="operator")
+    x = ps.add_parser("revoke")
+    x.add_argument("project_id")
+    x.add_argument("actor_ref")
     s.set_defaults(fn=cmd_project)
 
     s = sub.add_parser("task")

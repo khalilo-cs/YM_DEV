@@ -59,3 +59,20 @@ def test_serve_refuses_public_bind(cli, capsys):
     dd, *_ = cli
     with pytest.raises(SystemExit):
         main(["--data-dir", dd, "serve", "--host", "0.0.0.0"])  # noqa: S104
+
+
+def test_cli_project_access_requires_grant(cli, tmp_path, capsys, monkeypatch):
+    dd, admin, bob = cli
+    root = make_renamed_api_project(tmp_path / "proj2")
+    rc, out, _ = run(capsys, "--data-dir", dd, "project", "add", "calc", str(root))
+    pid = json.loads(out)["id"]
+    monkeypatch.setenv("YEMENDEV_TOKEN", bob)
+    assert json.loads(run(capsys, "--data-dir", dd, "project", "list")[1]) == []
+    rc, _, err = run(capsys, "--data-dir", dd, "project", "scan", pid)
+    assert rc == 1 and "no access to this project" in err
+    assert run(capsys, "--data-dir", dd, "audit")[0] == 1  # audit is admin-only
+    monkeypatch.setenv("YEMENDEV_TOKEN", admin)
+    assert run(capsys, "--data-dir", dd, "project", "grant", pid, "human:bob", "--role", "operator")[0] == 0
+    monkeypatch.setenv("YEMENDEV_TOKEN", bob)
+    assert [p["id"] for p in json.loads(run(capsys, "--data-dir", dd, "project", "list")[1])] == [pid]
+    assert run(capsys, "--data-dir", dd, "project", "scan", pid)[0] == 0

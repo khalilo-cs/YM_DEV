@@ -107,7 +107,7 @@ def _plan(ctx: Ctx, correct: bool = True, touch_extra: bool = False) -> RepairPl
 def _approve(p: Platform, task_id: str) -> int:
     pend = [a for a in p.approvals.for_task(task_id) if a.status is ApprovalStatus.PENDING]
     for a in pend:
-        p.approvals.decide(a.id, APPROVER, approve=True, reason="benchmark harness")
+        p.decide_approval(APPROVER, a.id, approve=True, reason="benchmark harness")
     return len(pend)
 
 
@@ -116,6 +116,7 @@ def _run_to_end(ctx: Ctx, plan: RepairPlan | None, crash_point: str | None = Non
     p = ctx.platform()
     wf = RepairWorkflow(p)
     proj = p.register_project(OPERATOR, "bench", str(ctx.root))
+    p.grant_member(OPERATOR, proj.id, APPROVER.ref, Role.OPERATOR)
     t = wf.create(OPERATOR, proj.id, human_plan=plan)
     if crash_point:
         ctx.faults.arm(crash_point)

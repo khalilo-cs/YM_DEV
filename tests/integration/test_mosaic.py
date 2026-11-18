@@ -145,6 +145,8 @@ def test_workflow_uses_model_plan_but_still_requires_simulation_and_approval(stu
     p = Platform(settings)
     wf = RepairWorkflow(p)
     proj = p.register_project(ALICE, "c", str(root))
+    from yemendev.governance.actors import Role
+    p.grant_member(ALICE, proj.id, BOB.ref, Role.OPERATOR)
     r = wf.advance(ALICE, wf.create(BOB, proj.id).id)
     # A wrong model patch is caught by simulation; nothing is applied and no approval is even requested.
     assert r.task.status is TaskStatus.NO_ACTION and "simulation" in r.message

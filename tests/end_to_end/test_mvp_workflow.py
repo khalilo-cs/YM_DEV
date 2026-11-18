@@ -88,6 +88,7 @@ def test_mvp_end_to_end_with_learning_and_skill_reuse(platform, wf, tmp_path, no
     # skill reuse on a second project with the same defect - no human plan, no model
     root2 = make_renamed_api_project(tmp_path / "proj2")
     p2 = platform.register_project(ALICE, "calc2", str(root2))
+    platform.grant_member(ALICE, p2.id, BOB.ref, Role.OPERATOR)
     t2 = wf.create(ALICE, p2.id)
     r2 = wf.advance(ALICE, t2.id)
     assert r2.task.status is TaskStatus.WAITING_APPROVAL, r2.message

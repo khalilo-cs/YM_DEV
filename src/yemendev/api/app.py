@@ -7,7 +7,11 @@
 * Bind to 127.0.0.1 by default (see cli ``serve``). There is no TLS termination here.
 """
 
+import hashlib
 import logging
+import math
+import time
+from collections.abc import Callable
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, Query, Request
@@ -17,7 +21,7 @@ from pydantic import BaseModel, Field
 
 from yemendev import __version__
 from yemendev.core.contracts import ErrorCode, InvalidInputError, YemenDevError
-from yemendev.governance.actors import Actor
+from yemendev.governance.actors import Actor, Role
 from yemendev.governance.approvals import ApprovalStatus
 from yemendev.governance.policy import Action
 from yemendev.learning.skills import SkillSpec, SkillStatus
@@ -25,6 +29,7 @@ from yemendev.memory.model import MemoryCategory
 from yemendev.orion.workflow import RepairWorkflow
 from yemendev.platform import Platform
 from yemendev.recovery.model import RepairPlan
+from yemendev.security.ratelimit import TokenBucketLimiter
 from yemendev.twin.graph import DependencyGraph
 
 log = logging.getLogger("yemendev.api")
@@ -91,6 +96,12 @@ async def _send_413(send: Any) -> None:
     await send({"type": "http.response.body", "body": body})
 
 
+def _too_many(wait: float, message: str) -> JSONResponse:
+    r = _err(429, "rate_limited", message)
+    r.headers["Retry-After"] = str(max(1, math.ceil(wait)))
+    return r
+
+
 def _err(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": {"code": code, "message": message}})
 
@@ -116,7 +127,12 @@ class ProposeSkill(BaseModel):
     skill_id: str | None = None
 
 
-def create_app(platform: Platform) -> FastAPI:
+class GrantMember(BaseModel):
+    actor_ref: str = Field(min_length=3, max_length=140, description="e.g. 'human:bob'")
+    role: Role
+
+
+def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) -> FastAPI:
     app = FastAPI(title="YEMENDEV AI", version=__version__, docs_url="/api/docs", openapi_url="/api/openapi.json",
                   redoc_url=None)
     wf = RepairWorkflow(platform)
@@ -129,6 +145,27 @@ def create_app(platform: Platform) -> FastAPI:
         return resp
 
     app.add_middleware(BodySizeLimit, max_bytes=MAX_BODY_BYTES)
+
+    st = platform.settings
+    limiter = TokenBucketLimiter(st.rate_limit_per_minute, st.rate_limit_burst, clock=clock)
+    auth_failures = TokenBucketLimiter(st.auth_failures_per_minute, st.auth_failures_per_minute, clock=clock)
+
+    # Registered last => outermost: throttled requests are rejected before their body is read.
+    @app.middleware("http")
+    async def rate_limit(request: Request, call_next: Any) -> Any:
+        client = request.client.host if request.client else "unknown"
+        ok, wait = auth_failures.peek(client)
+        if not ok:
+            return _too_many(wait, "too many failed authentication attempts")
+        auth = request.headers.get("authorization", "")
+        key = "cred:" + hashlib.sha256(auth.encode()).hexdigest() if auth else "ip:" + client
+        ok, wait = limiter.allow(key)
+        if not ok:
+            return _too_many(wait, "rate limit exceeded")
+        resp = await call_next(request)
+        if resp.status_code == 401:
+            auth_failures.allow(client)
+        return resp
 
     @app.exception_handler(YemenDevError)
     async def _app_error(_: Request, exc: YemenDevError) -> JSONResponse:
@@ -164,7 +201,11 @@ def create_app(platform: Platform) -> FastAPI:
     Who = Annotated[Actor, Depends(actor)]
 
     def read(a: Actor, target: str) -> None:
+        """Global (non-project) read: system status, skills, models."""
         platform.guard.require(a, Action.READ, target)
+
+    def read_audit(a: Actor) -> None:
+        platform.guard.require(a, Action.READ_AUDIT, "audit")
 
     # ---- system --------------------------------------------------------------------
     @app.get("/api/v1/health")
@@ -183,13 +224,23 @@ def create_app(platform: Platform) -> FastAPI:
 
     @app.get("/api/v1/projects")
     def projects(a: Who) -> list[dict[str, Any]]:
-        read(a, "projects")
-        return [p.model_dump() for p in platform.projects()]
+        return [p.model_dump() for p in platform.visible_projects(a)]
 
     @app.get("/api/v1/projects/{project_id}")
     def project(project_id: str, a: Who) -> dict[str, Any]:
-        read(a, project_id)
-        return platform.project(project_id).model_dump()
+        return platform.require_read(a, project_id).model_dump()
+
+    @app.get("/api/v1/projects/{project_id}/members")
+    def members(project_id: str, a: Who) -> list[Any]:
+        return [m.model_dump() for m in platform.list_members(a, project_id)]
+
+    @app.post("/api/v1/projects/{project_id}/members", status_code=201)
+    def grant(project_id: str, body: GrantMember, a: Who) -> dict[str, Any]:
+        return platform.grant_member(a, project_id, body.actor_ref, body.role).model_dump()
+
+    @app.delete("/api/v1/projects/{project_id}/members/{actor_ref}", status_code=204)
+    def revoke(project_id: str, actor_ref: str, a: Who) -> None:
+        platform.revoke_member(a, project_id, actor_ref)
 
     @app.post("/api/v1/projects/{project_id}/scan")
     def scan(project_id: str, a: Who) -> dict[str, Any]:
@@ -200,15 +251,14 @@ def create_app(platform: Platform) -> FastAPI:
 
     @app.get("/api/v1/projects/{project_id}/graph")
     def graph(project_id: str, a: Who) -> dict[str, Any]:
-        read(a, project_id)
+        platform.require_read(a, project_id)
         sid, snap = platform.latest_scan(project_id)
         return {"scan_id": sid, **DependencyGraph.from_snapshot(snap).report().model_dump()}
 
     @app.get("/api/v1/projects/{project_id}/memory")
     def memory(project_id: str, a: Who, category: MemoryCategory | None = None,
                include_inactive: bool = False, limit: Annotated[int, Query(ge=1, le=1000)] = 200) -> list[Any]:
-        read(a, project_id)
-        platform.project(project_id)
+        platform.require_read(a, project_id)
         return [r.model_dump() for r in platform.memory.query(project_id, category=category,
                                                                include_inactive=include_inactive, limit=limit)]
 
@@ -219,19 +269,17 @@ def create_app(platform: Platform) -> FastAPI:
 
     @app.get("/api/v1/tasks")
     def tasks(a: Who, project_id: str | None = None) -> list[Any]:
-        read(a, "tasks")
-        return [t.model_dump() for t in wf.tasks.list(project_id=project_id)]
+        return [t.model_dump() for t in wf.visible_tasks(a, project_id=project_id)]
 
     @app.get("/api/v1/tasks/{task_id}")
     def task(task_id: str, a: Who) -> dict[str, Any]:
-        read(a, task_id)
-        t = wf.tasks.get(task_id)
+        t = wf.get_task(a, task_id)
         return {**t.model_dump(), "steps": [{k: v for k, v in s.model_dump().items() if k != "output"}
                                             for s in wf.tasks.steps(task_id)]}
 
     @app.get("/api/v1/tasks/{task_id}/steps/{name}")
     def task_step(task_id: str, name: str, a: Who) -> dict[str, Any]:
-        read(a, task_id)
+        wf.get_task(a, task_id)
         s = wf.tasks.step(task_id, name)
         if s is None:
             raise InvalidInputError("step has not run")
@@ -249,20 +297,15 @@ def create_app(platform: Platform) -> FastAPI:
     # ---- approvals -----------------------------------------------------------------
     @app.get("/api/v1/approvals")
     def approvals(a: Who, status: ApprovalStatus | None = None) -> list[Any]:
-        read(a, "approvals")
-        return [x.model_dump() for x in platform.approvals.list(status=status)]
+        return [x.model_dump() for x in platform.visible_approvals(a, status=status)]
 
     @app.get("/api/v1/approvals/{approval_id}")
     def approval(approval_id: str, a: Who) -> dict[str, Any]:
-        read(a, approval_id)
-        return platform.approvals.get(approval_id).model_dump()
+        return platform.get_approval(a, approval_id).model_dump()
 
     @app.post("/api/v1/approvals/{approval_id}")
     def decide(approval_id: str, body: Decide, a: Who) -> dict[str, Any]:
-        r = platform.approvals.decide(approval_id, a, body.approve, body.reason)
-        platform.audit.record(actor=a.ref, action=Action.DECIDE_APPROVAL.value, target=approval_id,
-                              outcome=r.status.value, details={"reason": body.reason})
-        return r.model_dump()
+        return platform.decide_approval(a, approval_id, body.approve, body.reason).model_dump()
 
     # ---- skills --------------------------------------------------------------------
     @app.get("/api/v1/skills")
@@ -304,28 +347,26 @@ def create_app(platform: Platform) -> FastAPI:
     # ---- evidence & audit ----------------------------------------------------------
     @app.get("/api/v1/evidence")
     def evidence(a: Who, task_id: str | None = None, limit: Annotated[int, Query(ge=1, le=1000)] = 100) -> list[Any]:
-        read(a, "evidence")
-        return [e.model_dump() for e in platform.evidence.list(task_id=task_id, limit=limit)]
+        return [e.model_dump() for e in platform.visible_evidence(a, task_id=task_id, limit=limit)]
 
     @app.get("/api/v1/evidence/{evidence_id}")
     def evidence_one(evidence_id: str, a: Who) -> dict[str, Any]:
-        read(a, evidence_id)
-        return platform.evidence.get(evidence_id).model_dump()
+        return platform.get_evidence(a, evidence_id).model_dump()
 
     @app.get("/api/v1/audit")
     def audit(a: Who, after_seq: Annotated[int, Query(ge=0)] = 0,
               limit: Annotated[int, Query(ge=1, le=1000)] = 100) -> list[Any]:
-        read(a, "audit")
+        read_audit(a)
         return [e.model_dump() for e in platform.audit.list(limit=limit, after_seq=after_seq)]
 
     @app.get("/api/v1/audit/verify")
     def audit_verify(a: Who) -> dict[str, Any]:
-        read(a, "audit")
+        read_audit(a)
         return platform.audit.verify().model_dump()
 
     @app.get("/api/v1/integrity/verify")
     def integrity_verify(a: Who) -> dict[str, Any]:
-        read(a, "audit")
+        read_audit(a)
         return platform.verify_integrity()
 
     @app.get("/api/v1/models")

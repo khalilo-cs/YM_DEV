@@ -11,6 +11,10 @@
 - Stage 6: HTTP API `/api/v1`, CLI.
 - Stage 7: integrity cross-check endpoint `/api/v1/integrity/verify`.
 - Stage 8: resilience benchmark harness (`yemendev bench`), compound-failure scenarios, mutation check.
+- Stage 9: per-project memberships (`/projects/{id}/members`, `yemendev project grant|revoke|members`), token expiry (`--ttl-days`), API rate limiting and failed-auth lockout; DB migration 2.
+
+### Changed (breaking)
+- Non-admin users need a project membership to see or act on a project. Audit endpoints are admin-only.
 
 ### Security (stage 7 audit, see docs/AUDIT_REPORT.md)
 - CRITICAL: sandboxed project code could write the platform DB — fixed via privilege separation.

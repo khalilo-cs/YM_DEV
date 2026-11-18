@@ -22,4 +22,6 @@ Platform DB (approvals, tokens, evidence, memory), HMAC audit key, registered pr
 | Path traversal / symlink writes | Normalized relative patch paths; per-component symlink refusal; root re-validation on use | - |
 | Audit tampering | HMAC chain, key outside DB (0600), evidence anchored in chain | Key + DB both compromised → forgeable; tail truncation needs external head |
 | Secret leakage | `.env`/keys never read by scanner nor copied into sandbox; redaction on audit/evidence; tokens hashed | Pattern-based redaction can miss novel formats |
-| DoS via large requests | Body limit (Content-Length and chunked), list limits | No rate limiting (A-14) |
+| DoS via large/many requests | Body limit (Content-Length and chunked), list limits, per-credential rate limit, failed-auth lockout | Per process only; behind a proxy all clients share the proxy IP |
+| Cross-project access by a legitimate user | Memberships; token role is a ceiling; scoped lists, reads and approval decisions; audit admin-only | Only global admins manage members |
+| Stolen long-lived token | Mandatory expiry (default 90 d), revocation | No refresh/rotation flow yet |

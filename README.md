@@ -27,8 +27,9 @@ uv venv && uv pip install -e ".[dev]"
 export YEMENDEV_DATA_DIR=$PWD/.yemendev
 .venv/bin/yemendev init --actor alice              # prints an admin token once
 export YEMENDEV_TOKEN=ydv_...                       # alice's token
-.venv/bin/yemendev token issue bob --role operator  # a second human, to approve alice's plans
+.venv/bin/yemendev token issue bob --role operator  # a second human, to approve alice's plans (90-day token)
 .venv/bin/yemendev project add myproj /abs/path/to/project
+.venv/bin/yemendev project grant <project_id> human:bob --role operator   # access is per project
 .venv/bin/yemendev task repair <project_id> [--plan plan.json]
 .venv/bin/yemendev approvals list
 YEMENDEV_TOKEN=<bob's token> .venv/bin/yemendev approvals approve <approval_id>

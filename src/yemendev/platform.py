@@ -21,10 +21,11 @@ from yemendev.core.contracts import (
     new_id,
 )
 from yemendev.core.faults import NO_FAULTS, FaultInjector
-from yemendev.evidence.store import EvidenceBody, EvidenceStore
-from yemendev.governance.actors import Actor
-from yemendev.governance.approvals import ApprovalRequest, ApprovalService
+from yemendev.evidence.store import EvidenceBody, EvidenceRecord, EvidenceStore
+from yemendev.governance.actors import ROLE_RANK, Actor, Role
+from yemendev.governance.approvals import ApprovalRequest, ApprovalService, ApprovalStatus
 from yemendev.governance.guard import Guard
+from yemendev.governance.membership import Member, MembershipStore
 from yemendev.governance.policy import Action, PolicyEngine
 from yemendev.learning.skills import Skill, SkillEngine
 from yemendev.memory.engine import MemoryEngine
@@ -59,7 +60,8 @@ class Platform:
             os.chmod(f, 0o600)  # audit F3: platform DB must not be world-readable
         self.audit = AuditLog(self.db, load_or_create_key(settings.keys_dir / "audit.key"))
         self.policy = PolicyEngine()
-        self.guard = Guard(self.policy, self.audit)
+        self.members = MembershipStore(self.db)
+        self.guard = Guard(self.policy, self.audit, self.members)
         self.approvals = ApprovalService(self.db, self.policy, settings.approval_ttl_seconds)
         self.evidence = EvidenceStore(self.db, on_record=lambda r: self.audit.record(
             actor=r.actor, action="evidence.recorded", target=r.id, outcome=r.outcome,
@@ -98,9 +100,96 @@ class Platform:
             if "UNIQUE" in str(exc):
                 raise ConflictError("a project with this path is already registered") from exc
             raise
+        self.members.grant(p.id, actor.ref, Role.ADMIN, granted_by=actor.ref)  # registrant owns the project
         self.audit.record(actor=actor.ref, action=Action.REGISTER_PROJECT.value, target=p.id, outcome="ok",
                           details={"name": p.name})
         return p
+
+    # ---- membership (per-project authorization) --------------------------------------
+    def grant_member(self, actor: Actor, project_id: str, actor_ref: str, role: Role) -> Member:
+        self.project(project_id)
+        self.guard.require(actor, Action.MANAGE_MEMBERS, project_id, project_id=project_id)
+        eff = self.guard.effective(actor, project_id)
+        if eff is None or ROLE_RANK[role] > ROLE_RANK[eff.role]:
+            raise PermissionDeniedError("cannot grant a role higher than your own on this project")
+        m = self.members.grant(project_id, actor_ref, role, granted_by=actor.ref)
+        self.audit.record(actor=actor.ref, action=Action.MANAGE_MEMBERS.value, target=project_id, outcome="granted",
+                          details={"member": actor_ref, "role": role.value})
+        return m
+
+    def revoke_member(self, actor: Actor, project_id: str, actor_ref: str) -> None:
+        self.guard.require(actor, Action.MANAGE_MEMBERS, project_id, project_id=project_id)
+        self.members.revoke(project_id, actor_ref)
+        self.audit.record(actor=actor.ref, action=Action.MANAGE_MEMBERS.value, target=project_id, outcome="revoked",
+                          details={"member": actor_ref})
+
+    def list_members(self, actor: Actor, project_id: str) -> list[Member]:
+        self.require_read(actor, project_id)
+        return self.members.list(project_id)
+
+    def require_read(self, actor: Actor, project_id: str) -> Project:
+        p = self.project(project_id)
+        self.guard.require(actor, Action.READ, project_id, project_id=project_id)
+        return p
+
+    def visible_projects(self, actor: Actor) -> list[Project]:
+        self.guard.require(actor, Action.READ, "projects")
+        return [p for p in self.projects() if self.guard.can_read(actor, p.id)]
+
+    # ---- approvals (the authorization boundary for decisions) ------------------------
+    def _approval_project(self, req: ApprovalRequest) -> str | None:
+        return req.target if req.action is Action.APPLY_PATCH else None
+
+    def get_approval(self, actor: Actor, approval_id: str) -> ApprovalRequest:
+        req = self.approvals.get(approval_id)
+        pid = self._approval_project(req)
+        self.guard.require(actor, Action.READ, approval_id, project_id=pid)
+        return req
+
+    def visible_approvals(self, actor: Actor, status: ApprovalStatus | None = None) -> list[ApprovalRequest]:
+        self.guard.require(actor, Action.READ, "approvals")
+        out = []
+        for a in self.approvals.list(status=status):
+            pid = self._approval_project(a)
+            if pid is None or self.guard.can_read(actor, pid):
+                out.append(a)
+        return out
+
+    def decide_approval(self, actor: Actor, approval_id: str, approve: bool, reason: str = "") -> ApprovalRequest:
+        """Project-scoped decision: deciding a patch approval needs operator rights on *that* project."""
+        req = self.approvals.get(approval_id)
+        pid = self._approval_project(req)
+        self.guard.require(actor, Action.DECIDE_APPROVAL, approval_id, project_id=pid)
+        eff = self.guard.effective(actor, pid) if pid else actor
+        if eff is None:  # unreachable after require(); explicit so it survives python -O
+            raise PermissionDeniedError("no access to this project")
+        r = self.approvals.decide(approval_id, eff, approve, reason)
+        self.audit.record(actor=actor.ref, action=Action.DECIDE_APPROVAL.value, target=approval_id,
+                          outcome=r.status.value, details={"reason": reason, "project_id": pid})
+        return r
+
+    # ---- evidence (filtered to readable projects) ------------------------------------
+    def visible_evidence(self, actor: Actor, task_id: str | None = None, limit: int = 100) -> list[EvidenceRecord]:
+        self.guard.require(actor, Action.READ, "evidence")
+        recs = self.evidence.list(task_id=task_id, limit=limit)
+        readable: dict[str, bool] = {}
+        out = []
+        for r in recs:
+            if r.target not in readable:
+                readable[r.target] = self._is_project(r.target) and self.guard.can_read(actor, r.target)
+            if readable[r.target]:
+                out.append(r)
+        return out
+
+    def get_evidence(self, actor: Actor, evidence_id: str) -> EvidenceRecord:
+        r = self.evidence.get(evidence_id)
+        if not (self._is_project(r.target) and self.guard.can_read(actor, r.target)):
+            raise PermissionDeniedError("no access to this evidence")
+        return r
+
+    def _is_project(self, project_id: str) -> bool:
+        with self.db.read() as conn:
+            return conn.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,)).fetchone() is not None
 
     def project(self, project_id: str) -> Project:
         with self.db.read() as conn:
@@ -132,8 +221,8 @@ class Platform:
             return [Project(**dict(r)) for r in conn.execute("SELECT * FROM projects ORDER BY created_at")]
 
     def scan_project(self, actor: Actor, project_id: str, task_id: str | None = None) -> tuple[str, ProjectSnapshot]:
-        self.guard.require(actor, Action.SCAN_PROJECT, project_id)
         p = self.project(project_id)
+        self.guard.require(actor, Action.SCAN_PROJECT, project_id, project_id=project_id)
         root = self.project_root(project_id)
         snap = self.scanner.scan(root)
         sid = new_id("scn")

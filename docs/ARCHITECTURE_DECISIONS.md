@@ -8,3 +8,5 @@
 | [0004](adr/0004-hmac-chained-audit.md) | HMAC hash-chained audit log | Accepted |
 | [0005](adr/0005-sandbox-process-isolation.md) | Process-level sandbox with network namespace | Accepted |
 | [0006](adr/0006-full-content-patches.md) | Repairs as full-content patches with original-hash preconditions | Accepted |
+| [0007](adr/0007-project-scoped-authorization.md) | Project-scoped authorization, token role as ceiling | Accepted |
+| [0008](adr/0008-rate-limiting-and-token-expiry.md) | In-process rate limiting and mandatory token expiry | Accepted |
