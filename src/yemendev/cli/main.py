@@ -169,6 +169,23 @@ def cmd_audit(args: argparse.Namespace) -> int:
     return 0 if v.valid else 2
 
 
+def cmd_bench(args: argparse.Namespace) -> int:
+    from yemendev.benchmarks.resilience import run_benchmark
+
+    rep = run_benchmark(seed=args.seed, full=args.full, only=args.only or None)
+    out = Path(args.out) if args.out else None
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(rep.model_dump_json(indent=2))
+    for r in rep.results:
+        print(f"{'PASS' if r.correct else 'FAIL'}  {r.scenario:55s} expected={r.expected_status:12s} "
+              f"actual={r.actual_status:12s} {r.seconds_to_terminal:6.2f}s")
+    _print(rep.summary)
+    if out:
+        print(f"report written to {out}")
+    return 0 if rep.summary["correct"] == rep.summary["scenarios"] else 3
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     loopback = {"127.0.0.1", "::1", "localhost"}
     if args.host not in loopback and not args.allow_remote:
@@ -242,6 +259,13 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("audit")
     s.add_argument("--expected-head")
     s.set_defaults(fn=cmd_audit)
+
+    s = sub.add_parser("bench", help="run the resilience benchmark (real sandbox, real tests, injected failures)")
+    s.add_argument("--seed", type=int, default=7)
+    s.add_argument("--full", action="store_true", help="all 9 crash points (default: 3)")
+    s.add_argument("--only", nargs="*", help="scenario names to run")
+    s.add_argument("--out", help="write JSON report here")
+    s.set_defaults(fn=cmd_bench)
 
     s = sub.add_parser("serve")
     s.add_argument("--host", default="127.0.0.1")

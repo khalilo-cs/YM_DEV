@@ -49,11 +49,17 @@ Last reviewed: 2026-11-17 (stage 7 independent audit). Statuses:
 | HTTP API `/api/v1` | VERIFIED (local) | `api/app.py` | `tests/integration/test_api.py`; real `uvicorn` + `curl` | No TLS, no rate limiting |
 | CLI | TESTED | `cli/main.py` | `tests/integration/test_cli.py` | - |
 
+## Research & benchmarking
+
+| Feature | Status | Location | Tests / evidence | Known limitations |
+|---|---|---|---|---|
+| Resilience benchmark harness (15 scenarios incl. 2 compound failures, seeded, JSON reports) | TESTED | `benchmarks/` | `tests/regression/test_benchmark.py`; full run 15/15; mutation check 3/3 caught | Not comparative; synthetic fixtures; see BENCHMARK_METHODOLOGY |
+
 ## Not started
 
 Predictive risk engine · anomaly detection · counterfactual/compound failure simulation (beyond
 fault points) · digital immune system · continuity passport · synchronization queue · continuity
-debt metric · benchmark framework · web/desktop/mobile UI · i18n (Arabic/English) · PostgreSQL ·
+debt metric · comparative benchmark baselines · web/desktop/mobile UI · i18n (Arabic/English) · PostgreSQL ·
 OpenTelemetry · Tree-sitter/LSP · container sandbox backend · per-project authorization.
 
 ## MVP acceptance (directive §20)

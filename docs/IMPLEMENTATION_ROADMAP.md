@@ -12,7 +12,7 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 5 | ORION persistent orchestration, crash resume, fault injection | **Done - 102 tests total; MVP criteria 1-18 demonstrated** |
 | 6 | HTTP API + CLI | **Done - 115 tests total** |
 | 7 | Independent audit of stages 1-6, fixes, regression tests | **Done - see AUDIT_REPORT.md** |
-| 8 | Resilience benchmark harness (reproducible runs, fault scenarios, metrics, stored results) | Next |
-| 9 | Per-project authorization (A-11), token expiry, rate limiting | Planned |
+| 8 | Resilience benchmark harness (reproducible runs, fault scenarios, metrics, stored results) | **Done - 15/15, mutation-checked** |
+| 9 | Per-project authorization (A-11), token expiry, rate limiting | Next |
 | 10 | Container sandbox backend (Docker) for non-root hosts | Planned |
 | later | Risk engine, sync queue, UI (web/desktop/mobile), i18n, real-model evaluation | Not started |

@@ -10,5 +10,3 @@ dist/
 .yemendev/
 *.sqlite3
 .env
-benchmarks/results/*.json
-!benchmarks/results/.gitkeep
