@@ -25,3 +25,21 @@ def test_benchmark_compound_scenarios_hold_invariants():
 def test_scenario_catalogue():
     names = [n for n, _, _ in scenarios(full=True)]
     assert len(names) == len(set(names)) == 6 + 9
+
+
+def _docker_ready():
+    from yemendev.core.config import SandboxSettings
+    from yemendev.sandbox.docker_backend import docker_availability
+    return docker_availability(SandboxSettings(), use_cache=False).available
+
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize("backend", ["process", pytest.param("docker", marks=pytest.mark.skipif(
+    not _docker_ready(), reason="docker sandbox unavailable"))])
+def test_regression_drift_scenario_is_backend_independent(backend):
+    """Regression: the drift scenario relied on a host file the container backend (correctly) cannot reach,
+    so under docker the drift never happened and the scenario reported a false failure."""
+    [r] = run_benchmark(seed=7, only=["compound_drift_then_rollback"], backend=backend).results
+    assert r.correct and r.actual_status == "rolled_back", r

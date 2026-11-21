@@ -192,18 +192,29 @@ def _sc_compound_crash_plus_human_edit(ctx: Ctx) -> Any:
 
 
 def _sc_compound_drift_rollback(ctx: Ctx) -> Any:
-    """Simulation passes, then the environment changes before verification -> must roll back byte-exactly."""
-    shared = Path(tempfile.mkdtemp(prefix="ydv-bench-"))
-    os.chmod(shared, 0o777)  # noqa: S103 - external shared resource the sandbox may write
-    counter = shared / "n"
-    (ctx.root / "tests/test_env.py").write_text(
-        f"from pathlib import Path\n\n\ndef test_env():\n    p = Path({str(counter)!r})\n"
-        "    n = int(p.read_text()) + 1 if p.exists() else 1\n    p.write_text(str(n))\n    assert n <= 3\n")
-    before = {r: ctx.read(r) for r in (ctx.meta["service"], ctx.meta["extra"])}
-    st, msg, p, tid = _run_to_end(ctx, _plan(ctx, touch_extra=True))
-    after = {r: ctx.read(r) for r in before}
-    shutil.rmtree(shared, ignore_errors=True)
-    return "rolled_back", st, msg, p, tid, [] if after == before else ["rollback was not byte-exact"]
+    """Crash right after the change is applied; during the outage a module the tests depend on (outside
+    the plan) changes, so verification sees a previously passing test fail.
+
+    Required: roll back the plan's files byte-exactly, and do NOT revert the external change.
+    Backend-independent (regression: the earlier version relied on a host file the sandbox could reach,
+    which the container backend correctly blocks, so the drift never happened there).
+    """
+    core = ctx.root / f"{ctx.meta['package']}/core.py"
+    drifted = core.read_text().replace("return x * k", "return x * k + 1  # changed during the outage")
+
+    def drift(c: Ctx) -> None:
+        core.write_text(drifted)
+
+    plan_files = (ctx.meta["service"], ctx.meta["extra"])
+    before = {r: ctx.read(r) for r in plan_files}
+    st, msg, p, tid = _run_to_end(ctx, _plan(ctx, touch_extra=True), crash_point="step.execute.before_finish",
+                                  between=drift)
+    notes = []
+    if st is TaskStatus.ROLLED_BACK and {r: ctx.read(r) for r in plan_files} != before:
+        notes.append("rollback was not byte-exact")
+    if core.read_text() != drifted:
+        notes.append("external change made during the outage was overwritten")
+    return "rolled_back", st, msg, p, tid, notes
 
 
 def _sc_offline(ctx: Ctx) -> Any:
@@ -251,7 +262,8 @@ def _git_commit() -> str | None:
         return None
 
 
-def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = None) -> BenchmarkReport:
+def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = None,
+                  backend: str = "process") -> BenchmarkReport:
     started = iso()
     results: list[ScenarioResult] = []
     for i, (name, category, fn) in enumerate(scenarios(full)):
@@ -261,7 +273,7 @@ def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = No
         with _tmp() as base:
             meta = renamed_api_project(base / "proj", sc_seed)
             settings = Settings(data_dir=base / "data", workspaces_root=base / "ws",
-                                sandbox=SandboxSettings(timeout_seconds=60))
+                                sandbox=SandboxSettings(timeout_seconds=60, backend=backend))
             ctx = Ctx(root=base / "proj", meta=meta, settings=settings, faults=FaultInjector())
             t0 = time.monotonic()
             try:
@@ -298,6 +310,7 @@ def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = No
     return BenchmarkReport(
         started_at=started, finished_at=iso(), seed=seed, git_commit=_git_commit(),
         environment={"python": sys.version.split()[0], "platform": pyplatform.platform(), "cpus": os.cpu_count(),
+                     "sandbox_backend": backend,
                      "euid": os.geteuid()},
         caveats=[
             "Only YEMENDEV itself is measured; no comparative baselines (conventional tooling, other agents) "

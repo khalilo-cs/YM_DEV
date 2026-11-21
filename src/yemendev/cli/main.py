@@ -172,7 +172,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
 def cmd_bench(args: argparse.Namespace) -> int:
     from yemendev.benchmarks.resilience import run_benchmark
 
-    rep = run_benchmark(seed=args.seed, full=args.full, only=args.only or None)
+    rep = run_benchmark(seed=args.seed, full=args.full, only=args.only or None, backend=args.backend)
     out = Path(args.out) if args.out else None
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -287,6 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("bench", help="run the resilience benchmark (real sandbox, real tests, injected failures)")
     s.add_argument("--seed", type=int, default=7)
+    s.add_argument("--backend", choices=["process", "docker", "auto"], default="process")
     s.add_argument("--full", action="store_true", help="all 9 crash points (default: 3)")
     s.add_argument("--only", nargs="*", help="scenario names to run")
     s.add_argument("--out", help="write JSON report here")
