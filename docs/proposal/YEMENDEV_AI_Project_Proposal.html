@@ -1,0 +1,435 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>YEMENDEV AI — وثيقة المشروع الشاملة</title><style>
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:400;src:url(fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+066A-066D;}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:600;src:url(fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+066A-066D;}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:700;src:url(fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+066A-066D;}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:400;src:url(fonts/ibm-plex-sans-arabic-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215;}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:600;src:url(fonts/ibm-plex-sans-arabic-latin-600-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215;}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:700;src:url(fonts/ibm-plex-sans-arabic-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215;}
+@page{size:A4;margin:16mm 15mm 18mm 15mm;}
+@page:first{margin:0;}
+:root{--teal:#0f6e6e;--teal-l:#e7f2f2;--ink:#1d2327;--muted:#5d6670;--gold:#d4a017;--red:#b4442e;--line:#dde2e6;}
+*{box-sizing:border-box;}
+html{direction:rtl;}
+body{font-family:'IBM Plex Sans Arabic',DejaVu Sans,sans-serif;color:var(--ink);font-size:10pt;line-height:1.68;margin:0;}
+.en{font-family:'IBM Plex Sans Arabic',DejaVu Sans,sans-serif;}
+h1{font-size:19pt;color:var(--teal);margin:0 0 4mm;padding-bottom:2mm;border-bottom:2.5px solid var(--teal);line-height:1.4;}
+h2{font-size:13.2pt;color:var(--teal);margin:4.5mm 0 1.6mm;line-height:1.4;}
+h3{font-size:11.2pt;margin:4mm 0 1mm;color:#24303a;}
+p{margin:1.2mm 0 2mm;text-align:justify;}
+ul,ol{margin:1mm 0 3mm;padding-inline-start:6mm;}
+li{margin:0.6mm 0;}
+.section{break-before:page;}
+.nobreak{break-inside:avoid;}
+table{width:100%;border-collapse:collapse;margin:2mm 0 4mm;font-size:9.4pt;line-height:1.55;break-inside:auto;}
+tr{break-inside:avoid;}
+th{background:var(--teal);color:#fff;font-weight:600;padding:2mm 2.2mm;text-align:right;}
+td{padding:1.7mm 2.2mm;border-bottom:1px solid var(--line);vertical-align:top;}
+tr:nth-child(even) td{background:#f7f9fa;}
+td.num,th.num{text-align:left;white-space:nowrap;}
+tr.total td{font-weight:700;background:var(--teal-l)!important;border-top:2px solid var(--teal);}
+.box{border:1px solid var(--line);border-inline-start:5px solid var(--teal);background:#f8fbfb;padding:2.6mm 4mm;margin:3mm 0;border-radius:3px;break-inside:avoid;}
+.box.warn{border-inline-start-color:var(--gold);background:#fffaf0;}
+.box.red{border-inline-start-color:var(--red);background:#fdf5f3;}
+.box h3{margin-top:0;}
+.tag{display:inline-block;font-size:8.2pt;padding:0.2mm 2mm;border-radius:8px;font-weight:600;white-space:nowrap;}
+.t-ok{background:#dff1e6;color:#17663a;}.t-part{background:#fff1cc;color:#7a5c00;}.t-no{background:#eceff2;color:#59636e;}
+.t-est{background:#e9e4f7;color:#4a3a99;}
+.kpis{display:flex;gap:2.5mm;flex-wrap:wrap;margin:2mm 0;}
+.kpi{flex:1 1 30%;border:1px solid var(--line);border-radius:6px;padding:1.6mm 2.5mm;text-align:center;background:#fff;break-inside:avoid;}
+.kpi b{display:block;font-size:15pt;color:var(--teal);line-height:1.3;}
+.kpi span{font-size:8.8pt;color:var(--muted);}
+.fig{margin:3mm 0 4mm;break-inside:avoid;text-align:center;}
+.fig .cap{font-size:8.8pt;color:var(--muted);margin-top:1mm;}
+.cover{height:297mm;width:210mm;background:linear-gradient(160deg,#0b4f4f 0%,#0f6e6e 55%,#17807a 100%);color:#fff;padding:32mm 22mm;position:relative;break-after:page;}
+.cover .brand{font-size:40pt;font-weight:700;letter-spacing:1px;direction:ltr;text-align:right;line-height:1.2;}
+.cover .full{font-size:13pt;opacity:.92;direction:ltr;text-align:right;margin-top:2mm;}
+.cover .slogan{font-size:12pt;margin-top:10mm;opacity:.95;direction:ltr;text-align:right;letter-spacing:.5px;}
+.cover .title{font-size:24pt;font-weight:700;margin-top:26mm;line-height:1.5;}
+.cover .sub{font-size:13pt;opacity:.95;margin-top:3mm;line-height:1.8;}
+.cover .meta{position:absolute;bottom:26mm;right:22mm;left:22mm;font-size:10.5pt;border-top:1px solid rgba(255,255,255,.4);padding-top:5mm;line-height:2;}
+.cover .stamp{display:inline-block;border:1px solid rgba(255,255,255,.6);border-radius:14px;padding:1mm 4mm;font-size:9.5pt;margin-inline-start:2mm;}
+.toc{list-style:none;padding:0;columns:1;}
+.toc li{display:flex;border-bottom:1px dotted #c9d0d6;padding:1.1mm 0;}
+.toc li span:first-child{flex:1;}
+.small{font-size:8.8pt;color:var(--muted);}
+code{font-family:DejaVu Sans Mono,monospace;font-size:8.6pt;background:#f1f3f5;padding:0 1mm;border-radius:2px;direction:ltr;unicode-bidi:embed;}
+.two{display:flex;gap:4mm;}.two>div{flex:1;}
+.rng{white-space:nowrap;}
+h1,h2,h3{break-after:avoid;}
+.fig.cost svg{width:86%;}
+</style></head><body>
+<div class="cover">
+  <div class="brand">YEMENDEV AI</div>
+  <div class="full">Global Autonomous Digital Resilience &amp; Evolution Platform</div>
+  <div class="slogan">Understand · Predict · Protect · Recover · Evolve</div>
+  <div class="title">وثيقة المشروع الشاملة</div>
+  <div class="sub">الفكرة والرؤية · ما تم إنجازه فعليًا · البنية التقنية · الأمان<br>
+  خارطة الطريق والجدول الزمني · الفريق · التكاليف · المتطلبات · المخاطر</div>
+  <div class="meta">
+    الإصدار 1.0 <span class="stamp">وثيقة تخطيط</span><br>
+    التاريخ: 21 نوفمبر 2026<br>
+    حالة المنتج: نواة تعمل ومُختبرة (الإصدار <bdi dir="ltr">0.1.0</bdi>) — ليست منتجًا جاهزًا للإنتاج بعد<br>
+    كل أرقام التكلفة والوقت في هذه الوثيقة <b>تقديرات تخطيطية مبنية على افتراضات مذكورة صراحة</b>
+  </div>
+</div><div><h1>المحتويات</h1><ul class="toc"><li><span>1. الملخص التنفيذي</span></li><li><span>2. المشكلة والفرصة</span></li><li><span>3. الرؤية والحل</span></li><li><span>4. ما تم إنجازه فعليًا (بالأدلة)</span></li><li><span>5. البنية التقنية</span></li><li><span>6. الأمان والحوكمة</span></li><li><span>7. الابتكارات البحثية المقترحة</span></li><li><span>8. المستخدمون ونموذج العمل</span></li><li><span>9. خارطة الطريق والجدول الزمني</span></li><li><span>10. الفريق المطلوب</span></li><li><span>11. التكاليف التقديرية</span></li><li><span>12. المتطلبات اللازمة</span></li><li><span>13. المخاطر وخطط التخفيف</span></li><li><span>14. مؤشرات النجاح</span></li><li><span>15. الخطوات التالية الفورية</span></li><li><span>16. ملحق: المصطلحات والمراجع</span></li></ul></div>
+<div class="section"><h1>1. الملخص التنفيذي</h1>
+<p><b>YEMENDEV AI</b> منصة هندسية لـ<b>المرونة الرقمية وتطور البرمجيات</b>. تفهم المشروع البرمجي بكامله،
+وتكتشف أعطاله، وتقترح إصلاحات وتجربها في بيئة معزولة. ثم تطلب موافقة بشرية مربوطة بالتعديل المحدد،
+وتنفّذ الإصلاح وتتحقق منه بشكل مستقل، وتتراجع عنه تلقائيًا إن فشل. وتحتفظ بدليل موثّق لكل خطوة،
+وتتعلّم مهارات قابلة لإعادة الاستخدام، <b>دون الحاجة إلى اتصال دائم بالإنترنت</b>.</p>
+<p>الفكرة الجوهرية أن النظام <b>لا يفترض أن نموذج الذكاء الاصطناعي على حق</b>. كل مخرجات النماذج تُعامَل كمدخلات
+غير موثوقة، ولا يُعتبر أي إصلاح ناجحًا إلا بعد تحقق مستقل وسجل أدلة.</p>
+
+<div class="kpis">
+ <div class="kpi"><b>182</b><span>اختبارًا آليًا ناجحًا</span></div>
+ <div class="kpi"><b>18/18</b><span>معيار الحد الأدنى للمنتج (MVP) مُثبت</span></div>
+ <div class="kpi"><b>15/15</b><span>سيناريو مرونة ناجح على بيئتي العزل</span></div>
+ <div class="kpi"><b>2</b><span>ثغرة حرجة اكتُشفت وأُصلحت بالتدقيق الذاتي</span></div>
+ <div class="kpi"><b>12</b><span>شهرًا تقديرًا للوصول للإصدار 1.0</span></div>
+ <div class="kpi"><b>85</b><span>شهر-عمل تقديرًا للفريق</span></div>
+</div>
+
+<h2>أين نحن الآن؟</h2>
+<p>نواة المنصة <b>مبنية وتعمل ومُختبرة</b> على عشر مراحل. تشمل التخزين، والتدقيق المقاوم للتلاعب، والموافقات البشرية،
+والتنفيذ المعزول (عمليات مقيّدة وحاويات Docker)، والتشخيص، والإصلاح مع التراجع، والتعلّم، والاستئناف بعد الانقطاع،
+وواجهة HTTP وسطر أوامر. <b>لم تُبنَ بعد:</b> واجهات المستخدم الرسومية (ويب، سطح مكتب، جوال)، ومحرك المخاطر،
+والمزامنة بين الأجهزة، والتقييم مع نماذج ذكاء اصطناعي حقيقية.</p>
+
+<h2>ما المطلوب للوصول إلى الإصدار 1.0؟</h2>
+<table>
+<tr><th>البند</th><th>التقدير</th></tr>
+<tr><td>المدة وحجم العمل</td><td><span class="tag t-est">تقدير</span> 12 شهرًا و85 شهر-عمل بفريق من 11 دورًا (بعضها جزئي)؛ 18–24 شهرًا بفريق أصغر</td></tr>
+<tr><td>التكلفة — سيناريو أ (فريق إقليمي عن بُعد)</td><td class="num"><bdi dir="ltr" class="rng">$211,301 – $300,311</bdi></td></tr>
+<tr><td>التكلفة — سيناريو ب (فريق مختلط)</td><td class="num"><bdi dir="ltr" class="rng">$340,676 – $429,686</bdi></td></tr>
+<tr><td>التكلفة — سيناريو ج (أسعار دولية)</td><td class="num"><bdi dir="ltr" class="rng">$853,576 – $942,586</bdi></td></tr>
+<tr><td>المسار الأدنى: إصدار تجريبي خاص خلال 6 أشهر بـ 3 أشخاص</td><td class="num"><bdi dir="ltr" class="rng">$34,155 – $41,055</bdi></td></tr>
+</table>
+<div class="box warn"><h3>تنبيه مهم حول الأرقام</h3>
+أرقام التكلفة <b>ليست بيانات سوق</b>. هي افتراضات تخطيطية للرواتب والخدمات (القسم 11 يذكر كل افتراض)، وتشمل
+احتياطيًا بنسبة 15%. قبل اعتمادها كميزانية يجب استبدالها بعروض أسعار فعلية من السوق المحلي.
+أما أرقام "ما تم إنجازه" فهي <b>مقاسة فعليًا</b> من المستودع والاختبارات.</div>
+
+<div class="box"><h3>التوصية</h3>البدء بـ<b>المسار الأدنى</b> لمدة 6 أشهر، للوصول إلى إصدار تجريبي خاص مع 3–5 جهات تجريبية
+(شركات برمجيات وجامعات). ثم التوسع إلى سيناريو أ أو ب بناءً على نتائج التجربة، وبعد إثبات القيمة للمستخدمين الفعليين.</div>
+</div>
+<div class="section"><h1>2. المشكلة والفرصة</h1>
+<h2>المشكلة</h2>
+<ul>
+<li><b>الأنظمة البرمجية تتعطل، ومعرفة إصلاحها تضيع.</b> يغادر المطورون، وتتقادم الوثائق، ويُعاد حل المشكلة نفسها مرارًا.</li>
+<li><b>أدوات الذكاء الاصطناعي البرمجية الحالية تقترح تعديلات دون ضمانات.</b> قد يبدو التعديل صحيحًا وهو يكسر شيئًا آخر،
+وغالبًا لا يوجد تحقق مستقل، ولا تراجع آلي، ولا سجل يوضح ماذا حدث ولماذا.</li>
+<li><b>الاتصال بالإنترنت والكهرباء غير مستقرَّين</b> في مناطق كثيرة، منها اليمن. الأدوات التي تعتمد على السحابة
+باستمرار تتوقف حين ينقطع الاتصال، وقد تضيع معها حالة العمل.</li>
+<li><b>الثقة والحوكمة:</b> المؤسسات لا تستطيع منح أداة آلية صلاحية تعديل أنظمتها دون موافقات محددة وسجل تدقيق
+لا يمكن التلاعب به.</li>
+</ul>
+<h2>الفرصة</h2>
+<p>منصة تجمع <b>الفهم العميق للمشروع</b> مع <b>الإصلاح المُتحقق منه</b> و<b>الحوكمة الصارمة</b>
+و<b>العمل دون اتصال</b>. هذه منصة تُبنى للعمل في البيئات الصعبة أولًا، ثم تُقدَّم عالميًا.</p>
+<div class="box warn">لا تحتوي هذه الوثيقة على أرقام لحجم السوق أو نسب الأعطال، لأنه لا توجد بين أيدينا مصادر موثّقة لها.
+<b>دراسة السوق مدرجة كبند عمل إلزامي</b> في الخطة، ولها ميزانية في القسم 11.</div>
+</div>
+<div class="section"><h1>3. الرؤية والحل</h1>
+<p>الشعار: <bdi dir="ltr" class="en">Understand. Predict. Protect. Recover. Evolve.</bdi> — <b>افهم. تنبّأ. احمِ. تعافَ. تطوّر.</b></p>
+<h2>بنية RACE-X</h2>
+<p><bdi dir="ltr" class="en">Resilient Adaptive Continual Engineering and Recovery Architecture</bdi>: حلقة هندسية تمر بها كل عملية تعديل.
+كل مرحلة فيها مكوّن مستقل له مدخلات ومخرجات محددة، ويمكن اختباره وحده.</p>
+<div class="fig"><svg viewBox="0 0 660 430" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Arabic"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0f6e6e"/></marker></defs><circle cx="330" cy="215" r="165" fill="none" stroke="#cfe3e3" stroke-width="16"/><text x="330" y="207" font-size="24" font-weight="700" text-anchor="middle" fill="#0f6e6e">RACE-X</text><text x="330" y="233" font-size="12" text-anchor="middle" fill="#555">حلقة الهندسة والتعافي المستمرة</text><path d="M313.0,55.5 Q277.6,53.8 250.0,76.0" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M222.5,95.9 Q192.9,115.4 183.6,149.6" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M173.1,181.9 Q160.5,215.0 173.1,248.1" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M183.6,280.4 Q192.9,314.6 222.5,334.1" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M250.0,354.0 Q277.6,376.2 313.0,374.5" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M347.0,374.5 Q382.4,376.2 410.0,354.0" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M437.5,334.1 Q467.1,314.6 476.4,280.4" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M486.9,248.1 Q499.5,215.0 486.9,181.9" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M476.4,149.6 Q467.1,115.4 437.5,95.9" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><path d="M410.0,76.0 Q382.4,53.8 347.0,55.5" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#ar)" opacity="0.82"/><rect x="272.0" y="30.0" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="330.0" y="48.0" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">رصد</text><text x="330.0" y="63.0" font-size="9.5" text-anchor="middle" fill="#777">Observe</text><rect x="175.01543337174195" y="61.51219592813368" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="233.01543337174195" y="79.51219592813368" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">فهم وذاكرة</text><text x="233.01543337174195" y="94.51219592813368" font-size="9.5" text-anchor="middle" fill="#777">Understand</text><rect x="115.07567481129968" y="144.01219592813368" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="173.07567481129968" y="162.01219592813368" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">تشخيص</text><text x="173.07567481129968" y="177.01219592813368" font-size="9.5" text-anchor="middle" fill="#777">Diagnose</text><rect x="115.07567481129965" y="245.98780407186632" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="173.07567481129965" y="263.9878040718663" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">اقتراح خطط</text><text x="173.07567481129965" y="278.9878040718663" font-size="9.5" text-anchor="middle" fill="#777">Plan</text><rect x="175.01543337174192" y="328.4878040718663" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="233.01543337174192" y="346.4878040718663" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">محاكاة</text><text x="233.01543337174192" y="361.4878040718663" font-size="9.5" text-anchor="middle" fill="#777">Simulate</text><rect x="271.99999999999994" y="360.0" width="116" height="40" rx="9" fill="#fff" stroke="#d4a017" stroke-width="2"/><text x="329.99999999999994" y="378.0" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">موافقة بشرية</text><text x="329.99999999999994" y="393.0" font-size="9.5" text-anchor="middle" fill="#777">Authorize</text><rect x="368.98456662825805" y="328.4878040718663" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="426.98456662825805" y="346.4878040718663" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">تنفيذ</text><text x="426.98456662825805" y="361.4878040718663" font-size="9.5" text-anchor="middle" fill="#777">Execute</text><rect x="428.9243251887003" y="245.98780407186638" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="486.9243251887003" y="263.9878040718664" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">تحقق مستقل</text><text x="486.9243251887003" y="278.9878040718664" font-size="9.5" text-anchor="middle" fill="#777">Verify</text><rect x="428.9243251887003" y="144.0121959281337" width="116" height="40" rx="9" fill="#fff" stroke="#b4442e" stroke-width="2"/><text x="486.9243251887003" y="162.0121959281337" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">تراجع عند الفشل</text><text x="486.9243251887003" y="177.0121959281337" font-size="9.5" text-anchor="middle" fill="#777">Rollback</text><rect x="368.9845666282581" y="61.51219592813371" width="116" height="40" rx="9" fill="#fff" stroke="#0f6e6e" stroke-width="2"/><text x="426.9845666282581" y="79.5121959281337" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">تعلّم بأدلة</text><text x="426.9845666282581" y="94.5121959281337" font-size="9.5" text-anchor="middle" fill="#777">Learn</text></svg><div class="cap">شكل 1: حلقة RACE-X. ذهبي = موافقة بشرية إلزامية، أحمر = تراجع آلي عند فشل التحقق</div></div>
+<h2>المبادئ غير القابلة للتفاوض</h2>
+<table>
+<tr><th>المبدأ</th><th>ماذا يعني عمليًا</th></tr>
+<tr><td>لا وظائف وهمية</td><td>أي ميزة غير مكتملة تُوسم صراحة: غير منفّذة، أو تجريبية، أو تحتاج نموذجًا. ولا نتائج نجاح مختلقة.</td></tr>
+<tr><td>الأدلة قبل الادعاء</td><td>كل خطوة مهمة تنتج سجل دليل مرتبطًا بسلسلة تدقيق مشفّرة.</td></tr>
+<tr><td>الإنسان يقرر</td><td>أي تعديل حساس يحتاج موافقة إنسان آخر، مربوطة بالتعديل نفسه، وصالحة لمرة واحدة ولمدة محددة.</td></tr>
+<tr><td>النموذج قد يخطئ</td><td>مخرجات الذكاء الاصطناعي غير موثوقة: تُفحص بمخطط، وتُحاكى في عزل، ثم يُتحقق منها.</td></tr>
+<tr><td>العمل دون اتصال أولًا</td><td>كل سير العمل الأساسي يعمل محليًا، ويُستأنف بعد انقطاع الكهرباء أو الشبكة.</td></tr>
+<tr><td>لا تعقيد مبكر</td><td>نظام موحّد بحدود داخلية واضحة؛ والفصل إلى خدمات منفصلة فقط عند وجود سبب مُثبت.</td></tr>
+</table>
+</div>
+<div class="section"><h1>4. ما تم إنجازه فعليًا (بالأدلة)</h1>
+<p>كل الأرقام في هذا القسم <b>مقاسة</b> من المستودع وتشغيل الاختبارات بتاريخ 21 نوفمبر 2026، على الفرع
+<code>ccr-5b7e38f8-g2boke</code> في المستودع <code>khalilo-cs/ym_dev</code>.</p>
+<table>
+<tr><th>المقياس</th><th class="num">القيمة</th></tr>
+<tr><td>أسطر الكود المصدري (Python)</td><td class="num">6,281 سطرًا في 59 ملفًا</td></tr>
+<tr><td>أسطر الاختبارات</td><td class="num">2,418 سطرًا في 25 ملفًا</td></tr>
+<tr><td>الاختبارات الآلية</td><td class="num">182 ناجحًا، 0 فاشلًا، 0 متخطّى</td></tr>
+<tr><td>فحص الأنواع والجودة</td><td class="num">mypy --strict وruff: لا أخطاء</td></tr>
+<tr><td>الثغرات المعروفة في التبعيات (pip-audit)</td><td class="num">لا شيء</td></tr>
+<tr><td>واجهة HTTP / أوامر سطر الأوامر</td><td class="num">32 مسارًا / 28 أمرًا وأمرًا فرعيًا</td></tr>
+<tr><td>جداول قاعدة البيانات / الترحيلات</td><td class="num">12 جدولًا / ترحيلان</td></tr>
+<tr><td>قرارات معمارية موثّقة (ADR)</td><td class="num">9</td></tr>
+</table>
+<h2>حالة الميزات</h2>
+<table><tr><th>الميزة</th><th>الحالة</th></tr><tr><td>التخزين المحلي وترحيلات قاعدة البيانات</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>سجل تدقيق مقاوم للتلاعب (سلسلة HMAC) + ربط الأدلة به</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>الموافقات البشرية المربوطة بالعملية ولمرة واحدة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>التفويض لكل مشروع + انتهاء صلاحية الرموز + تحديد المعدل</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>الذاكرة الحية (مصدر، صلاحية، كشف التناقض والتقادم)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>ماسح المشاريع ورسم التبعيات (Python)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>التنفيذ المعزول: عمليات مقيّدة + حاويات Docker</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>التشخيص (فرضيات موسومة بأنها غير مؤكدة)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>الإصلاح: محاكاة، تنفيذ، تحقق، تراجع حرفي</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>محرك المهارات والتعلّم من التجارب الناجحة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>الاستئناف بعد الانقطاع في 9 نقاط مختلفة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>واجهة HTTP (32 مسارًا) وسطر أوامر</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>مقياس المرونة (15 سيناريو، منها فشل مركّب)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>طبقة النماذج (واجهة متوافقة مع OpenAI)</td><td><span class="tag t-part">مُختبرة ببديل للبروتوكول فقط</span></td></tr><tr><td>واجهات رسومية: ويب، سطح مكتب، جوال</td><td><span class="tag t-no">لم تبدأ</span></td></tr><tr><td>محرك المخاطر والتنبؤ والتوأم الرقمي الكامل</td><td><span class="tag t-no">لم يبدأ</span></td></tr><tr><td>المزامنة بين الأجهزة + PostgreSQL متعدد المستخدمين</td><td><span class="tag t-no">لم يبدأ</span></td></tr><tr><td>الدعم الكامل للعربية والإنجليزية في الواجهات</td><td><span class="tag t-no">لم يبدأ</span></td></tr></table>
+<p class="small">مُختبر = اختبارات آلية ناجحة. مُتحقق منه = جُرّب ضمن سير عمل حقيقي كامل وأنتج أدلة. التفاصيل الكاملة في
+<code>docs/FEATURE_STATUS.md</code>.</p>
+
+<h2>سير العمل الذي يعمل اليوم من البداية للنهاية</h2>
+<ol>
+<li>تسجيل مشروع Python محلي وفحصه دون تنفيذ أي كود منه.</li>
+<li>تشغيل اختباراته مرتين داخل بيئة معزولة للتأكد من أن الفشل قابل للتكرار.</li>
+<li>تشخيص الفشل وتسجيل فرضيات موسومة بأنها "غير مؤكدة".</li>
+<li>اقتراح إصلاح من خطة بشرية، أو مهارة مُتحقق منها، أو نموذج ذكاء اصطناعي إن وُجد.</li>
+<li>محاكاة الإصلاح في نسخة معزولة، ورفضه إن لم يصلح شيئًا أو كسر اختبارًا كان ناجحًا.</li>
+<li>طلب موافقة من <b>إنسان آخر</b> غير صاحب الخطة، مربوطة بالتعديل المحدد.</li>
+<li>التنفيذ مع نقطة استعادة، ثم التحقق، ثم <b>التراجع الحرفي</b> إن فشل التحقق.</li>
+<li>تعلّم مهارة من الإصلاح الناجح. في الاختبارات، أصلحت مهارة متعلَّمة مشروعًا ثانيًا بنفس الخلل دون أي تدخل.</li>
+</ol>
+
+<h2>التدقيق الأمني الذاتي</h2>
+<p>أُجري تدقيق مستقل هاجم النظام فعليًا. من أبرز ما اكتُشف وأُصلح:</p>
+<ul>
+<li><b>حرجة:</b> اختبارات مشروع خبيث كتبت رمز مدير في قاعدة بيانات المنصة. أُصلحت بفصل الصلاحيات، ونقل مجلدات العمل خارج مجلد البيانات.</li>
+<li><b>حرجة:</b> على جهاز بدون فصل صلاحيات، وصل الكود الخبيث إلى خادم Docker، وهذا يساوي السيطرة على الجهاز. أصبحت المنصة ترفض التشغيل في هذه الحالة.</li>
+<li><b>عالية:</b> تجاوز لفصل المهام يسمح لصاحب الخطة بالموافقة عليها بنفسه، وثغرة استبدال جذر المشروع برابط رمزي.</li>
+<li><b>متوسطة:</b> تجاوز حد حجم الطلب، وحذف أدلة دون كشف، وخوارزمية تربيعية في تحليل التبعيات أصبحت أسرع بنحو 100 مرة.</li>
+</ul>
+<div class="box red"><h3>حدود يجب معرفتها</h3>
+<ul>
+<li>لم يُختبر أي نموذج ذكاء اصطناعي حقيقي، لعدم توفره في بيئة التطوير.</li>
+<li>التحقق من الإصلاح لا يكون أقوى من اختبارات المشروع نفسه، والمشروع الخبيث يستطيع تزوير نتائجه.</li>
+<li>كل التحقق تم في بيئة تطوير واحدة (Linux)، وليس على أجهزة المستخدمين الفعلية.</li>
+<li>بُني الجزء الحالي بمساعدة وكيل ذكاء اصطناعي برمجي. يحتاج الكود مراجعة بشرية خبيرة قبل الاعتماد عليه في الإنتاج.</li>
+</ul></div>
+</div>
+<div class="section"><h1>5. البنية التقنية</h1>
+<p>نظام موحّد (<bdi dir="ltr" class="en">modular monolith</bdi>) بحدود داخلية واضحة بين المحركات. تتواصل المحركات عبر عقود بيانات مُعرّفة الأنواع،
+ولا يربطها ببعض إلا مكان واحد هو "جذر التركيب".</p>
+<div class="fig"><svg viewBox="0 0 700 430" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Arabic"><text x="694" y="37" font-size="12" font-weight="700" text-anchor="start" fill="#444">الواجهات</text><rect x="478.4" y="10" width="111.6" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="534.1999999999999" y="31.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">سطر الأوامر</text><text x="534.1999999999999" y="46.0" font-size="9.5" text-anchor="middle" fill="#777">CLI</text><rect x="358.8" y="10" width="111.6" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="414.6" y="31.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">واجهة HTTP</text><text x="414.6" y="46.0" font-size="9.5" text-anchor="middle" fill="#777">REST API /api/v1</text><rect x="239.20000000000005" y="10" width="111.6" height="46" rx="8" fill="#fafafa" stroke="#aaa" stroke-width="1.6" stroke-dasharray="6 4"/><text x="295.00000000000006" y="31.0" font-size="12" font-weight="600" text-anchor="middle" fill="#888">لوحة الويب</text><text x="295.00000000000006" y="46.0" font-size="9.5" text-anchor="middle" fill="#777">React (مخطط)</text><rect x="119.60000000000002" y="10" width="111.6" height="46" rx="8" fill="#fafafa" stroke="#aaa" stroke-width="1.6" stroke-dasharray="6 4"/><text x="175.40000000000003" y="31.0" font-size="12" font-weight="600" text-anchor="middle" fill="#888">سطح المكتب</text><text x="175.40000000000003" y="46.0" font-size="9.5" text-anchor="middle" fill="#777">Tauri (مخطط)</text><rect x="0.0" y="10" width="111.6" height="46" rx="8" fill="#fafafa" stroke="#aaa" stroke-width="1.6" stroke-dasharray="6 4"/><text x="55.8" y="31.0" font-size="12" font-weight="600" text-anchor="middle" fill="#888">الجوال المرافق</text><text x="55.8" y="46.0" font-size="9.5" text-anchor="middle" fill="#777">Android (مخطط)</text><text x="694" y="112" font-size="12" font-weight="700" text-anchor="start" fill="#444">التنسيق</text><rect x="299.0" y="85" width="291.0" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="444.5" y="106.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">ORION</text><text x="444.5" y="121.0" font-size="9.5" text-anchor="middle" fill="#777">مهام دائمة، استئناف، عقود</text><rect x="0.0" y="85" width="291.0" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="145.5" y="106.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">MOSAIC</text><text x="145.5" y="121.0" font-size="9.5" text-anchor="middle" fill="#777">طبقة نماذج مستقلة عن المزود</text><text x="694" y="187" font-size="12" font-weight="700" text-anchor="start" fill="#444">المحركات</text><rect x="498.3333333333333" y="160" width="91.66666666666667" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="544.1666666666666" y="181.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">التوأم الرقمي</text><text x="544.1666666666666" y="196.0" font-size="9.5" text-anchor="middle" fill="#777">فحص + رسم التبعيات</text><rect x="398.66666666666663" y="160" width="91.66666666666667" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="444.49999999999994" y="181.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">التشخيص</text><text x="444.49999999999994" y="196.0" font-size="9.5" text-anchor="middle" fill="#777">فرضيات غير مؤكدة</text><rect x="299.0" y="160" width="91.66666666666667" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="344.8333333333333" y="181.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">التعافي</text><text x="344.8333333333333" y="196.0" font-size="9.5" text-anchor="middle" fill="#777">محاكاة/تنفيذ/تراجع</text><rect x="199.33333333333331" y="160" width="91.66666666666667" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="245.16666666666666" y="181.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">المهارات</text><text x="245.16666666666666" y="196.0" font-size="9.5" text-anchor="middle" fill="#777">تعلّم مُتحقق منه</text><rect x="99.66666666666663" y="160" width="91.66666666666667" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="145.49999999999997" y="181.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">الذاكرة الحية</text><text x="145.49999999999997" y="196.0" font-size="9.5" text-anchor="middle" fill="#777">مصدر + صلاحية</text><rect x="0.0" y="160" width="91.66666666666667" height="46" rx="8" fill="#fafafa" stroke="#aaa" stroke-width="1.6" stroke-dasharray="6 4"/><text x="45.833333333333336" y="181.0" font-size="12" font-weight="600" text-anchor="middle" fill="#888">المخاطر</text><text x="45.833333333333336" y="196.0" font-size="9.5" text-anchor="middle" fill="#777">(مخطط)</text><text x="694" y="262" font-size="12" font-weight="700" text-anchor="start" fill="#444">الحوكمة والأمن</text><rect x="448.5" y="235" width="141.5" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="519.25" y="256.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">السياسات والأدوار</text><text x="519.25" y="271.0" font-size="9.5" text-anchor="middle" fill="#777">+ عضوية المشاريع</text><rect x="299.0" y="235" width="141.5" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="369.75" y="256.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">الموافقات</text><text x="369.75" y="271.0" font-size="9.5" text-anchor="middle" fill="#777">مربوطة، لمرة واحدة</text><rect x="149.5" y="235" width="141.5" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="220.25" y="256.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">سجل التدقيق</text><text x="220.25" y="271.0" font-size="9.5" text-anchor="middle" fill="#777">سلسلة HMAC</text><rect x="0.0" y="235" width="141.5" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="70.75" y="256.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">الأدلة</text><text x="70.75" y="271.0" font-size="9.5" text-anchor="middle" fill="#777">مرتبطة بالسلسلة</text><text x="694" y="337" font-size="12" font-weight="700" text-anchor="start" fill="#444">التنفيذ المعزول</text><rect x="299.0" y="310" width="291.0" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="444.5" y="331.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">واجهة العمليات</text><text x="444.5" y="346.0" font-size="9.5" text-anchor="middle" fill="#777">rlimits + netns + uid</text><rect x="0.0" y="310" width="291.0" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="145.5" y="331.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">حاويات Docker</text><text x="145.5" y="346.0" font-size="9.5" text-anchor="middle" fill="#777">بلا شبكة، قراءة فقط</text><text x="694" y="412" font-size="12" font-weight="700" text-anchor="start" fill="#444">التخزين</text><rect x="398.66666666666663" y="385" width="191.33333333333334" height="46" rx="8" fill="#eef6f6" stroke="#0f6e6e" stroke-width="1.6"/><text x="494.3333333333333" y="406.0" font-size="12" font-weight="600" text-anchor="middle" fill="#163">SQLite محلي</text><text x="494.3333333333333" y="421.0" font-size="9.5" text-anchor="middle" fill="#777">WAL، ترحيلات ذرية</text><rect x="199.33333333333331" y="385" width="191.33333333333334" height="46" rx="8" fill="#fafafa" stroke="#aaa" stroke-width="1.6" stroke-dasharray="6 4"/><text x="295.0" y="406.0" font-size="12" font-weight="600" text-anchor="middle" fill="#888">PostgreSQL</text><text x="295.0" y="421.0" font-size="9.5" text-anchor="middle" fill="#777">(مخطط لتعدد المستخدمين)</text><rect x="0.0" y="385" width="191.33333333333334" height="46" rx="8" fill="#fafafa" stroke="#aaa" stroke-width="1.6" stroke-dasharray="6 4"/><text x="95.66666666666667" y="406.0" font-size="12" font-weight="600" text-anchor="middle" fill="#888">المزامنة</text><text x="95.66666666666667" y="421.0" font-size="9.5" text-anchor="middle" fill="#777">(مخطط)</text></svg><div class="cap">شكل 2: طبقات المنصة. الإطار المتصل = مبني ومُختبر، الإطار المتقطع = مخطط</div></div>
+<h2>المحركات الرئيسية</h2>
+<table>
+<tr><th>المحرك</th><th>المسؤولية</th><th>الحالة</th></tr>
+<tr><td>MOSAIC</td><td>واجهة موحّدة لنماذج الذكاء الاصطناعي المحلية والبعيدة، دون ربط بمزوّد واحد، مع فحص صارم للمخرجات</td><td><span class="tag t-part">جزئي</span></td></tr>
+<tr><td>ORION</td><td>تنسيق المهام، وحفظ حالة كل خطوة، والاستئناف بعد الانقطاع، ومنع تشغيل مهمة واحدة من عاملَين</td><td><span class="tag t-ok">مبني</span></td></tr>
+<tr><td>الذاكرة الحية</td><td>13 فئة معرفة، مع مصدر كل معلومة وشروط صلاحيتها وإصداراتها، وكشف التناقضات</td><td><span class="tag t-ok">مبني</span></td></tr>
+<tr><td>التوأم الرقمي</td><td>تمثيل المشروع وتبعياته، مع التمييز بين "مُلاحظ" و"مُستنتج" و"مجهول"</td><td><span class="tag t-part">جزئي</span></td></tr>
+<tr><td>التعافي</td><td>تحضير، محاكاة، موافقة، تنفيذ، تحقق، اعتماد؛ والتراجع عند الفشل</td><td><span class="tag t-ok">مبني</span></td></tr>
+<tr><td>المهارات المُتحقق منها</td><td>مهارات لها إصدارات واختبارات، ودورة حياة صارمة؛ والمهارة الفاشلة لا تُفعّل أبدًا</td><td><span class="tag t-ok">مبني</span></td></tr>
+<tr><td>الحوكمة والأدلة</td><td>أدوار، وعضويات مشاريع، وموافقات، وسجل تدقيق مشفّر، وأدلة مرتبطة به</td><td><span class="tag t-ok">مبني</span></td></tr>
+<tr><td>المخاطر والتنبؤ</td><td>كشف الشذوذ، وتقييم مخاطر التغيير، ومؤشرات الفشل؛ بأساليب إحصائية قابلة للتفسير أولًا</td><td><span class="tag t-no">مخطط</span></td></tr>
+<tr><td>الاستمرارية والمزامنة</td><td>نقاط استعادة، وطابور مزامنة، وكشف التعارضات بعد عودة الاتصال</td><td><span class="tag t-part">جزئي</span></td></tr>
+</table>
+<h2>التقنيات</h2>
+<table>
+<tr><th>الطبقة</th><th>المستخدم حاليًا</th><th>المخطط</th></tr>
+<tr><td>الخلفية</td><td>Python 3.11+، FastAPI، Pydantic</td><td>Rust فقط إذا أثبت القياس الحاجة</td></tr>
+<tr><td>التخزين</td><td>SQLite (WAL، ترحيلات ذرية)</td><td>PostgreSQL لتعدد المستخدمين</td></tr>
+<tr><td>العزل</td><td>rlimits، network namespaces، تنزيل الصلاحيات، Docker</td><td>gVisor أو Firecracker لعزل أقوى</td></tr>
+<tr><td>الذكاء الاصطناعي</td><td>واجهة OpenAI-compatible (llama.cpp وOllama وvLLM)</td><td>تقييم مع نماذج محلية مفتوحة</td></tr>
+<tr><td>فهم الكود</td><td>Python AST</td><td>Tree-sitter وLSP للغات أخرى</td></tr>
+<tr><td>الواجهات</td><td>REST API، سطر أوامر</td><td>React + TypeScript، Tauri، Kotlin/Compose</td></tr>
+<tr><td>المراقبة</td><td>سجلات منظمة، أدلة</td><td>OpenTelemetry</td></tr>
+</table>
+</div>
+<div class="section"><h1>6. الأمان والحوكمة</h1>
+<p>صُمّم الأمان انطلاقًا من نموذج تهديد: كود المشروع غير موثوق، ومخرجات النماذج غير موثوقة، والمستخدم الشرعي
+نفسه قد يحاول تجاوز صلاحياته.</p>
+<h2>طبقات الحماية</h2>
+<table>
+<tr><th>التهديد</th><th>الحماية المطبّقة</th></tr>
+<tr><td>كود المشروع يعبث بالمنصة</td><td>حاوية Docker بلا شبكة، ونظام ملفات للقراءة فقط، وبلا صلاحيات نظام، وبمستخدم غير root، ولا ترى إلا نسخة المشروع</td></tr>
+<tr><td>الوصول إلى خادم الحاويات</td><td>رفض التشغيل إن كانت هوية التشغيل تستطيع الوصول لمقبس Docker أو containerd أو Podman</td></tr>
+<tr><td>نموذج ذكاء اصطناعي يقترح تعديلًا خبيثًا</td><td>النموذج لا يعدّل إلا ملفات عُرضت عليه، ثم محاكاة، ثم موافقة بشرية، ثم تحقق، ثم تراجع</td></tr>
+<tr><td>إعادة استخدام موافقة أو توسيعها</td><td>الموافقة مربوطة بالمهمة والمشروع وبصمة التعديلات، ولمرة واحدة، وتنتهي صلاحيتها، وتُسحب عند الإلغاء</td></tr>
+<tr><td>موافقة الشخص على عمله</td><td>مقدّم الطلب لا يستطيع الموافقة، والوكلاء الآليون لا يوافقون أبدًا</td></tr>
+<tr><td>الوصول لمشاريع الآخرين</td><td>عضوية لكل مشروع، ودور الرمز هو الحد الأعلى للصلاحية</td></tr>
+<tr><td>التلاعب بالسجل</td><td>سلسلة HMAC مفتاحها خارج قاعدة البيانات، والأدلة مرتبطة بالسلسلة</td></tr>
+<tr><td>تسرّب الأسرار</td><td>ملفات <code>.env</code> والمفاتيح لا تُقرأ ولا تُنسخ، وتنقية تلقائية للسجلات، والرموز تُخزَّن كتجزئة فقط</td></tr>
+<tr><td>إغراق الخادم بالطلبات</td><td>حد لحجم الطلب، وحد لمعدل الطلبات لكل رمز، وإيقاف مؤقت بعد محاولات دخول فاشلة</td></tr>
+</table>
+<h2>مقارنة بيئتي العزل (هجمات متطابقة، نتائج مقاسة)</h2>
+<table>
+<tr><th>الهجوم</th><th>عمليات مقيّدة</th><th>حاويات Docker</th></tr>
+<tr><td>قراءة ملفات الجهاز المضيف</td><td>مفتوح</td><td>محجوب</td></tr>
+<tr><td>رؤية عمليات الجهاز المضيف</td><td>مفتوح</td><td>محجوب</td></tr>
+<tr><td>الوصول لخادم Docker</td><td>محجوب أو مرفوض</td><td>محجوب</td></tr>
+<tr><td>الشبكة الخارجية، والكتابة خارج المجلد، وصلاحيات النواة</td><td>محجوب</td><td>محجوب</td></tr>
+</table>
+<div class="box">المرجع المستخدم لدورة التطوير الآمن هو <b>NIST Secure Software Development Framework</b>. وقبل الإصدار 1.0
+يلزم <b>تدقيق أمني خارجي واختبار اختراق</b> من جهة مستقلة، وله ميزانية في القسم 11.</div>
+</div>
+<div class="section"><h1>7. الابتكارات البحثية المقترحة</h1>
+<div class="box warn">هذه <b>فرضيات بحثية</b>، ولا ندّعي أنها ابتكارات جديدة. لا يصح وصفها بالجِدّة إلا بعد مراجعة منهجية
+للأدبيات العلمية وبراءات الاختراع، وهذه المراجعة جزء من خطة البحث.</div>
+<table><tr><th>المفهوم</th><th>سؤال البحث</th><th>الحالة</th></tr><tr><td><b>الذاكرة الحية للنظام</b></td><td>هل تبقى ذاكرة المشروع دقيقة عبر سلسلة طويلة من التغييرات دون تراكم معرفة قديمة أو متناقضة؟</td><td>مبني جزئيًا</td></tr><tr><td><b>محرك المستقبلات البديلة</b></td><td>هل تقلل محاكاة سيناريوهات الفشل قبل التغيير الخطِر من الأعطال الفعلية؟</td><td>نقاط الأعطال فقط</td></tr><tr><td><b>جواز الاستمرارية الرقمي</b></td><td>وصف محمول وموقّع للنظام يسمح بإعادة بنائه وتشغيله من جهة أخرى</td><td>لم يبدأ</td></tr><tr><td><b>المهارات الحاملة لإثباتها</b></td><td>كل مهارة تحمل أدلة على ما اختُبرت عليه وحدودها</td><td>مبني</td></tr><tr><td><b>نظام المناعة الرقمي</b></td><td>كشف الانحراف والتغييرات غير المصرّح بها، مع التمييز بين الشذوذ التشغيلي والهجوم</td><td>لم يبدأ</td></tr><tr><td><b>دَين الاستمرارية</b></td><td>مقياس تجريبي لخطر غياب التوثيق والنسخ الاحتياطي المُتحقق منه وغيرها</td><td>لم يبدأ</td></tr><tr><td><b>اختبار الأعطال المركّبة</b></td><td>حقن أكثر من عطل معًا وقياس جودة التعافي وسلامة البيانات</td><td>سيناريوهان مبنيان</td></tr></table>
+<h2>خطة التقييم</h2>
+<p>مقارنة خمسة أنظمة على نفس مجموعة المشاريع والأعطال:</p>
+<ol>
+<li>أدوات تقليدية آلية</li>
+<li>وكيل برمجة ذكي أساسي</li>
+<li>وكيل مع ذاكرة</li>
+<li>وكيل مع مهارات</li>
+<li>YEMENDEV AI بحلقة RACE-X كاملة</li>
+</ol>
+<p>المقاييس: نسبة نجاح التعافي، وزمن التعافي، وفقدان البيانات، ومعدل التراجعات، ونسب الإنذار الخاطئ، واكتمال الأدلة.
+<b>لم تُبنَ الأنظمة المرجعية (1–4) بعد</b>، لذلك لا يُدّعى أي تفوق حتى الآن.</p>
+<p>الشراكة مع جامعة، يمنية أو إقليمية، تسمح بإنتاج أبحاث محكّمة ومجموعة بيانات مقياس مفتوحة، وتوفر وصولًا إلى مشاريع حقيقية للتقييم.</p>
+</div>
+<div class="section"><h1>8. المستخدمون ونموذج العمل</h1>
+<h2>الفئات المستهدفة</h2>
+<table>
+<tr><th>الفئة</th><th>المشكلة التي نحلها لها</th><th>ما يهمها أكثر</th></tr>
+<tr><td>شركات البرمجيات</td><td>صيانة أنظمة قديمة وإصلاح أعطال متكررة بأمان</td><td>الموافقات، والتراجع، وسجل التدقيق</td></tr>
+<tr><td>المؤسسات (حكومية، بنوك، اتصالات)</td><td>استمرارية الأنظمة الحرجة مع انقطاع الاتصال وفقدان الخبرات</td><td>العمل دون اتصال، والحوكمة، والتشغيل على خوادمها</td></tr>
+<tr><td>الجامعات</td><td>تعليم الهندسة الموثوقة، وبحث علمي قابل للتكرار</td><td>المقاييس المفتوحة والأدلة</td></tr>
+<tr><td>المطورون الأفراد</td><td>فهم المشاريع وإصلاحها دون إنترنت مستقر</td><td>سهولة التثبيت والعمل المحلي</td></tr>
+</table>
+<h2>نموذج العمل المقترح: نواة مفتوحة (<bdi dir="ltr" class="en">open-core</bdi>)</h2>
+<ul>
+<li><b>النواة مفتوحة المصدر</b> (Apache-2.0 كما هو معلن في المشروع): تبني الثقة، وتسمح بالتدقيق الخارجي، وتجذب المساهمين والجامعات.</li>
+<li><b>إصدار المؤسسات المدفوع:</b> تسجيل دخول موحّد، وإدارة مركزية لعدة فرق، وتقارير امتثال، ودعم باتفاقية مستوى خدمة.</li>
+<li><b>عقود الدعم والتشغيل</b>، و<b>خدمات استعادة الأنظمة القديمة</b>، وهي مناسبة للسوق المحلي.</li>
+<li><b>برنامج جامعي</b> مجاني أو مخفّض، مع شهادات تدريب.</li>
+</ul>
+<div class="box warn">الأسعار <b>لم تُحدد</b> عمدًا. تُحدد بعد مقابلات مع 10–20 عميلًا محتملًا وبرنامج تجريبي، فوضع
+أسعار الآن سيكون تخمينًا.</div>
+<h2>استراتيجية الدخول للسوق</h2>
+<ol>
+<li>3–5 جهات تجريبية مجانية خلال الإصدار التجريبي الخاص، مقابل ملاحظات منظمة وإذن بنشر دراسة حالة.</li>
+<li>شراكة جامعية للبحث والتدريب، تنتج طلابًا مدرَّبين على المنصة.</li>
+<li>نشر المقياس المفتوح ونتائجه لبناء المصداقية التقنية.</li>
+<li>التوسع إقليميًا ثم عالميًا عبر المصدر المفتوح والإصدار المؤسسي.</li>
+</ol>
+</div>
+<div class="section"><h1>9. خارطة الطريق والجدول الزمني</h1>
+<p>تبدأ الخطة من الوضع الحالي (المراحل 1–10 مكتملة)، وتمتد 12 شهرًا حتى الإصدار 1.0، مع تنفيذ مسارات العمل بالتوازي.
+<span class="tag t-est">تقدير</span> يفترض الفريق الموصوف في القسم 10.</p>
+<div class="fig"><svg viewBox="0 0 668 344" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Arabic"><rect x="384" y="30" width="34" height="274" fill="#f4f6f8"/><text x="401.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش1</text><rect x="350" y="30" width="34" height="274" fill="#ffffff"/><text x="367.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش2</text><rect x="316" y="30" width="34" height="274" fill="#f4f6f8"/><text x="333.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش3</text><rect x="282" y="30" width="34" height="274" fill="#ffffff"/><text x="299.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش4</text><rect x="248" y="30" width="34" height="274" fill="#f4f6f8"/><text x="265.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش5</text><rect x="214" y="30" width="34" height="274" fill="#ffffff"/><text x="231.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش6</text><rect x="180" y="30" width="34" height="274" fill="#f4f6f8"/><text x="197.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش7</text><rect x="146" y="30" width="34" height="274" fill="#ffffff"/><text x="163.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش8</text><rect x="112" y="30" width="34" height="274" fill="#f4f6f8"/><text x="129.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش9</text><rect x="78" y="30" width="34" height="274" fill="#ffffff"/><text x="95.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش10</text><rect x="44" y="30" width="34" height="274" fill="#f4f6f8"/><text x="61.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش11</text><rect x="10" y="30" width="34" height="274" fill="#ffffff"/><text x="27.0" y="22" font-size="11" text-anchor="middle" fill="#555">ش12</text><text x="662" y="52" font-size="11.5" text-anchor="start" fill="#222">تثبيت النواة وإصدار تجريبي خاص</text><rect x="318" y="39" width="98" height="19" rx="5" fill="#0f6e6e" opacity="0.88"/><text x="662" y="82" font-size="11.5" text-anchor="start" fill="#222">الأمن المستمر والتدقيق الخارجي</text><rect x="12" y="69" width="404" height="19" rx="5" fill="#b4442e" opacity="0.88"/><text x="662" y="112" font-size="11.5" text-anchor="start" fill="#222">تكامل النماذج المحلية والبعيدة وتقييمها</text><rect x="182" y="99" width="200" height="19" rx="5" fill="#5b4bb3" opacity="0.88"/><text x="662" y="142" font-size="11.5" text-anchor="start" fill="#222">البحث والمقاييس المقارنة</text><rect x="12" y="129" width="336" height="19" rx="5" fill="#8a6d1d" opacity="0.88"/><text x="662" y="172" font-size="11.5" text-anchor="start" fill="#222">واجهة الويب ولوحة التحكم + العربية/الإنجليزية</text><rect x="114" y="159" width="200" height="19" rx="5" fill="#2e6db4" opacity="0.88"/><text x="662" y="202" font-size="11.5" text-anchor="start" fill="#222">الاستمرارية والمزامنة دون اتصال + PostgreSQL</text><rect x="114" y="189" width="166" height="19" rx="5" fill="#0f6e6e" opacity="0.88"/><text x="662" y="232" font-size="11.5" text-anchor="start" fill="#222">محرك المخاطر والتوأم الرقمي والمحاكاة</text><rect x="46" y="219" width="200" height="19" rx="5" fill="#5b4bb3" opacity="0.88"/><text x="662" y="262" font-size="11.5" text-anchor="start" fill="#222">تطبيق سطح المكتب والتطبيق المرافق للجوال</text><rect x="12" y="249" width="166" height="19" rx="5" fill="#2e6db4" opacity="0.88"/><text x="662" y="292" font-size="11.5" text-anchor="start" fill="#222">الجاهزية للإطلاق: تغليف، توثيق، دعم</text><rect x="12" y="279" width="64" height="19" rx="5" fill="#0f6e6e" opacity="0.88"/><line x1="319" y1="30" x2="319" y2="310" stroke="#d4a017" stroke-width="2" stroke-dasharray="4 3"/><text x="319" y="328" font-size="11" text-anchor="middle" fill="#7a5c00" font-weight="600">M1: إصدار تجريبي خاص</text><line x1="183" y1="30" x2="183" y2="310" stroke="#d4a017" stroke-width="2" stroke-dasharray="4 3"/><text x="183" y="328" font-size="11" text-anchor="middle" fill="#7a5c00" font-weight="600">M2: إصدار تجريبي عام</text><line x1="13" y1="30" x2="13" y2="310" stroke="#d4a017" stroke-width="2" stroke-dasharray="4 3"/><text x="70" y="328" font-size="11" text-anchor="middle" fill="#7a5c00" font-weight="600">M3: الإصدار 1.0</text></svg><div class="cap">شكل 3: الجدول الزمني (ش = شهر، يُقرأ من اليمين إلى اليسار). الخطوط الذهبية = المعالم الرئيسية</div></div>
+<table><tr><th>مسار العمل</th><th>English</th><th class="num">الفترة</th><th class="num">المدة</th></tr><tr><td>تثبيت النواة وإصدار تجريبي خاص</td><td class='small'><bdi dir="ltr" class="en">Core hardening & private beta</bdi></td><td class='num'>ش1 – ش3</td><td class='num'>3 شهر</td></tr><tr><td>الأمن المستمر والتدقيق الخارجي</td><td class='small'><bdi dir="ltr" class="en">Security hardening & external audit</bdi></td><td class='num'>ش1 – ش12</td><td class='num'>12 شهر</td></tr><tr><td>تكامل النماذج المحلية والبعيدة وتقييمها</td><td class='small'><bdi dir="ltr" class="en">Model integration & evaluation</bdi></td><td class='num'>ش2 – ش7</td><td class='num'>6 شهر</td></tr><tr><td>البحث والمقاييس المقارنة</td><td class='small'><bdi dir="ltr" class="en">Research & comparative benchmarks</bdi></td><td class='num'>ش3 – ش12</td><td class='num'>10 شهر</td></tr><tr><td>واجهة الويب ولوحة التحكم + العربية/الإنجليزية</td><td class='small'><bdi dir="ltr" class="en">Web UI, dashboard, i18n</bdi></td><td class='num'>ش4 – ش9</td><td class='num'>6 شهر</td></tr><tr><td>الاستمرارية والمزامنة دون اتصال + PostgreSQL</td><td class='small'><bdi dir="ltr" class="en">Offline sync & multi-user</bdi></td><td class='num'>ش5 – ش9</td><td class='num'>5 شهر</td></tr><tr><td>محرك المخاطر والتوأم الرقمي والمحاكاة</td><td class='small'><bdi dir="ltr" class="en">Risk engine, digital twin, simulation</bdi></td><td class='num'>ش6 – ش11</td><td class='num'>6 شهر</td></tr><tr><td>تطبيق سطح المكتب والتطبيق المرافق للجوال</td><td class='small'><bdi dir="ltr" class="en">Desktop & Android companion</bdi></td><td class='num'>ش8 – ش12</td><td class='num'>5 شهر</td></tr><tr><td>الجاهزية للإطلاق: تغليف، توثيق، دعم</td><td class='small'><bdi dir="ltr" class="en">Release readiness</bdi></td><td class='num'>ش11 – ش12</td><td class='num'>2 شهر</td></tr></table>
+<h2>المعالم الرئيسية ومعايير قبولها</h2>
+<table>
+<tr><th>المعلم</th><th>الموعد</th><th>معيار القبول (قابل للقياس)</th></tr>
+<tr><td><b>M1:</b> إصدار تجريبي خاص</td><td>نهاية ش3</td><td>تثبيت بأمر واحد؛ Docker هو الافتراضي؛ 3 جهات تجريبية تستخدمه على مشاريع حقيقية؛ صفر فقدان بيانات في المقياس</td></tr>
+<tr><td><b>M2:</b> إصدار تجريبي عام</td><td>نهاية ش7</td><td>لوحة ويب بالعربية والإنجليزية؛ دعم نموذج محلي واحد على الأقل مُقيَّم؛ دعم لغة برمجة ثانية</td></tr>
+<tr><td><b>M3:</b> الإصدار 1.0</td><td>نهاية ش12</td><td>تدقيق أمني خارجي بلا ثغرات حرجة مفتوحة؛ تطبيق سطح مكتب؛ تطبيق جوال مرافق للموافقات؛ مقياس مقارن منشور</td></tr>
+</table>
+<div class="box warn"><h3>بدائل زمنية واقعية</h3>
+<ul>
+<li><b>فريق أصغر (4–5 أشخاص):</b> 18–24 شهرًا للوصول إلى نفس النطاق.</li>
+<li><b>المسار الأدنى (3 أشخاص):</b> M1 خلال 6 أشهر بدل 3، ثم يُعاد التقييم.</li>
+</ul>
+التأخير الأكثر احتمالًا يأتي من الواجهات الرسومية ومن تقييم النماذج، لذلك يُنصح بعدم ربط أي التزام خارجي بموعد M3 قبل تحقيق M1.</div>
+</div>
+<div class="section"><h1>10. الفريق المطلوب</h1>
+<table>
+<tr><th>الدور</th><th>English</th><th>الفئة</th><th class="num">نسبة الدوام</th><th class="num">الأشهر</th><th class="num">شهر-عمل</th></tr>
+<tr><td>قائد تقني / مهندس معماري</td><td class='small'><bdi dir="ltr" class="en">Tech lead / architect</bdi></td><td>أول</td><td class='num'>1</td><td class='num'>12</td><td class='num'>12</td></tr><tr><td>مهندس خلفية أول (Python)</td><td class='small'><bdi dir="ltr" class="en">Senior backend engineer</bdi></td><td>أول</td><td class='num'>1</td><td class='num'>12</td><td class='num'>12</td></tr><tr><td>مهندس خلفية</td><td class='small'><bdi dir="ltr" class="en">Backend engineer</bdi></td><td>متوسط</td><td class='num'>1</td><td class='num'>10</td><td class='num'>10</td></tr><tr><td>مهندس ذكاء اصطناعي / نماذج لغوية</td><td class='small'><bdi dir="ltr" class="en">ML / LLM engineer</bdi></td><td>متخصص</td><td class='num'>1</td><td class='num'>9</td><td class='num'>9</td></tr><tr><td>مهندس أمن (دوام جزئي)</td><td class='small'><bdi dir="ltr" class="en">Security engineer (part-time)</bdi></td><td>متخصص</td><td class='num'>0.5</td><td class='num'>12</td><td class='num'>6</td></tr><tr><td>مهندس واجهات (React/TypeScript)</td><td class='small'><bdi dir="ltr" class="en">Frontend engineer</bdi></td><td>متوسط</td><td class='num'>1</td><td class='num'>8</td><td class='num'>8</td></tr><tr><td>مهندس سطح مكتب/جوال (Tauri/Kotlin)</td><td class='small'><bdi dir="ltr" class="en">Desktop / mobile engineer</bdi></td><td>متوسط</td><td class='num'>1</td><td class='num'>5</td><td class='num'>5</td></tr><tr><td>مهندس جودة وتشغيل (QA/DevOps)</td><td class='small'><bdi dir="ltr" class="en">QA / DevOps engineer</bdi></td><td>متوسط</td><td class='num'>1</td><td class='num'>10</td><td class='num'>10</td></tr><tr><td>مصمم منتج وتجربة مستخدم (جزئي)</td><td class='small'><bdi dir="ltr" class="en">Product / UX designer (part-time)</bdi></td><td>متوسط</td><td class='num'>0.5</td><td class='num'>8</td><td class='num'>4</td></tr><tr><td>باحث (جزئي / شراكة جامعية)</td><td class='small'><bdi dir="ltr" class="en">Researcher (part-time / university)</bdi></td><td>متخصص</td><td class='num'>0.5</td><td class='num'>12</td><td class='num'>6</td></tr><tr><td>كاتب تقني ومترجم عربي (جزئي)</td><td class='small'><bdi dir="ltr" class="en">Technical writer / Arabic l10n</bdi></td><td>متوسط</td><td class='num'>0.5</td><td class='num'>6</td><td class='num'>3</td></tr>
+<tr class="total"><td colspan="5">الإجمالي (أول 24 + متوسط 40 + متخصص 21)</td><td class="num">85</td></tr>
+</table>
+<h2>ملاحظات على تكوين الفريق</h2>
+<ul>
+<li>الدوران الأهم من اليوم الأول: <b>القائد التقني</b> و<b>مهندس الخلفية الأول</b>. هما من سيستوعبان الكود الحالي ويراجعانه.</li>
+<li>مهندس الأمن يبدأ بدوام جزئي، ويصبح محوريًا قبل التدقيق الخارجي.</li>
+<li>الباحث يمكن أن يكون من الجامعة الشريكة، بتمويل مشترك أو منحة.</li>
+<li>يُفترض أن يستخدم الفريق أدوات برمجة بمساعدة الذكاء الاصطناعي، وهذا مُدرج في ميزانية الخدمات. ومع ذلك تبقى المراجعة البشرية إلزامية.</li>
+<li>مهارات مطلوبة إضافيًا: إتقان العربية التقنية، وخبرة في الأنظمة الموزّعة والأمن، وخبرة في نماذج اللغة المحلية.</li>
+</ul>
+</div>
+<div class="section"><h1>11. التكاليف التقديرية</h1>
+<div class="box red"><h3>اقرأ هذا أولًا</h3>
+كل المبالغ بالدولار الأمريكي، وهي <b>افتراضات تخطيطية وليست أسعار سوق مُتحقق منها</b>. الهدف منها إظهار
+<b>هيكل التكلفة</b> والفروق بين السيناريوهات. أما الأرقام نفسها فيجب استبدالها بعروض فعلية قبل أي التزام مالي.
+"التكلفة الشاملة" للفرد تشمل الراتب والمستحقات والأعباء الإدارية. الحسابات مولّدة آليًا من ملف
+<code>docs/proposal/model.py</code> لضمان دقتها، ويمكن تعديل الافتراضات فيه وإعادة توليد الوثيقة.</div>
+<h2>11.1 افتراضات التكلفة الشهرية الشاملة للفرد</h2>
+<table><tr><th>السيناريو</th><th class="num">أول</th><th class="num">متوسط</th><th class="num">متخصص</th></tr><tr><td>أ: فريق إقليمي عن بُعد</td><td class='num'><bdi dir="ltr">$2,000</bdi></td><td class='num'><bdi dir="ltr">$1,200</bdi></td><td class='num'><bdi dir="ltr">$2,500</bdi></td></tr><tr><td>ب: فريق مختلط (إقليمي + خبراء دوليون)</td><td class='num'><bdi dir="ltr">$3,500</bdi></td><td class='num'><bdi dir="ltr">$1,800</bdi></td><td class='num'><bdi dir="ltr">$5,000</bdi></td></tr><tr><td>ج: أسعار السوق الدولية</td><td class='num'><bdi dir="ltr">$9,000</bdi></td><td class='num'><bdi dir="ltr">$6,500</bdi></td><td class='num'><bdi dir="ltr">$11,000</bdi></td></tr></table>
+<h2>11.2 تكلفة الفريق (85 شهر-عمل)</h2>
+<table><tr><th>السيناريو</th><th class="num">تكلفة الأفراد لـ 12 شهرًا</th></tr><tr><td>أ: فريق إقليمي عن بُعد</td><td class='num'><bdi dir="ltr">$148,500</bdi></td></tr><tr><td>ب: فريق مختلط (إقليمي + خبراء دوليون)</td><td class='num'><bdi dir="ltr">$261,000</bdi></td></tr><tr><td>ج: أسعار السوق الدولية</td><td class='num'><bdi dir="ltr">$707,000</bdi></td></tr></table>
+<h2>11.3 التكاليف غير البشرية (12 شهرًا، مشتركة بين السيناريوهات)</h2>
+<table><tr><th>البند</th><th class="num">الحد الأدنى</th><th class="num">الحد الأعلى</th><th>ملاحظة</th></tr><tr><td>خوادم سحابية للتطوير والاختبار والتجهيز</td><td class='num'><bdi dir="ltr">$1,800</bdi></td><td class='num'><bdi dir="ltr">$4,800</bdi></td><td class='small'>150–400 $ شهريًا</td></tr><tr><td>وحدات معالجة رسومية لتقييم النماذج (حسب الطلب، 8 أشهر)</td><td class='num'><bdi dir="ltr">$2,400</bdi></td><td class='num'><bdi dir="ltr">$7,200</bdi></td><td class='small'>300–900 $ شهريًا</td></tr><tr><td>استهلاك واجهات النماذج اللغوية (تطوير وتقييم)</td><td class='num'><bdi dir="ltr">$2,400</bdi></td><td class='num'><bdi dir="ltr">$18,000</bdi></td><td class='small'>200–1,500 $ شهريًا حسب الاستخدام؛ يجب التحقق من الأسعار الحالية</td></tr><tr><td>أدوات التطوير والاستضافة والتكامل المستمر</td><td class='num'><bdi dir="ltr">$1,200</bdi></td><td class='num'><bdi dir="ltr">$3,600</bdi></td><td class='small'>100–300 $ شهريًا</td></tr><tr><td>أجهزة للفريق (9 أجهزة، مرة واحدة)</td><td class='num'><bdi dir="ltr">$9,000</bdi></td><td class='num'><bdi dir="ltr">$16,200</bdi></td><td class='small'>1,000–1,800 $ للجهاز</td></tr><tr><td>طاقة احتياطية للفريق (UPS/طاقة شمسية، 9 أفراد)</td><td class='num'><bdi dir="ltr">$2,700</bdi></td><td class='num'><bdi dir="ltr">$7,200</bdi></td><td class='small'>مهم في بيئات انقطاع الكهرباء</td></tr><tr><td>بدل اتصال بالإنترنت (9 أفراد × 12 شهرًا)</td><td class='num'><bdi dir="ltr">$3,240</bdi></td><td class='num'><bdi dir="ltr">$8,640</bdi></td><td class='small'>30–80 $ شهريًا للفرد</td></tr><tr><td>تدقيق أمني واختبار اختراق خارجي قبل الإصدار 1.0</td><td class='num'><bdi dir="ltr">$5,000</bdi></td><td class='num'><bdi dir="ltr">$20,000</bdi></td><td class='small'>مرة واحدة</td></tr><tr><td>قانوني: تسجيل شركة، علامة تجارية، تراخيص، سياسة خصوصية</td><td class='num'><bdi dir="ltr">$2,000</bdi></td><td class='num'><bdi dir="ltr">$8,000</bdi></td><td class='small'>يختلف حسب الدولة</td></tr><tr><td>حسابات متاجر التطبيقات وشهادات توقيع الكود</td><td class='num'><bdi dir="ltr">$500</bdi></td><td class='num'><bdi dir="ltr">$1,000</bdi></td><td class='small'>Google Play وApple وتوقيع سطح المكتب</td></tr><tr><td>البحث العلمي: رسوم نشر ومؤتمرات</td><td class='num'><bdi dir="ltr">$2,000</bdi></td><td class='num'><bdi dir="ltr">$8,000</bdi></td><td class='small'></td></tr><tr><td>أبحاث السوق وبرامج تجريبية مع عملاء أوائل</td><td class='num'><bdi dir="ltr">$3,000</bdi></td><td class='num'><bdi dir="ltr">$10,000</bdi></td><td class='small'></td></tr>
+<tr class="total"><td>المجموع</td><td class="num"><bdi dir="ltr">$35,240</bdi></td><td class="num"><bdi dir="ltr">$112,640</bdi></td><td></td></tr></table>
+<h2>11.4 الإجمالي (شاملًا احتياطي 15%)</h2>
+<table><tr><th>السيناريو</th><th class="num">الأفراد</th><th class="num">غير بشري</th><th class="num">الإجمالي لـ 12 شهرًا</th><th class="num">المتوسط الشهري</th></tr><tr><td>أ: فريق إقليمي عن بُعد</td><td class='num'><bdi dir="ltr">$148,500</bdi></td><td class='num'><bdi dir="ltr" class="rng">$35,240 – $112,640</bdi></td><td class='num'><b><bdi dir="ltr" class="rng">$211,301 – $300,311</bdi></b></td><td class='num'><bdi dir="ltr" class="rng">$18k – $25k</bdi></td></tr><tr><td>ب: فريق مختلط (إقليمي + خبراء دوليون)</td><td class='num'><bdi dir="ltr">$261,000</bdi></td><td class='num'><bdi dir="ltr" class="rng">$35,240 – $112,640</bdi></td><td class='num'><b><bdi dir="ltr" class="rng">$340,676 – $429,686</bdi></b></td><td class='num'><bdi dir="ltr" class="rng">$28k – $36k</bdi></td></tr><tr><td>ج: أسعار السوق الدولية</td><td class='num'><bdi dir="ltr">$707,000</bdi></td><td class='num'><bdi dir="ltr" class="rng">$35,240 – $112,640</bdi></td><td class='num'><b><bdi dir="ltr" class="rng">$853,576 – $942,586</bdi></b></td><td class='num'><bdi dir="ltr" class="rng">$71k – $79k</bdi></td></tr></table>
+<div class="fig cost"><svg viewBox="0 0 690 204" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Arabic"><line x1="450.0" y1="10" x2="450.0" y2="174" stroke="#e3e6ea"/><text x="450.0" y="196" font-size="10" text-anchor="middle" fill="#666">0k $</text><line x1="380.84431003093067" y1="10" x2="380.84431003093067" y2="174" stroke="#e3e6ea"/><text x="380.84431003093067" y="196" font-size="10" text-anchor="middle" fill="#666">200k $</text><line x1="311.68862006186134" y1="10" x2="311.68862006186134" y2="174" stroke="#e3e6ea"/><text x="311.68862006186134" y="196" font-size="10" text-anchor="middle" fill="#666">400k $</text><line x1="242.532930092792" y1="10" x2="242.532930092792" y2="174" stroke="#e3e6ea"/><text x="242.532930092792" y="196" font-size="10" text-anchor="middle" fill="#666">600k $</text><line x1="173.37724012372263" y1="10" x2="173.37724012372263" y2="174" stroke="#e3e6ea"/><text x="173.37724012372263" y="196" font-size="10" text-anchor="middle" fill="#666">800k $</text><line x1="104.2215501546533" y1="10" x2="104.2215501546533" y2="174" stroke="#e3e6ea"/><text x="104.2215501546533" y="196" font-size="10" text-anchor="middle" fill="#666">1000k $</text><line x1="35.06586018558397" y1="10" x2="35.06586018558397" y2="174" stroke="#e3e6ea"/><text x="35.06586018558397" y="196" font-size="10" text-anchor="middle" fill="#666">1200k $</text><text x="684" y="36" font-size="12" text-anchor="start" fill="#222">المسار الأدنى (6 أشهر)</text><rect x="438.1899370455322" y="22" width="11.81006295446781" height="20" fill="#0f6e6e" opacity="0.85"/><rect x="435.8040657415993" y="22" width="2.385871303932902" height="20" fill="#0f6e6e" opacity="0.35"/><text x="429.8040657415993" y="37" font-size="11" text-anchor="end" fill="#333" direction="ltr">34k – 41k $</text><text x="684" y="76" font-size="12" text-anchor="start" fill="#222">أ: فريق إقليمي عن بُعد</text><rect x="376.9366677692284" y="62" width="73.0633322307716" height="20" fill="#0f6e6e" opacity="0.85"/><rect x="346.1589279484941" y="62" width="30.77773982073427" height="20" fill="#0f6e6e" opacity="0.35"/><text x="340.1589279484941" y="77" font-size="11" text-anchor="end" fill="#333" direction="ltr">211k – 300k $</text><text x="684" y="116" font-size="12" text-anchor="start" fill="#222">ب: فريق مختلط (إقليمي + خبراء دوليون)</text><rect x="332.2015808204867" y="102" width="117.7984191795133" height="20" fill="#0f6e6e" opacity="0.85"/><rect x="301.4238409997524" y="102" width="30.777739820734325" height="20" fill="#0f6e6e" opacity="0.35"/><text x="295.4238409997524" y="117" font-size="11" text-anchor="end" fill="#333" direction="ltr">341k – 430k $</text><text x="684" y="156" font-size="12" text-anchor="start" fill="#222">ج: أسعار السوق الدولية</text><rect x="154.8518138948084" y="142" width="295.1481861051916" height="20" fill="#0f6e6e" opacity="0.85"/><rect x="124.07407407407408" y="142" width="30.777739820734325" height="20" fill="#0f6e6e" opacity="0.35"/><text x="118.07407407407408" y="157" font-size="11" text-anchor="end" fill="#333" direction="ltr">854k – 943k $</text></svg><div class="cap">شكل 4: نطاق التكلفة الإجمالية لكل سيناريو. الجزء الداكن = الحد الأدنى، والفاتح = الفرق حتى الحد الأعلى</div></div>
+<h2>11.5 المسار الأدنى: إصدار تجريبي خاص خلال 6 أشهر</h2>
+<table><tr><th>الدور</th><th class="num">نسبة الدوام</th><th class="num">الأشهر</th></tr><tr><td>قائد تقني</td><td class='num'>1</td><td class='num'>6</td></tr><tr><td>مهندس خلفية</td><td class='num'>1</td><td class='num'>6</td></tr><tr><td>أمن وجودة (جزئي)</td><td class='num'>0.5</td><td class='num'>6</td></tr></table>
+<p>بأسعار سيناريو أ: تكلفة الأفراد <bdi dir="ltr">$26,700</bdi> (15 شهر-عمل)، وتكاليف أخرى بين
+<bdi dir="ltr">$3,000</bdi> و<bdi dir="ltr">$9,000</bdi>. <b>الإجمالي مع الاحتياطي:
+<bdi dir="ltr" class="rng">$34,155 – $41,055</bdi></b>. هذا المسار لا يشمل الواجهات الرسومية ولا التدقيق الخارجي.</p>
+<h2>11.6 مصادر تمويل مقترحة</h2>
+<ul>
+<li>منح البحث والابتكار (جامعية أو دولية) لمسار البحث والمقاييس المفتوحة.</li>
+<li>برامج دعم المصادر المفتوحة والبنية الرقمية.</li>
+<li>مستثمر ملائكي أو مسرّعة أعمال بعد M1، مع أدلة استخدام فعلية من الجهات التجريبية.</li>
+<li>عقود خدمات مبكرة، مثل استعادة الأنظمة القديمة، تموّل جزءًا من التطوير.</li>
+</ul>
+</div>
+<div class="section"><h1>12. المتطلبات اللازمة</h1>
+<div class="two"><div>
+<h2>للفريق</h2>
+<ul>
+<li>أجهزة تطوير: 16 جيجابايت ذاكرة على الأقل، ومعالج حديث، وLinux أو macOS.</li>
+<li>طاقة احتياطية (UPS أو طاقة شمسية)، واتصال احتياطي بالإنترنت.</li>
+<li>جهاز أو خدمة سحابية بمعالج رسومي (24 جيجابايت VRAM أو أكثر) لتقييم النماذج المحلية.</li>
+<li>مستودع كود، وتكامل مستمر، ومتتبع مهام، وأداة تصميم.</li>
+<li>حسابات: مزود سحابي، وGoogle Play، وApple Developer، وشهادة توقيع لتطبيق سطح المكتب.</li>
+</ul></div><div>
+<h2>للمستخدم النهائي</h2>
+<ul>
+<li>Linux أو macOS (Windows لاحقًا)، وPython 3.11 أو أحدث.</li>
+<li>4 جيجابايت ذاكرة كحد أدنى، و8 أو أكثر موصى بها.</li>
+<li>Docker موصى به بشدة للمشاريع غير الموثوقة.</li>
+<li>نموذج ذكاء اصطناعي محلي أو بعيد: <b>اختياري</b>، والمنصة تعمل بدونه.</li>
+<li>لا يلزم اتصال دائم بالإنترنت.</li>
+</ul></div></div>
+<h2>متطلبات قانونية وتنظيمية</h2>
+<ul>
+<li>تسجيل كيان قانوني، وحماية الاسم والعلامة التجارية <b>YEMENDEV AI</b>.</li>
+<li>مراجعة تراخيص كل التبعيات المفتوحة. المشروع معلن بترخيص Apache-2.0، ويلزم تأكيد ذلك قانونيًا.</li>
+<li>سياسة خصوصية واتفاقية استخدام، واتفاقيات معالجة بيانات مع العملاء المؤسسيين.</li>
+<li>اتفاقيات ملكية فكرية مع أعضاء الفريق والمساهمين.</li>
+<li>مراجعة قيود التصدير والعقوبات على الخدمات السحابية والأدوات المستخدمة، وهي <b>مهمة بشكل خاص</b> في السياق اليمني.</li>
+</ul>
+<h2>شراكات مطلوبة</h2>
+<ul>
+<li>جامعة للبحث والتقييم والتدريب.</li>
+<li>3–5 جهات تجريبية بمشاريع حقيقية، مع إذن بالاستخدام للتقييم.</li>
+<li>جهة أمنية مستقلة للتدقيق الخارجي.</li>
+</ul>
+</div>
+<div class="section"><h1>13. المخاطر وخطط التخفيف</h1>
+<table><tr><th>النوع</th><th>الخطر</th><th>الأثر</th><th>التخفيف</th></tr><tr><td>تقني</td><td>ضعف جودة إصلاحات النماذج المحلية</td><td>عالٍ</td><td>المنصة لا تعتمد على النموذج: المحاكاة والتحقق والتراجع تمنع الضرر، والمهارات المُتحقق منها تعمل دون نموذج</td></tr><tr><td>تقني</td><td>اختبارات المشاريع الحقيقية ضعيفة أو غائبة</td><td>عالٍ</td><td>توليد اختبارات مقترحة (يحتاج تطويرًا)، وتوضيح حدود التحقق في كل دليل</td></tr><tr><td>أمني</td><td>هروب من الحاوية عبر ثغرة في النواة</td><td>منخفض/عالٍ</td><td>تحديثات مستمرة، ودعم gVisor/Firecracker لاحقًا، وتدقيق خارجي</td></tr><tr><td>أمني</td><td>موافقة بشرية متسرعة على تعديل خبيث</td><td>متوسط</td><td>عرض الفرق كاملًا في طلب الموافقة، وتحسينات واجهة المراجعة، وتدريب المستخدمين</td></tr><tr><td>سوقي</td><td>عدم وجود طلب كافٍ بالسعر المطلوب</td><td>متوسط</td><td>برنامج تجريبي قبل التوسع، والتسعير بعد المقابلات، ونموذج نواة مفتوحة</td></tr><tr><td>تمويلي</td><td>نقص التمويل قبل الوصول للإصدار 1.0</td><td>عالٍ</td><td>المسار الأدنى أولًا، وتمويل مرحلي مربوط بالمعالم، وعقود خدمات مبكرة</td></tr><tr><td>فريق</td><td>صعوبة توظيف خبرات أمنية وذكاء اصطناعي</td><td>متوسط</td><td>شراكات جامعية، وخبراء دوليون بدوام جزئي (سيناريو ب)</td></tr><tr><td>تشغيلي</td><td>انقطاع الكهرباء والإنترنت عن الفريق</td><td>عالٍ</td><td>طاقة احتياطية واتصال احتياطي مدرجان في الميزانية، والمنصة نفسها مصممة للعمل دون اتصال</td></tr><tr><td>تنظيمي</td><td>قيود الوصول لخدمات سحابية أو أدوات بسبب العقوبات</td><td>متوسط</td><td>تفضيل الأدوات المفتوحة والتشغيل الذاتي، ومراجعة قانونية مبكرة</td></tr><tr><td>جودة</td><td>الكود الحالي بُني بمساعدة وكيل ذكاء اصطناعي</td><td>متوسط</td><td>مراجعة بشرية كاملة من القائد التقني في الشهر الأول، وتدقيق خارجي قبل 1.0</td></tr></table>
+<p class="small">سجل المخاطر التقنية الكامل وتقرير التدقيق في <code>docs/RISK_REGISTER.md</code> و<code>docs/AUDIT_REPORT.md</code>.</p>
+</div>
+<div class="section"><h1>14. مؤشرات النجاح</h1>
+<p>هذه <b>أهداف مقترحة</b> وليست نتائج محققة، وتُقاس في نهاية كل معلم.</p>
+<table>
+<tr><th>المجال</th><th>المؤشر</th><th>هدف M1</th><th>هدف M3</th></tr>
+<tr><td>سلامة البيانات</td><td>فقدان بيانات في المقياس وفي الاستخدام الفعلي</td><td>صفر</td><td>صفر</td></tr>
+<tr><td>التعافي</td><td>نسبة نجاح سيناريوهات التعافي في المقياس</td><td>100% (15 سيناريو)</td><td>≥ 95% على 100+ سيناريو حقيقي</td></tr>
+<tr><td>الأمان</td><td>ثغرات حرجة أو عالية مفتوحة</td><td>صفر معروفة</td><td>صفر بعد التدقيق الخارجي</td></tr>
+<tr><td>الدقة</td><td>إصلاحات اعتُمدت ثم تبيّن أنها خاطئة</td><td>تُقاس</td><td>&lt; 2%</td></tr>
+<tr><td>الاستخدام</td><td>جهات تستخدم المنصة على مشاريع حقيقية</td><td>3</td><td>20+</td></tr>
+<tr><td>البحث</td><td>أوراق محكّمة / مجموعات بيانات مفتوحة</td><td>—</td><td>1 / 1</td></tr>
+<tr><td>الجودة</td><td>تغطية الاختبارات للكود الحرج</td><td>تُقاس</td><td>≥ 85%</td></tr>
+</table>
+</div>
+<div class="section"><h1>15. الخطوات التالية الفورية</h1>
+<h2>خلال 30 يومًا</h2>
+<ol>
+<li>تعيين القائد التقني، وإجراء مراجعة بشرية كاملة للكود الحالي.</li>
+<li>جعل Docker البيئة الافتراضية حين يكون متاحًا، مع تحذيرات واضحة (المرحلة 11).</li>
+<li>تحديد 5–10 جهات تجريبية محتملة وبدء المقابلات.</li>
+<li>بدء الإجراءات القانونية: تسجيل الكيان والعلامة التجارية.</li>
+</ol>
+<h2>خلال 60 يومًا</h2>
+<ol>
+<li>مثبّت بأمر واحد، وصور حاويات لكل مشروع حسب تبعياته.</li>
+<li>تقييم أول نموذج محلي مفتوح على مقياس المرونة.</li>
+<li>توقيع اتفاقية شراكة جامعية.</li>
+</ol>
+<h2>خلال 90 يومًا (M1)</h2>
+<ol>
+<li>إصدار تجريبي خاص مع 3 جهات على مشاريع حقيقية.</li>
+<li>تقرير نتائج أول تجربة: ما نجح، وما فشل، وما يجب تغييره.</li>
+<li>قرار التوسع، بناءً على الأدلة.</li>
+</ol>
+</div>
+<div class="section"><h1>16. ملحق: المصطلحات والمراجع</h1>
+<h2>المصطلحات</h2><table><tr><th>المصطلح</th><th>المعنى</th></tr><tr><td><bdi dir="ltr" class="en">RACE-X</bdi></td><td>حلقة الهندسة والتعافي المستمرة المرنة</td></tr><tr><td><bdi dir="ltr" class="en">MOSAIC</bdi></td><td>طبقة الذكاء الاصطناعي المستقلة عن المزوّد</td></tr><tr><td><bdi dir="ltr" class="en">ORION</bdi></td><td>محرك تنسيق المهام والاستئناف</td></tr><tr><td><bdi dir="ltr" class="en">Sandbox</bdi></td><td>بيئة معزولة لتشغيل كود غير موثوق</td></tr><tr><td><bdi dir="ltr" class="en">Rollback</bdi></td><td>التراجع واستعادة الحالة الأصلية حرفيًا</td></tr><tr><td><bdi dir="ltr" class="en">Evidence</bdi></td><td>سجل دليل غير قابل للتعديل لكل خطوة</td></tr><tr><td><bdi dir="ltr" class="en">Audit chain (HMAC)</bdi></td><td>سلسلة تدقيق مشفّرة تكشف التعديل والحذف</td></tr><tr><td><bdi dir="ltr" class="en">ADR</bdi></td><td>سجل قرار معماري</td></tr><tr><td><bdi dir="ltr" class="en">MVP</bdi></td><td>الحد الأدنى من المنتج القابل للاستخدام</td></tr><tr><td><bdi dir="ltr" class="en">Person-month</bdi></td><td>شهر-عمل: عمل شخص واحد بدوام كامل لمدة شهر</td></tr></table>
+<h2>وثائق المشروع</h2><ul><li><code>docs/FEATURE_STATUS.md</code> — حالة كل ميزة بالأدلة</li><li><code>docs/AUDIT_REPORT.md</code> — تقرير التدقيق الأمني</li><li><code>docs/THREAT_MODEL.md</code> — نموذج التهديد</li><li><code>docs/BENCHMARK_METHODOLOGY.md</code> — منهجية مقياس المرونة</li><li><code>docs/IMPLEMENTATION_ROADMAP.md</code> — خارطة الطريق التقنية</li><li><code>docs/adr/</code> — 9 قرارات معمارية</li><li><code>docs/proposal/model.py</code> — افتراضات التكلفة والجدول (قابلة للتعديل وإعادة التوليد)</li></ul>
+<h2>إعادة توليد هذه الوثيقة</h2>
+<p>عدّل الافتراضات في <code>docs/proposal/model.py</code> ثم نفّذ <code>python3 docs/proposal/build.py</code>.</p>
+<p class="small">أُعدّت هذه الوثيقة في 21 نوفمبر 2026. الأرقام المقاسة صحيحة في تاريخ الإعداد، والتقديرات تحتاج مراجعة دورية.</p>
+</div></body></html>
