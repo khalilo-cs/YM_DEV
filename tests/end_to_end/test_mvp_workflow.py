@@ -100,8 +100,16 @@ def test_mvp_end_to_end_with_learning_and_skill_reuse(platform, wf, tmp_path, no
     assert platform.skills.field_stats(cand, 1)["successes"] == 1
 
 
-def test_failed_verification_rolls_back_exactly(platform, wf, tmp_path):
-    """Environment drift between simulation and verification: a test that starts failing after N runs."""
+def test_failed_verification_rolls_back_exactly(settings, tmp_path):
+    """Environment drift between simulation and verification: a test that starts failing after N runs.
+
+    Process backend only, by design: the drift is modelled through a host-shared file, which the docker
+    backend (correctly) makes unreachable. The backend-independent variant is the benchmark scenario
+    ``compound_drift_then_rollback`` (tests/regression/test_benchmark.py).
+    """
+    settings.sandbox = settings.sandbox.model_copy(update={"backend": "process"})
+    platform = Platform(settings)
+    wf = RepairWorkflow(platform)
     import os
     import tempfile
     root = make_renamed_api_project(tmp_path / "proj")

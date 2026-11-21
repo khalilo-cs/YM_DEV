@@ -187,15 +187,22 @@ def cmd_bench(args: argparse.Namespace) -> int:
 
 
 def cmd_sandbox(args: argparse.Namespace) -> int:
-    from yemendev.sandbox.docker_backend import docker_availability
+    from yemendev.sandbox.docker_backend import isolation_report
     from yemendev.sandbox.image import build_sandbox_image
 
     settings = Settings.from_env(Path(args.data_dir) if args.data_dir else None)
     if args.scmd == "status":
         s = settings.sandbox
-        _print({"backend_setting": s.backend, "docker_image": s.docker_image,
-                "docker": docker_availability(s, use_cache=False).model_dump(),
-                "privilege_separation": s.sandbox_identity() is not None})
+        rep = isolation_report(s)
+        _print({**rep, "docker_image": s.docker_image, "privilege_separation": s.sandbox_identity() is not None})
+        for w in rep["warnings"]:  # type: ignore[attr-defined]
+            print(f"WARNING: {w}", file=sys.stderr)
+        return 0
+    if args.project:  # per-project dependency image: authenticated, admin-only, audited
+        p = _platform(args)
+        a = _actor(p, args)
+        img = p.build_project_image(a, args.project, wheels_dir=Path(args.wheels) if args.wheels else None)
+        _print(img.model_dump())
         return 0
     res = build_sandbox_image(settings.sandbox, base_image=args.base, pytest_version=args.pytest,
                               wheels_dir=Path(args.wheels) if args.wheels else None)
@@ -300,6 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("--base", default="python:3.13-slim", help="local base image (never pulled implicitly)")
     x.add_argument("--pytest", default="9.2.0")
     x.add_argument("--wheels", help="directory of pre-downloaded wheels (fully offline)")
+    x.add_argument("--project", help="build the dependency image for this project id (needs an admin token)")
     s.set_defaults(fn=cmd_sandbox)
 
     s = sub.add_parser("serve")

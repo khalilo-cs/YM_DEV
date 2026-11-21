@@ -249,6 +249,10 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
                 "languages": snap.languages, "findings": [f.model_dump() for f in snap.findings],
                 "sensitive_files": snap.sensitive_files, "skipped": snap.skipped}
 
+    @app.post("/api/v1/projects/{project_id}/sandbox-image")
+    def project_image(project_id: str, a: Who) -> dict[str, Any]:
+        return dict(platform.build_project_image(a, project_id).model_dump())
+
     @app.get("/api/v1/projects/{project_id}/graph")
     def graph(project_id: str, a: Who) -> dict[str, Any]:
         platform.require_read(a, project_id)

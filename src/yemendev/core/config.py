@@ -33,7 +33,7 @@ class SandboxSettings(BaseModel):
     privilege_separation: str = Field(default="best_effort")
     # Execution backend: "process" (rlimits + netns + uid drop), "docker" (container; required - never falls
     # back silently), or "auto" (docker when usable, else process; the choice is recorded per run).
-    backend: str = Field(default="process")
+    backend: str = Field(default="auto")
     # Process backend only: run untrusted code even if its identity can reach a container-runtime socket
     # (docker/containerd/podman = root-equivalent). Off by default; when on, every run records the exposure.
     allow_runtime_socket_exposure: bool = False
@@ -126,7 +126,7 @@ class Settings(BaseModel):
             network_isolation=env.get("YEMENDEV_NETWORK_ISOLATION", "best_effort"),
             timeout_seconds=float(env.get("YEMENDEV_SANDBOX_TIMEOUT", "120")),
             python_executable=env.get("YEMENDEV_PYTHON", sys.executable),
-            backend=env.get("YEMENDEV_SANDBOX_BACKEND", "process"),
+            backend=env.get("YEMENDEV_SANDBOX_BACKEND", "auto"),
             docker_image=env.get("YEMENDEV_SANDBOX_IMAGE", "yemendev-sandbox:py3.13"),
         )
         model = ModelSettings(

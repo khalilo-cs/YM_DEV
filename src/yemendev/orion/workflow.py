@@ -196,8 +196,9 @@ class RepairWorkflow:
     def _baseline(self, actor: Actor, t: Task) -> Any:
         self.p.guard.require(actor, Action.RUN_SANDBOXED, t.project_id, project_id=t.project_id)
         runs = []
+        sandbox, image_note = self.p.sandbox_for(t.project_id)
         for _ in range(BASELINE_RUNS):
-            with Workspace(self._root(t), self.p.settings.sandbox, base_dir=self.p.settings.workspaces_dir) as ws:
+            with Workspace(self._root(t), sandbox, base_dir=self.p.settings.workspaces_dir) as ws:
                 runs.append(run_pytest(ws))
         r = runs[-1]
         self.p.evidence.record(
@@ -209,7 +210,8 @@ class RepairWorkflow:
                                            "image": r.execution.image, "run_as_uid": r.execution.run_as_uid,
                                            "backend_note": r.execution.backend_note},
                               limitations=["test results are only as strong as the project's own test suite"]
-                              + ([r.execution.backend_note] if r.execution.backend_note else [])))
+                              + ([r.execution.backend_note] if r.execution.backend_note else [])
+                              + ([image_note] if image_note else [])))
         return {"runs": [x.model_dump(mode="json") for x in runs]}
 
     def _diagnose(self, actor: Actor, t: Task) -> Any:
@@ -263,7 +265,7 @@ class RepairWorkflow:
         for pd in self._out(t.id, "propose")["plans"]:
             plan = RepairPlan(**pd)
             try:
-                res = self.p.recovery.simulate(root, plan, baseline)
+                res = self.p.recovery.simulate(root, plan, baseline, sandbox=self.p.sandbox_for(t.project_id)[0])
                 entry = {"plan_id": plan.id, "passed": res.passed, "problems": res.problems,
                          "comparison": res.comparison.model_dump() if res.comparison else None}
             except YemenDevError as exc:
@@ -362,7 +364,8 @@ class RepairWorkflow:
 
     def _verify(self, actor: Actor, t: Task) -> Any:
         plan = self._plan(t)
-        res: PhaseResult = self.p.recovery.verify(self._root(t), plan, self._baseline_report(t))
+        res: PhaseResult = self.p.recovery.verify(self._root(t), plan, self._baseline_report(t),
+                                                  sandbox=self.p.sandbox_for(t.project_id)[0])
         out = {"passed": res.passed, "problems": res.problems,
                "comparison": res.comparison.model_dump() if res.comparison else None}
         self.p.evidence.record(action="repair.verify", actor="agent:verification", target=t.project_id,

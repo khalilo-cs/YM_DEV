@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from yemendev.core.config import Settings
+from yemendev.core.config import SandboxSettings, Settings
 from yemendev.core.contracts import (
     ConflictError,
     InvalidInputError,
@@ -243,6 +243,50 @@ class Platform:
                           details={"scan_id": sid, "evidence_id": ev.id})
         return sid, snap
 
+    # ---- per-project sandbox images ---------------------------------------------------------
+    def sandbox_for(self, project_id: str) -> tuple[SandboxSettings, str | None]:
+        """Sandbox settings for this project (its dependency image when built) and a note if degraded."""
+        from yemendev.sandbox.docker_backend import docker_availability
+        from yemendev.sandbox.project_image import image_exists, project_image_tag, runtime_requirements
+
+        base = self.settings.sandbox
+        if base.backend == "process":
+            return base, None
+        try:
+            _, snap = self.latest_scan(project_id)
+            reqs = runtime_requirements(snap)
+        except (NotFoundError, InvalidInputError):
+            return base, None
+        if not reqs:
+            return base, None
+        avail = docker_availability(base)
+        if not avail.available or not avail.image_id:
+            return base, None
+        tag = project_image_tag(avail.image_id, reqs)
+        if image_exists(base, tag):
+            return base.model_copy(update={"docker_image": tag}), None
+        return base, (f"project declares {len(reqs)} dependenc{'y' if len(reqs) == 1 else 'ies'} but no project "
+                      "sandbox image is built; tests that import them will fail in the container "
+                      "(build it: `yemendev sandbox build-image --project <id>`)")
+
+    def build_project_image(self, actor: Actor, project_id: str, wheels_dir: Path | None = None) -> Any:
+        from yemendev.sandbox.project_image import build_project_image, runtime_requirements
+
+        self.project(project_id)
+        self.guard.require(actor, Action.BUILD_SANDBOX_IMAGE, project_id, project_id=project_id)
+        _, snap = self.latest_scan(project_id)
+        reqs = runtime_requirements(snap)
+        img = build_project_image(self.settings.sandbox, reqs, wheels_dir=wheels_dir)
+        outcome = "reused" if img.reused else "built"
+        self.evidence.record(
+            action="sandbox.project_image", actor=actor.ref, target=project_id, outcome=outcome,
+            body=EvidenceBody(inputs={"requirements": reqs}, after_state=img.model_dump(),
+                              limitations=["wheels only; dependency code is installed into the image, never run on the "
+                                           "host", "unpinned requirements resolve to the newest wheels at build time"]))
+        self.audit.record(actor=actor.ref, action=Action.BUILD_SANDBOX_IMAGE.value, target=project_id,
+                          outcome=outcome, details={"tag": img.tag, "image_id": img.image_id})
+        return img
+
     def latest_scan(self, project_id: str) -> tuple[str, ProjectSnapshot]:
         with self.db.read() as conn:
             r = conn.execute("SELECT id, snapshot_json FROM project_scans WHERE project_id = ? ORDER BY created_at"
@@ -305,7 +349,7 @@ class Platform:
                       for t in ("projects", "tasks", "approval_requests", "evidence_records", "skills",
                                 "memory_records", "audit_events")}
             pending = conn.execute("SELECT COUNT(*) FROM approval_requests WHERE status = 'pending'").fetchone()[0]
-        from yemendev.sandbox.docker_backend import docker_availability
+        from yemendev.sandbox.docker_backend import isolation_report
         from yemendev.sandbox.workspace import network_namespace_available
 
         return {
@@ -317,9 +361,7 @@ class Platform:
                         "network_namespace_available": network_namespace_available(),
                         "privilege_separation": self.settings.sandbox.sandbox_identity() is not None,
                         "privilege_separation_mode": self.settings.sandbox.privilege_separation,
-                        "backend_setting": self.settings.sandbox.backend,
-                        "docker": docker_availability(self.settings.sandbox).model_dump()
-                        if self.settings.sandbox.backend != "process" else None},
+                        **{f"isolation_{k}": v for k, v in isolation_report(self.settings.sandbox).items()}},
             "offline_capable": True,
             "generated_at": iso(),
         }

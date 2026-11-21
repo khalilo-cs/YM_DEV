@@ -203,10 +203,12 @@ class Workspace:
             self.backend_note = f"{self.backend_note}; {note}" if self.backend_note else note
             return
         self.cleanup()
+        hint = f" ({self.backend_note})" if self.backend_note else ""
         raise UnavailableError(
             f"refusing to run untrusted code: its identity can reach container runtime socket(s) {exposed}, "
-            "which is equivalent to root on this host. Use backend=docker, run the platform as root so code "
-            "runs as an unprivileged uid, or set allow_runtime_socket_exposure explicitly.")
+            "which is equivalent to root on this host. Use the docker backend (build its image with "
+            "`yemendev sandbox build-image`), run the platform as root so code runs as an unprivileged uid, "
+            f"or set allow_runtime_socket_exposure explicitly{hint}.")
 
     @property
     def python_executable(self) -> str:

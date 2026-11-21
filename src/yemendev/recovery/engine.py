@@ -81,9 +81,10 @@ class RecoveryEngine:
             originals[p.path] = data.decode("utf-8", "replace")
         return PreparedPlan(plan=plan, originals=originals, diff=plan.unified_diff(originals))
 
-    def simulate(self, root: Path, plan: RepairPlan, baseline: TestRunReport) -> PhaseResult:
+    def simulate(self, root: Path, plan: RepairPlan, baseline: TestRunReport,
+                 sandbox: SandboxSettings | None = None) -> PhaseResult:
         self.prepare(root, plan)
-        with Workspace(root, self.sandbox, base_dir=self.workspaces_dir) as ws:
+        with Workspace(root, sandbox or self.sandbox, base_dir=self.workspaces_dir) as ws:
             for p in plan.patches:
                 ws.write(p.path, p.new_content.encode("utf-8"))
             report = run_pytest(ws)
@@ -135,11 +136,12 @@ class RecoveryEngine:
             return "diverged"
         return "partial"
 
-    def verify(self, root: Path, plan: RepairPlan, baseline: TestRunReport) -> PhaseResult:
+    def verify(self, root: Path, plan: RepairPlan, baseline: TestRunReport,
+               sandbox: SandboxSettings | None = None) -> PhaseResult:
         if self.applied_state(root, plan) != "applied":
             return PhaseResult(passed=False, report=None, comparison=None,
                                problems=["patched files do not match the approved content"])
-        with Workspace(root, self.sandbox, base_dir=self.workspaces_dir) as ws:
+        with Workspace(root, sandbox or self.sandbox, base_dir=self.workspaces_dir) as ws:
             report = run_pytest(ws)
         return self._judge(baseline, report)
 

@@ -11,7 +11,7 @@ from yemendev.sandbox.workspace import Workspace, network_namespace_available
 
 @pytest.fixture
 def settings():
-    return SandboxSettings(timeout_seconds=20, max_memory_mb=512)
+    return SandboxSettings(backend="process", timeout_seconds=20, max_memory_mb=512)
 
 
 def test_source_is_copied_not_modified(tmp_path, settings):
@@ -76,7 +76,7 @@ def test_memory_limit_enforced(tmp_path, settings):
 
 
 def test_output_is_capped(tmp_path):
-    s = SandboxSettings(timeout_seconds=20, max_output_bytes=2048)
+    s = SandboxSettings(backend="process", timeout_seconds=20, max_output_bytes=2048)
     with Workspace(make_passing_project(tmp_path / "p"), s) as ws:
         r = ws.run([sys.executable, "-c", "print('a'*100000)"])
     assert r.output_truncated and len(r.stdout) <= 2048
@@ -95,7 +95,7 @@ def test_required_isolation_refuses_when_unavailable(tmp_path, monkeypatch):
     from yemendev.core.contracts import UnavailableError
     from yemendev.sandbox import workspace as wsmod
     monkeypatch.setattr(wsmod, "network_namespace_available", lambda: False)
-    s = SandboxSettings(network_isolation="required")
+    s = SandboxSettings(backend="process", network_isolation="required")
     with Workspace(make_passing_project(tmp_path / "p"), s) as ws, pytest.raises(UnavailableError):
         ws.run([sys.executable, "-c", "pass"])
 
@@ -131,7 +131,7 @@ def test_privilege_separation_applied_and_platform_state_unreachable(tmp_path, s
 
 def test_privilege_separation_required_refuses_when_unavailable(tmp_path, monkeypatch):
     from yemendev.core.contracts import UnavailableError
-    s = SandboxSettings(privilege_separation="required")
+    s = SandboxSettings(backend="process", privilege_separation="required")
     monkeypatch.setattr(SandboxSettings, "sandbox_identity", lambda self: None)
     with pytest.raises(UnavailableError):
         Workspace(make_passing_project(tmp_path / "p"), s)

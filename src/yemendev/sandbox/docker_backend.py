@@ -79,6 +79,36 @@ def _probe(s: SandboxSettings) -> DockerAvailability:
                               image_id=img.stdout.strip())
 
 
+def isolation_report(s: SandboxSettings) -> dict[str, object]:
+    """Which backend untrusted code will actually use, and plain-language warnings about weaker isolation."""
+    from yemendev.sandbox.workspace import exposed_runtime_sockets
+
+    warnings: list[str] = []
+    docker = docker_availability(s) if s.backend != "process" else None
+    if s.backend == "process" or (s.backend == "auto" and docker is not None and not docker.available):
+        effective = "process"
+        if s.backend == "auto" and docker is not None:
+            warnings.append(f"docker sandbox not usable ({docker.reason}); falling back to the process backend")
+        warnings.append("process backend: untrusted code can read world-readable host files and see host processes")
+        ident = s.sandbox_identity()
+        if ident is None:
+            warnings.append("no privilege separation: untrusted code runs as the platform's own user")
+        if exposed_runtime_sockets(ident) and not s.allow_runtime_socket_exposure:
+            warnings.append("untrusted code could reach a container runtime socket: runs will be REFUSED")
+        elif exposed_runtime_sockets(ident):
+            warnings.append("untrusted code can reach a container runtime socket "
+                            "(root-equivalent); allowed by setting")
+    else:
+        effective = "docker"
+        if docker is not None and not docker.available:  # backend == "docker" (required) but unusable
+            effective = "unavailable"
+            warnings.append(f"docker backend required but unusable: {docker.reason}; sandboxed runs will fail")
+    if s.network_isolation == "disabled":
+        warnings.append("network isolation disabled: untrusted code has network access")
+    return {"setting": s.backend, "effective": effective, "warnings": warnings,
+            "docker": docker.model_dump() if docker else None}
+
+
 def container_identity(identity: tuple[int, int] | None) -> tuple[int, int]:
     """Never run as uid 0 inside the container."""
     uid, gid = identity if identity is not None else (os.getuid(), os.getgid())

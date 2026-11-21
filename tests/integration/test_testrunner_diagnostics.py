@@ -79,7 +79,7 @@ def test_timeout_is_not_success(tmp_path):
 
 
 def test_runner_error_when_pytest_missing(tmp_path):
-    s = SandboxSettings(python_executable="/usr/bin/false")
+    s = SandboxSettings(backend="process", python_executable="/usr/bin/false")
     with Workspace(make_passing_project(tmp_path / "p"), s) as ws:
         r = run_pytest(ws)
     assert r.status is RunStatus.RUNNER_ERROR

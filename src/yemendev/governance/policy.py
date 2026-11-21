@@ -32,6 +32,7 @@ class Action(StrEnum):
     ISSUE_TOKEN = "token.issue"  # noqa: S105 - action name, not a secret
     MANAGE_MEMBERS = "project.manage_members"
     READ_AUDIT = "audit.read"  # the audit log spans all projects
+    BUILD_SANDBOX_IMAGE = "sandbox.build_image"  # downloads third-party code: admin only
 
 
 class Sensitivity(StrEnum):
@@ -66,6 +67,7 @@ POLICY: dict[Action, Rule] = {
     Action.ISSUE_TOKEN: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
     Action.MANAGE_MEMBERS: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
     Action.READ_AUDIT: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
+    Action.BUILD_SANDBOX_IMAGE: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
 }
 
 
