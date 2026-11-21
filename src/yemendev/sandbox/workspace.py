@@ -24,6 +24,7 @@ from __future__ import annotations
 import os
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -103,6 +104,44 @@ def _unshare_prefix(dropping_privileges: bool = False) -> list[str]:
     return [exe, "--net"]
 
 
+def runtime_socket_candidates() -> list[Path]:
+    uid = os.getuid()
+    cands = [Path("/var/run/docker.sock"), Path("/run/docker.sock"), Path(f"/run/user/{uid}/docker.sock"),
+             Path("/run/containerd/containerd.sock"), Path("/run/podman/podman.sock"),
+             Path(f"/run/user/{uid}/podman/podman.sock"), Path("/var/run/crio/crio.sock")]
+    dh = os.environ.get("DOCKER_HOST", "")
+    if dh.startswith("unix://"):
+        cands.append(Path(dh[len("unix://"):]))
+    return cands
+
+
+def exposed_runtime_sockets(identity: tuple[int, int] | None,
+                            candidates: list[Path] | None = None) -> list[str]:
+    """Runtime sockets the sandbox identity could connect to.
+
+    ``identity=None`` means code runs as the platform's own user (with its supplementary groups).
+    For a dropped identity, groups are cleared by the launcher, so only owner/primary-group/world bits count.
+    """
+    out = []
+    for p in candidates if candidates is not None else runtime_socket_candidates():
+        try:
+            st = os.stat(p)
+        except OSError:
+            continue
+        if not stat.S_ISSOCK(st.st_mode):
+            continue
+        if identity is None:
+            reachable = os.access(p, os.R_OK | os.W_OK)
+        else:
+            uid, gid = identity
+            mode = st.st_mode
+            reachable = (st.st_uid == uid and mode & 0o600 == 0o600) or \
+                (st.st_gid == gid and mode & 0o060 == 0o060) or (mode & 0o006 == 0o006)
+        if reachable:
+            out.append(str(p))
+    return out
+
+
 def _ignore(src: str, names: list[str]) -> set[str]:
     out = set()
     for n in names:
@@ -136,6 +175,7 @@ class Workspace:
         self._chown_tree()
         if self.backend == "process":
             self._check_reachable()
+            self._check_runtime_sockets()
 
     def _select_backend(self) -> tuple[str, str | None, DockerAvailability | None]:
         mode = self.settings.backend
@@ -148,6 +188,25 @@ class Workspace:
             self.cleanup()
             raise UnavailableError(f"docker sandbox backend required but unavailable: {avail.reason}")
         return "process", f"auto: docker unavailable ({avail.reason}); used process backend", None
+
+    def _check_runtime_sockets(self) -> None:
+        """Refuse to run untrusted code that could reach a container-runtime socket (root-equivalent).
+
+        Regression (stage 10 audit): with no uid drop, sandboxed code connected to /var/run/docker.sock
+        and got ``HTTP 200`` from the Docker API - network namespaces do not block Unix sockets.
+        """
+        exposed = exposed_runtime_sockets(self.identity)
+        if not exposed:
+            return
+        if self.settings.allow_runtime_socket_exposure:
+            note = f"WARNING: sandboxed code can reach container runtime socket(s) {exposed} (allowed by setting)"
+            self.backend_note = f"{self.backend_note}; {note}" if self.backend_note else note
+            return
+        self.cleanup()
+        raise UnavailableError(
+            f"refusing to run untrusted code: its identity can reach container runtime socket(s) {exposed}, "
+            "which is equivalent to root on this host. Use backend=docker, run the platform as root so code "
+            "runs as an unprivileged uid, or set allow_runtime_socket_exposure explicitly.")
 
     @property
     def python_executable(self) -> str:

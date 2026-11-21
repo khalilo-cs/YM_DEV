@@ -34,6 +34,9 @@ class SandboxSettings(BaseModel):
     # Execution backend: "process" (rlimits + netns + uid drop), "docker" (container; required - never falls
     # back silently), or "auto" (docker when usable, else process; the choice is recorded per run).
     backend: str = Field(default="process")
+    # Process backend only: run untrusted code even if its identity can reach a container-runtime socket
+    # (docker/containerd/podman = root-equivalent). Off by default; when on, every run records the exposure.
+    allow_runtime_socket_exposure: bool = False
     docker_binary: str = "docker"
     docker_image: str = "yemendev-sandbox:py3.13"
     docker_pids_limit: int = Field(default=256, ge=16, le=65536)

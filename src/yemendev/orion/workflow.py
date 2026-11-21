@@ -205,8 +205,11 @@ class RepairWorkflow:
             body=EvidenceBody(tests={"runs": [{"status": x.status.value, "passed": x.passed, "failed": x.failed,
                                                "errors": x.errors, "failing": x.failing_ids()} for x in runs]},
                               environment={"network_isolated": r.execution.network_isolated,
-                                           "limits": r.execution.limits},
-                              limitations=["test results are only as strong as the project's own test suite"]))
+                                           "limits": r.execution.limits, "backend": r.execution.backend,
+                                           "image": r.execution.image, "run_as_uid": r.execution.run_as_uid,
+                                           "backend_note": r.execution.backend_note},
+                              limitations=["test results are only as strong as the project's own test suite"]
+                              + ([r.execution.backend_note] if r.execution.backend_note else [])))
         return {"runs": [x.model_dump(mode="json") for x in runs]}
 
     def _diagnose(self, actor: Actor, t: Task) -> Any:
