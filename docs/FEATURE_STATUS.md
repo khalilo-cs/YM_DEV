@@ -1,6 +1,6 @@
 # Feature Status
 
-Last reviewed: 2026-11-21 (stage 10). Statuses:
+Last reviewed: 2026-11-21 (stage 11). Statuses:
 **NOT STARTED · IMPLEMENTED** (code exists, no/insufficient tests) **· TESTED** (automated tests pass)
 **· VERIFIED** (exercised end-to-end in a real workflow, with evidence) **· EXPERIMENTAL · BLOCKED**.
 
@@ -36,6 +36,8 @@ Last reviewed: 2026-11-21 (stage 10). Statuses:
 | Sandbox `process` backend: copy-on-run, rlimits, process-group kill, netns, scrubbed env, uid drop, runtime-socket refusal | VERIFIED (local) | `sandbox/workspace.py` | `tests/security/test_sandbox.py`, `test_runtime_socket_exposure.py`; attack scripts | Host world-readable files/processes visible; uid drop needs root or `run_as_uid` |
 | Sandbox `docker` backend (ADR-0009) | VERIFIED (local) | `sandbox/docker_backend.py` | `tests/unit/test_docker_backend.py` (no daemon), `tests/security/test_docker_sandbox.py` (real containers, ran); benchmark 15/15 on docker; comparative attacks | Verified with Docker 29 / cgroup v1 / runc in this container only; shares host kernel; projects with third-party deps need a custom image |
 | Offline-first sandbox image build | VERIFIED (local) | `sandbox/image.py`, `yemendev sandbox build-image` | built here with `--network none` | Base image must already be present locally |
+| Per-project sandbox images (wheels only, dependency-hash tags, evidence of wheel hashes) | VERIFIED (local) | `sandbox/project_image.py`, `Platform.build_project_image` | `tests/integration/test_project_image.py` (real build with `six`: fails without image, passes with it; reuse; stale-image avoidance; admin-only) | Packages without a wheel unsupported; unpinned deps resolve at build time |
+| `auto` default backend + isolation warnings | TESTED | `docker_backend.isolation_report`, `yemendev sandbox status`, `/system/status` | `tests/unit/test_isolation_report.py`; benchmark 15/15 on `auto` | - |
 | pytest runner (JUnit parsing, honest statuses, hostile XML rejected) | TESTED | `sandbox/testrunner.py` | `tests/integration/test_testrunner_diagnostics.py` | Project can forge its own report (A-12) |
 | Diagnostics (reproducible vs flaky, locations, unverified hypotheses) | TESTED | `diagnostics/engine.py` | same | Rule-based |
 | Repair plans, checkpoints, atomic writes, byte-exact verified rollback | VERIFIED (local) | `recovery/` | `tests/integration/test_recovery.py`, E2E | Full-content patches only |

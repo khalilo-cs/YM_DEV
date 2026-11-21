@@ -8,7 +8,7 @@ code can read world-readable host files and see host processes.
 * `sandbox.backend = process | docker | auto`. `docker` is *required* mode: if the daemon or image is
   unusable the run fails with the reason; it never silently falls back. `auto` uses docker when
   usable, otherwise process, and records the choice and reason in the run's result and evidence.
-* Default stays `process` (backwards compatible). **Recommended for untrusted projects: `docker`.**
+* Default was `process` at first; **superseded by ADR-0010: the default is now `auto`.**
 * Container flags: `--network none --read-only --tmpfs /tmp --cap-drop ALL --security-opt
   no-new-privileges --user <non-zero uid> --pids-limit --memory(=swap) --cpus --ulimit fsize/core/cpu
   --init`, only the workspace copy bind-mounted at `/work`; the container is killed on timeout and

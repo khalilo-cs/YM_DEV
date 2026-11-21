@@ -16,6 +16,12 @@
 - Stage 10: Docker container sandbox backend (`YEMENDEV_SANDBOX_BACKEND=docker|auto`), offline-first
   `yemendev sandbox build-image`, `yemendev sandbox status`, `yemendev bench --backend`.
 
+- Stage 11: per-project sandbox images (`yemendev sandbox build-image --project`,
+  `POST /api/v1/projects/{id}/sandbox-image`); isolation report with warnings.
+
+### Changed (stage 11)
+- Default sandbox backend is now `auto` (docker when usable, else process with recorded warnings).
+
 ### Security (stage 10)
 - CRITICAL (A-16): process-backend runs whose identity can reach a container-runtime socket are refused.
 

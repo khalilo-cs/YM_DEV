@@ -36,9 +36,10 @@ YEMENDEV_TOKEN=<bob's token> .venv/bin/yemendev approvals approve <approval_id>
 .venv/bin/yemendev task advance <task_id>
 .venv/bin/yemendev serve                            # HTTP API on 127.0.0.1:8765, docs at /api/docs
 
-# Recommended for untrusted projects: run their tests in containers (needs a local Docker daemon)
+# Containers are used automatically once the sandbox image exists (needs a local Docker daemon)
 docker pull python:3.13-slim && .venv/bin/yemendev sandbox build-image
-export YEMENDEV_SANDBOX_BACKEND=docker && .venv/bin/yemendev sandbox status
+.venv/bin/yemendev sandbox status                          # effective backend + warnings
+.venv/bin/yemendev sandbox build-image --project <id>      # image with the project's dependencies (admin)
 ```
 
 Optional model (any OpenAI-compatible server, e.g. llama.cpp / Ollama / vLLM):

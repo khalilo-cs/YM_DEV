@@ -50,3 +50,8 @@ mean 1.51 s to terminal. File: `benchmarks/results/run-20261117T235832Z.json`.
 The first docker run scored 14/15 because of a **scenario defect** (A-17), not a platform defect; that
 run is kept as `benchmarks/results/run-stage10-docker-SCENARIO-BUG.json`. Mutation check re-run after
 the redesign: 3/3 caught.
+
+## Results (2026-11-21, seed 7, `--full`, stage 11, default backend `auto`)
+
+15/15 correct, 0 data-integrity violations, mean 1.96 s to terminal (docker selected automatically).
+File: `benchmarks/results/run-stage11-auto.json`.

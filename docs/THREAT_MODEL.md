@@ -25,4 +25,5 @@ Platform DB (approvals, tokens, evidence, memory), HMAC audit key, registered pr
 | Secret leakage | `.env`/keys never read by scanner nor copied into sandbox; redaction on audit/evidence; tokens hashed | Pattern-based redaction can miss novel formats |
 | DoS via large/many requests | Body limit (Content-Length and chunked), list limits, per-credential rate limit, failed-auth lockout | Per process only; behind a proxy all clients share the proxy IP |
 | Cross-project access by a legitimate user | Memberships; token role is a ceiling; scoped lists, reads and approval decisions; audit admin-only | Only global admins manage members |
+| Malicious or compromised project dependency | Wheels only (no build code on the host), no URL/VCS/path specs, `--network none` image build, wheel SHA-256 recorded, admin-only build | Dependency code still runs inside the sandbox during tests (by design); unpinned deps can change between builds |
 | Stolen long-lived token | Mandatory expiry (default 90 d), revocation | No refresh/rotation flow yet |
