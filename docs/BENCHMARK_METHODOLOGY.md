@@ -1,6 +1,6 @@
 # YEMENDEV Resilience Benchmark — Methodology (v0.1)
 
-Code: `src/yemendev/benchmarks/` · Run: `yemendev bench [--full] [--seed N] --out benchmarks/results/<file>.json`
+Code: `src/yemendev/benchmarks/` · Run: `yemendev bench [--full] [--seed N] [--backend process|docker|auto] --out benchmarks/results/<file>.json`
 
 ## What it measures
 Each scenario runs the **real** workflow (real sandbox, real pytest, real files on disk) against a
@@ -13,7 +13,7 @@ reported status.
 | reject_regressing_plan | safe recovery | no_action | project untouched, no approval requested |
 | healthy_no_action | false positive | no_action | project untouched |
 | offline_repair | intermittent connectivity | succeeded | platform sockets blocked for the whole run |
-| compound_drift_then_rollback | compound failure | rolled_back | both files byte-identical to original |
+| compound_drift_then_rollback | compound failure | rolled_back | crash after apply + a module outside the plan changes during the outage: plan files byte-identical to original, external change preserved |
 | compound_crash_plus_human_edit | compound failure | failed ("diverged") | human's edit not overwritten |
 | crash_resume@<point> ×9 | power interruption | succeeded | both patched files correct after restart |
 
@@ -39,3 +39,14 @@ mean 1.51 s to terminal. File: `benchmarks/results/run-20261117T235832Z.json`.
 * Crashes are in-process exceptions; real power loss (torn writes, fsync behaviour) is not exercised.
 * Not yet covered: low-memory operation, long-horizon maintenance, skill transfer across projects at
   scale, legacy code, multilingual docs, knowledge staleness over many changes, sync.
+
+## Results (2026-11-21, seed 7, `--full`, after stage 10)
+
+| Backend | Correct | Data-integrity violations | Mean s to terminal | File |
+|---|---|---|---|---|
+| process | 15/15 | 0 | 1.60 | `benchmarks/results/run-stage10-process.json` |
+| docker | 15/15 | 0 | 2.48 | `benchmarks/results/run-stage10-docker.json` |
+
+The first docker run scored 14/15 because of a **scenario defect** (A-17), not a platform defect; that
+run is kept as `benchmarks/results/run-stage10-docker-SCENARIO-BUG.json`. Mutation check re-run after
+the redesign: 3/3 caught.

@@ -13,7 +13,8 @@ Platform DB (approvals, tokens, evidence, memory), HMAC audit key, registered pr
 
 | Threat | Control | Residual risk |
 |---|---|---|
-| Project code tampers with platform state | Copy-on-run workspace outside data dir; unprivileged uid (when root); 0700 data dir; rlimits; netns | Without privilege separation (non-root host) code runs as platform user (A-13). No syscall filter. |
+| Project code tampers with platform state | Docker backend: container sees only the workspace copy, no network, read-only rootfs, no capabilities, non-root uid. Process backend: workspace outside data dir, uid drop (root hosts), 0700 data dir, rlimits, netns | Process backend: host world-readable files and processes visible. Docker: kernel shared with host (container escape via kernel bugs) |
+| Project code reaches the container runtime (root-equivalent) | Process backend refuses if the run identity can reach a runtime socket (A-16); docker backend never mounts sockets | Explicit `allow_runtime_socket_exposure` override (recorded in evidence) |
 | Project code exfiltrates data over network | `unshare --net` (loopback only), recorded per run | Best-effort unless `network_isolation=required` |
 | Project forges test results | None possible from outside; documented in evidence | Verification is only as trustworthy as the project (A-12) |
 | Model proposes malicious patch | Model sees/edits only non-test files it was shown; simulation; bound human approval; verify; rollback | A human may approve a subtle malicious patch; diff is shown in the approval summary |

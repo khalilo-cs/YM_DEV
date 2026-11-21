@@ -11,7 +11,7 @@
 For a local Python project, YEMENDEV AI can:
 
 1. scan it (files, languages, import graph, declared dependencies) without executing any code;
-2. run its test suite twice in an isolated sandbox (copy-on-run, unprivileged uid, no network);
+2. run its test suite twice in an isolated sandbox (a Docker container, or a restricted process: no network, unprivileged);
 3. diagnose reproducible failures and record *unverified* hypotheses;
 4. propose repairs from a human-authored plan, from validated skills, or (if configured) from a model;
 5. simulate each repair in a fresh sandbox and reject any that fixes nothing or breaks a passing test;
@@ -35,6 +35,10 @@ export YEMENDEV_TOKEN=ydv_...                       # alice's token
 YEMENDEV_TOKEN=<bob's token> .venv/bin/yemendev approvals approve <approval_id>
 .venv/bin/yemendev task advance <task_id>
 .venv/bin/yemendev serve                            # HTTP API on 127.0.0.1:8765, docs at /api/docs
+
+# Recommended for untrusted projects: run their tests in containers (needs a local Docker daemon)
+docker pull python:3.13-slim && .venv/bin/yemendev sandbox build-image
+export YEMENDEV_SANDBOX_BACKEND=docker && .venv/bin/yemendev sandbox status
 ```
 
 Optional model (any OpenAI-compatible server, e.g. llama.cpp / Ollama / vLLM):

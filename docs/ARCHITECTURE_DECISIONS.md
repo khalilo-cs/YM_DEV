@@ -10,3 +10,4 @@
 | [0006](adr/0006-full-content-patches.md) | Repairs as full-content patches with original-hash preconditions | Accepted |
 | [0007](adr/0007-project-scoped-authorization.md) | Project-scoped authorization, token role as ceiling | Accepted |
 | [0008](adr/0008-rate-limiting-and-token-expiry.md) | In-process rate limiting and mandatory token expiry | Accepted |
+| [0009](adr/0009-container-sandbox-backend.md) | Pluggable execution backend with Docker container sandbox | Accepted |

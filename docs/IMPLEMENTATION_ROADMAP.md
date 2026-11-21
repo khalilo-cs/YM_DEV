@@ -14,5 +14,6 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 7 | Independent audit of stages 1-6, fixes, regression tests | **Done - see AUDIT_REPORT.md** |
 | 8 | Resilience benchmark harness (reproducible runs, fault scenarios, metrics, stored results) | **Done - 15/15, mutation-checked** |
 | 9 | Per-project authorization (A-11), token expiry, rate limiting | **Done** |
-| 10 | Container sandbox backend (Docker) for non-root hosts | Next |
+| 10 | Container sandbox backend (Docker) for non-root hosts | **Done - verified with real containers** |
+| 11 | Make `docker` the recommended default where available (`auto` + warnings); per-project sandbox images | Next |
 | later | Risk engine, sync queue, UI (web/desktop/mobile), i18n, real-model evaluation | Not started |

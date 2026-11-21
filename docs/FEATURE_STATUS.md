@@ -1,6 +1,6 @@
 # Feature Status
 
-Last reviewed: 2026-11-18 (stage 9). Statuses:
+Last reviewed: 2026-11-21 (stage 10). Statuses:
 **NOT STARTED · IMPLEMENTED** (code exists, no/insufficient tests) **· TESTED** (automated tests pass)
 **· VERIFIED** (exercised end-to-end in a real workflow, with evidence) **· EXPERIMENTAL · BLOCKED**.
 
@@ -33,7 +33,9 @@ Last reviewed: 2026-11-18 (stage 9). Statuses:
 
 | Feature | Status | Location | Tests / evidence | Known limitations |
 |---|---|---|---|---|
-| Sandbox: copy-on-run, rlimits, process-group kill, netns, scrubbed env, **privilege drop to uid 65534** | VERIFIED (local) | `sandbox/workspace.py` | `tests/security/test_sandbox.py` (network & privilege tests ran, not skipped); attack scripts | Not a VM/container; no syscall filter; no privilege drop on non-root hosts unless `run_as_uid` set (A-13) |
+| Sandbox `process` backend: copy-on-run, rlimits, process-group kill, netns, scrubbed env, uid drop, runtime-socket refusal | VERIFIED (local) | `sandbox/workspace.py` | `tests/security/test_sandbox.py`, `test_runtime_socket_exposure.py`; attack scripts | Host world-readable files/processes visible; uid drop needs root or `run_as_uid` |
+| Sandbox `docker` backend (ADR-0009) | VERIFIED (local) | `sandbox/docker_backend.py` | `tests/unit/test_docker_backend.py` (no daemon), `tests/security/test_docker_sandbox.py` (real containers, ran); benchmark 15/15 on docker; comparative attacks | Verified with Docker 29 / cgroup v1 / runc in this container only; shares host kernel; projects with third-party deps need a custom image |
+| Offline-first sandbox image build | VERIFIED (local) | `sandbox/image.py`, `yemendev sandbox build-image` | built here with `--network none` | Base image must already be present locally |
 | pytest runner (JUnit parsing, honest statuses, hostile XML rejected) | TESTED | `sandbox/testrunner.py` | `tests/integration/test_testrunner_diagnostics.py` | Project can forge its own report (A-12) |
 | Diagnostics (reproducible vs flaky, locations, unverified hypotheses) | TESTED | `diagnostics/engine.py` | same | Rule-based |
 | Repair plans, checkpoints, atomic writes, byte-exact verified rollback | VERIFIED (local) | `recovery/` | `tests/integration/test_recovery.py`, E2E | Full-content patches only |
@@ -55,14 +57,14 @@ Last reviewed: 2026-11-18 (stage 9). Statuses:
 
 | Feature | Status | Location | Tests / evidence | Known limitations |
 |---|---|---|---|---|
-| Resilience benchmark harness (15 scenarios incl. 2 compound failures, seeded, JSON reports) | TESTED | `benchmarks/` | `tests/regression/test_benchmark.py`; full run 15/15; mutation check 3/3 caught | Not comparative; synthetic fixtures; see BENCHMARK_METHODOLOGY |
+| Resilience benchmark harness (15 scenarios incl. 2 compound failures, seeded, JSON reports, `--backend`) | TESTED | `benchmarks/` | `tests/regression/test_benchmark.py`; full run 15/15 on **both** backends; mutation check 3/3 caught | Not comparative; synthetic fixtures; see BENCHMARK_METHODOLOGY |
 
 ## Not started
 
 Predictive risk engine · anomaly detection · counterfactual/compound failure simulation (beyond
 fault points) · digital immune system · continuity passport · synchronization queue · continuity
 debt metric · comparative benchmark baselines · web/desktop/mobile UI · i18n (Arabic/English) · PostgreSQL ·
-OpenTelemetry · Tree-sitter/LSP · container sandbox backend.
+OpenTelemetry · Tree-sitter/LSP · VM-level (gVisor/Firecracker) sandboxing.
 
 ## MVP acceptance (directive §20)
 
