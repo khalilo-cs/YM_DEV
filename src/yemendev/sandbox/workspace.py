@@ -36,6 +36,7 @@ from pydantic import BaseModel
 
 from yemendev.core.config import SandboxSettings
 from yemendev.core.contracts import ExecutionFailedError, InvalidInputError, UnavailableError, sha256_bytes
+from yemendev.sandbox.docker_backend import DockerAvailability, docker_availability, run_in_container
 from yemendev.twin.scanner import SENSITIVE_NAMES, SKIP_DIRS
 
 
@@ -50,6 +51,9 @@ class ExecutionResult(BaseModel):
     run_as_uid: int | None
     limits: dict[str, Any]
     output_truncated: bool
+    backend: str = "process"
+    image: str | None = None
+    backend_note: str | None = None
 
 
 # Trusted launcher: applies rlimits, then replaces itself with the target program.
@@ -123,12 +127,32 @@ class Workspace:
         self.home.mkdir()
         shutil.copytree(self.source, self.root, symlinks=False, ignore=_ignore)
         self.identity = settings.sandbox_identity()
-        if self.identity is None and settings.privilege_separation == "required":
+        self.backend, self.backend_note, self._docker = self._select_backend()
+        # A container provides privilege separation even when the platform cannot switch users.
+        if self.identity is None and settings.privilege_separation == "required" and self.backend != "docker":
             self.cleanup()
             raise UnavailableError("privilege separation is required but the platform cannot switch users "
                                    "(not running as root and no run_as_uid configured)")
         self._chown_tree()
-        self._check_reachable()
+        if self.backend == "process":
+            self._check_reachable()
+
+    def _select_backend(self) -> tuple[str, str | None, DockerAvailability | None]:
+        mode = self.settings.backend
+        if mode == "process":
+            return "process", None, None
+        avail = docker_availability(self.settings)
+        if avail.available:
+            return "docker", None, avail
+        if mode == "docker":
+            self.cleanup()
+            raise UnavailableError(f"docker sandbox backend required but unavailable: {avail.reason}")
+        return "process", f"auto: docker unavailable ({avail.reason}); used process backend", None
+
+    @property
+    def python_executable(self) -> str:
+        """Interpreter to use for this backend (the container's own python for docker)."""
+        return "python" if self.backend == "docker" else self.settings.python_executable
 
     def _check_reachable(self) -> None:
         """Fail clearly if the sandbox uid cannot traverse to its workspace (instead of an opaque test failure)."""
@@ -186,8 +210,18 @@ class Workspace:
     def run(self, argv: list[str], timeout: float | None = None) -> ExecutionResult:
         if not argv or not all(isinstance(a, str) for a in argv):
             raise InvalidInputError("argv must be a non-empty list of strings")
+        timeout = timeout or self.settings.timeout_seconds
+        if self.backend == "docker":
+            if self._docker is None:
+                raise UnavailableError("docker backend selected without availability information")
+            return run_in_container(self, argv, timeout, self._docker)
+        r = self._run_process(argv, timeout)
+        if self.backend_note:
+            r.backend_note = self.backend_note
+        return r
+
+    def _run_process(self, argv: list[str], timeout: float) -> ExecutionResult:
         s = self.settings
-        timeout = timeout or s.timeout_seconds
         isolate = s.network_isolation != "disabled" and network_namespace_available()
         if s.network_isolation == "required" and not isolate:
             raise UnavailableError("network isolation is required but not available on this host")

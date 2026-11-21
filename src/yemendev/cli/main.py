@@ -186,6 +186,23 @@ def cmd_bench(args: argparse.Namespace) -> int:
     return 0 if rep.summary["correct"] == rep.summary["scenarios"] else 3
 
 
+def cmd_sandbox(args: argparse.Namespace) -> int:
+    from yemendev.sandbox.docker_backend import docker_availability
+    from yemendev.sandbox.image import build_sandbox_image
+
+    settings = Settings.from_env(Path(args.data_dir) if args.data_dir else None)
+    if args.scmd == "status":
+        s = settings.sandbox
+        _print({"backend_setting": s.backend, "docker_image": s.docker_image,
+                "docker": docker_availability(s, use_cache=False).model_dump(),
+                "privilege_separation": s.sandbox_identity() is not None})
+        return 0
+    res = build_sandbox_image(settings.sandbox, base_image=args.base, pytest_version=args.pytest,
+                              wheels_dir=Path(args.wheels) if args.wheels else None)
+    _print(res.model_dump())
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     loopback = {"127.0.0.1", "::1", "localhost"}
     if args.host not in loopback and not args.allow_remote:
@@ -274,6 +291,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--only", nargs="*", help="scenario names to run")
     s.add_argument("--out", help="write JSON report here")
     s.set_defaults(fn=cmd_bench)
+
+    s = sub.add_parser("sandbox", help="sandbox backend status / build the container image")
+    sbs = s.add_subparsers(dest="scmd", required=True)
+    sbs.add_parser("status")
+    x = sbs.add_parser("build-image", help="build the docker sandbox image (no network inside the build)")
+    x.add_argument("--base", default="python:3.13-slim", help="local base image (never pulled implicitly)")
+    x.add_argument("--pytest", default="9.2.0")
+    x.add_argument("--wheels", help="directory of pre-downloaded wheels (fully offline)")
+    s.set_defaults(fn=cmd_sandbox)
 
     s = sub.add_parser("serve")
     s.add_argument("--host", default="127.0.0.1")

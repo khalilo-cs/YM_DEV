@@ -31,6 +31,21 @@ class SandboxSettings(BaseModel):
     # "required": refuse to run untrusted code as the platform's own user.
     # "best_effort": drop privileges when possible; record whether it happened.
     privilege_separation: str = Field(default="best_effort")
+    # Execution backend: "process" (rlimits + netns + uid drop), "docker" (container; required - never falls
+    # back silently), or "auto" (docker when usable, else process; the choice is recorded per run).
+    backend: str = Field(default="process")
+    docker_binary: str = "docker"
+    docker_image: str = "yemendev-sandbox:py3.13"
+    docker_pids_limit: int = Field(default=256, ge=16, le=65536)
+    docker_cpus: float = Field(default=2.0, gt=0, le=256)
+    docker_tmpfs_mb: int = Field(default=256, ge=16, le=65536)
+
+    @field_validator("backend")
+    @classmethod
+    def _check_backend(cls, v: str) -> str:
+        if v not in {"process", "docker", "auto"}:
+            raise ValueError("backend must be process|docker|auto")
+        return v
 
     @field_validator("privilege_separation")
     @classmethod
@@ -108,6 +123,8 @@ class Settings(BaseModel):
             network_isolation=env.get("YEMENDEV_NETWORK_ISOLATION", "best_effort"),
             timeout_seconds=float(env.get("YEMENDEV_SANDBOX_TIMEOUT", "120")),
             python_executable=env.get("YEMENDEV_PYTHON", sys.executable),
+            backend=env.get("YEMENDEV_SANDBOX_BACKEND", "process"),
+            docker_image=env.get("YEMENDEV_SANDBOX_IMAGE", "yemendev-sandbox:py3.13"),
         )
         model = ModelSettings(
             base_url=env.get("YEMENDEV_MODEL_BASE_URL") or None,

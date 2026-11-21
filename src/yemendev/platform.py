@@ -305,6 +305,7 @@ class Platform:
                       for t in ("projects", "tasks", "approval_requests", "evidence_records", "skills",
                                 "memory_records", "audit_events")}
             pending = conn.execute("SELECT COUNT(*) FROM approval_requests WHERE status = 'pending'").fetchone()[0]
+        from yemendev.sandbox.docker_backend import docker_availability
         from yemendev.sandbox.workspace import network_namespace_available
 
         return {
@@ -315,7 +316,10 @@ class Platform:
             "sandbox": {"network_isolation_mode": self.settings.sandbox.network_isolation,
                         "network_namespace_available": network_namespace_available(),
                         "privilege_separation": self.settings.sandbox.sandbox_identity() is not None,
-                        "privilege_separation_mode": self.settings.sandbox.privilege_separation},
+                        "privilege_separation_mode": self.settings.sandbox.privilege_separation,
+                        "backend_setting": self.settings.sandbox.backend,
+                        "docker": docker_availability(self.settings.sandbox).model_dump()
+                        if self.settings.sandbox.backend != "process" else None},
             "offline_capable": True,
             "generated_at": iso(),
         }

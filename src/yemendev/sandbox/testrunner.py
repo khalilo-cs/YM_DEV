@@ -96,7 +96,7 @@ def _parse_junit(data: bytes) -> list[TestCaseResult]:
 def run_pytest(ws: Workspace, extra_args: list[str] | None = None, timeout: float | None = None) -> TestRunReport:
     report_path = ws.root / REPORT_NAME
     report_path.unlink(missing_ok=True)
-    argv = [ws.settings.python_executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+    argv = [ws.python_executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
             f"--junitxml={REPORT_NAME}", "-o", "junit_family=xunit2", *(extra_args or [])]
     ex = ws.run(argv, timeout=timeout)
     if ex.timed_out:
