@@ -16,5 +16,6 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 9 | Per-project authorization (A-11), token expiry, rate limiting | **Done** |
 | 10 | Container sandbox backend (Docker) for non-root hosts | **Done - verified with real containers** |
 | 11 | Make `docker` the recommended default where available (`auto` + warnings); per-project sandbox images | **Done - 197 tests; benchmark 15/15 on auto** |
+| 11b | Agents as real components (registry, runner, security agent, conflict policy); generated reference docs + drift test; directive section-18 documents | **Done - 215 tests** |
 | 12 | One-command installer & packaging; second language (JS/TS) in the scanner | Next |
 | later | Risk engine, sync queue, UI (web/desktop/mobile), i18n, real-model evaluation | Not started |

@@ -81,7 +81,7 @@ h1,h2,h3{break-after:avoid;}
 غير موثوقة، ولا يُعتبر أي إصلاح ناجحًا إلا بعد تحقق مستقل وسجل أدلة.</p>
 
 <div class="kpis">
- <div class="kpi"><b>197</b><span>اختبارًا آليًا ناجحًا</span></div>
+ <div class="kpi"><b>215</b><span>اختبارًا آليًا ناجحًا</span></div>
  <div class="kpi"><b>18/18</b><span>معيار الحد الأدنى للمنتج (MVP) مُثبت</span></div>
  <div class="kpi"><b>15/15</b><span>سيناريو مرونة ناجح على بيئتي العزل</span></div>
  <div class="kpi"><b>2</b><span>ثغرة حرجة اكتُشفت وأُصلحت بالتدقيق الذاتي</span></div>
@@ -151,17 +151,17 @@ h1,h2,h3{break-after:avoid;}
 <code>ccr-5b7e38f8-g2boke</code> في المستودع <code>khalilo-cs/ym_dev</code>.</p>
 <table>
 <tr><th>المقياس</th><th class="num">القيمة</th></tr>
-<tr><td>أسطر الكود المصدري (Python)</td><td class="num">6,512 سطرًا في 60 ملفًا</td></tr>
-<tr><td>أسطر الاختبارات</td><td class="num">2,580 سطرًا في 27 ملفًا</td></tr>
-<tr><td>الاختبارات الآلية</td><td class="num">197 ناجحًا، 0 فاشلًا، 0 متخطّى</td></tr>
+<tr><td>أسطر الكود المصدري (Python)</td><td class="num">6,897 سطرًا في 64 ملفًا</td></tr>
+<tr><td>أسطر الاختبارات</td><td class="num">2,743 سطرًا في 29 ملفًا</td></tr>
+<tr><td>الاختبارات الآلية</td><td class="num">215 ناجحًا، 0 فاشلًا، 0 متخطّى</td></tr>
 <tr><td>فحص الأنواع والجودة</td><td class="num">mypy --strict وruff: لا أخطاء</td></tr>
 <tr><td>الثغرات المعروفة في التبعيات (pip-audit)</td><td class="num">لا شيء</td></tr>
-<tr><td>واجهة HTTP / أوامر سطر الأوامر</td><td class="num">33 مسارًا / 28 أمرًا وأمرًا فرعيًا</td></tr>
-<tr><td>جداول قاعدة البيانات / الترحيلات</td><td class="num">12 جدولًا / ترحيلان</td></tr>
-<tr><td>قرارات معمارية موثّقة (ADR)</td><td class="num">10</td></tr>
+<tr><td>واجهة HTTP / أوامر سطر الأوامر</td><td class="num">36 مسارًا / 28 أمرًا وأمرًا فرعيًا</td></tr>
+<tr><td>جداول قاعدة البيانات / الترحيلات</td><td class="num">13 جدولًا / 3 ترحيلات</td></tr>
+<tr><td>قرارات معمارية موثّقة (ADR)</td><td class="num">11</td></tr>
 </table>
 <h2>حالة الميزات</h2>
-<table><tr><th>الميزة</th><th>الحالة</th></tr><tr><td>التخزين المحلي وترحيلات قاعدة البيانات</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>سجل تدقيق مقاوم للتلاعب (سلسلة HMAC) + ربط الأدلة به</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>الموافقات البشرية المربوطة بالعملية ولمرة واحدة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>التفويض لكل مشروع + انتهاء صلاحية الرموز + تحديد المعدل</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>الذاكرة الحية (مصدر، صلاحية، كشف التناقض والتقادم)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>ماسح المشاريع ورسم التبعيات (Python)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>التنفيذ المعزول: عمليات مقيّدة + حاويات Docker</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>التشخيص (فرضيات موسومة بأنها غير مؤكدة)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>الإصلاح: محاكاة، تنفيذ، تحقق، تراجع حرفي</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>محرك المهارات والتعلّم من التجارب الناجحة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>الاستئناف بعد الانقطاع في 9 نقاط مختلفة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>واجهة HTTP (33 مسارًا) وسطر أوامر</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>صورة حاوية لكل مشروع بمكتباته (wheels فقط)</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>مقياس المرونة (15 سيناريو، منها فشل مركّب)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>طبقة النماذج (واجهة متوافقة مع OpenAI)</td><td><span class="tag t-part">مُختبرة ببديل للبروتوكول فقط</span></td></tr><tr><td>واجهات رسومية: ويب، سطح مكتب، جوال</td><td><span class="tag t-no">لم تبدأ</span></td></tr><tr><td>محرك المخاطر والتنبؤ والتوأم الرقمي الكامل</td><td><span class="tag t-no">لم يبدأ</span></td></tr><tr><td>المزامنة بين الأجهزة + PostgreSQL متعدد المستخدمين</td><td><span class="tag t-no">لم يبدأ</span></td></tr><tr><td>الدعم الكامل للعربية والإنجليزية في الواجهات</td><td><span class="tag t-no">لم يبدأ</span></td></tr></table>
+<table><tr><th>الميزة</th><th>الحالة</th></tr><tr><td>التخزين المحلي وترحيلات قاعدة البيانات</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>سجل تدقيق مقاوم للتلاعب (سلسلة HMAC) + ربط الأدلة به</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>الموافقات البشرية المربوطة بالعملية ولمرة واحدة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>التفويض لكل مشروع + انتهاء صلاحية الرموز + تحديد المعدل</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>الذاكرة الحية (مصدر، صلاحية، كشف التناقض والتقادم)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>ماسح المشاريع ورسم التبعيات (Python)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>التنفيذ المعزول: عمليات مقيّدة + حاويات Docker</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>التشخيص (فرضيات موسومة بأنها غير مؤكدة)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>الإصلاح: محاكاة، تنفيذ، تحقق، تراجع حرفي</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>محرك المهارات والتعلّم من التجارب الناجحة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>الاستئناف بعد الانقطاع في 9 نقاط مختلفة</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>واجهة HTTP (36 مسارًا) وسطر أوامر</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>الوكلاء: صلاحيات ثابتة، سجل تشغيل، وكيل أمني، سياسة حل التعارض</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>صورة حاوية لكل مشروع بمكتباته (wheels فقط)</td><td><span class="tag t-ok">مُتحقق منه</span></td></tr><tr><td>مقياس المرونة (15 سيناريو، منها فشل مركّب)</td><td><span class="tag t-ok">مُختبر</span></td></tr><tr><td>طبقة النماذج (واجهة متوافقة مع OpenAI)</td><td><span class="tag t-part">مُختبرة ببديل للبروتوكول فقط</span></td></tr><tr><td>واجهات رسومية: ويب، سطح مكتب، جوال</td><td><span class="tag t-no">لم تبدأ</span></td></tr><tr><td>محرك المخاطر والتنبؤ والتوأم الرقمي الكامل</td><td><span class="tag t-no">لم يبدأ</span></td></tr><tr><td>المزامنة بين الأجهزة + PostgreSQL متعدد المستخدمين</td><td><span class="tag t-no">لم يبدأ</span></td></tr><tr><td>الدعم الكامل للعربية والإنجليزية في الواجهات</td><td><span class="tag t-no">لم يبدأ</span></td></tr></table>
 <p class="small">مُختبر = اختبارات آلية ناجحة. مُتحقق منه = جُرّب ضمن سير عمل حقيقي كامل وأنتج أدلة. التفاصيل الكاملة في
 <code>docs/FEATURE_STATUS.md</code>.</p>
 
@@ -277,7 +277,7 @@ h1,h2,h3{break-after:avoid;}
 </table>
 <h2>نموذج العمل المقترح: نواة مفتوحة (<bdi dir="ltr" class="en">open-core</bdi>)</h2>
 <ul>
-<li><b>النواة مفتوحة المصدر</b> (Apache-2.0 كما هو معلن في المشروع): تبني الثقة، وتسمح بالتدقيق الخارجي، وتجذب المساهمين والجامعات.</li>
+<li><b>النواة مفتوحة المصدر</b> (الترخيص المقترح Apache-2.0، و<b>القرار النهائي للمالك</b> ولم يُحسم بعد): تبني الثقة، وتسمح بالتدقيق الخارجي، وتجذب المساهمين والجامعات.</li>
 <li><b>إصدار المؤسسات المدفوع:</b> تسجيل دخول موحّد، وإدارة مركزية لعدة فرق، وتقارير امتثال، ودعم باتفاقية مستوى خدمة.</li>
 <li><b>عقود الدعم والتشغيل</b>، و<b>خدمات استعادة الأنظمة القديمة</b>، وهي مناسبة للسوق المحلي.</li>
 <li><b>برنامج جامعي</b> مجاني أو مخفّض، مع شهادات تدريب.</li>
@@ -376,7 +376,7 @@ h1,h2,h3{break-after:avoid;}
 <h2>متطلبات قانونية وتنظيمية</h2>
 <ul>
 <li>تسجيل كيان قانوني، وحماية الاسم والعلامة التجارية <b>YEMENDEV AI</b>.</li>
-<li>مراجعة تراخيص كل التبعيات المفتوحة. المشروع معلن بترخيص Apache-2.0، ويلزم تأكيد ذلك قانونيًا.</li>
+<li><b>اختيار ترخيص المشروع</b> (Apache-2.0 أو AGPL-3.0 أو ترخيص مغلق) قرار للمالك لم يُحسم بعد، ثم مراجعة تراخيص كل التبعيات المفتوحة.</li>
 <li>سياسة خصوصية واتفاقية استخدام، واتفاقيات معالجة بيانات مع العملاء المؤسسيين.</li>
 <li>اتفاقيات ملكية فكرية مع أعضاء الفريق والمساهمين.</li>
 <li>مراجعة قيود التصدير والعقوبات على الخدمات السحابية والأدوات المستخدمة، وهي <b>مهمة بشكل خاص</b> في السياق اليمني.</li>
@@ -428,7 +428,7 @@ h1,h2,h3{break-after:avoid;}
 </div>
 <div class="section"><h1>16. ملحق: المصطلحات والمراجع</h1>
 <h2>المصطلحات</h2><table><tr><th>المصطلح</th><th>المعنى</th></tr><tr><td><bdi dir="ltr" class="en">RACE-X</bdi></td><td>حلقة الهندسة والتعافي المستمرة المرنة</td></tr><tr><td><bdi dir="ltr" class="en">MOSAIC</bdi></td><td>طبقة الذكاء الاصطناعي المستقلة عن المزوّد</td></tr><tr><td><bdi dir="ltr" class="en">ORION</bdi></td><td>محرك تنسيق المهام والاستئناف</td></tr><tr><td><bdi dir="ltr" class="en">Sandbox</bdi></td><td>بيئة معزولة لتشغيل كود غير موثوق</td></tr><tr><td><bdi dir="ltr" class="en">Rollback</bdi></td><td>التراجع واستعادة الحالة الأصلية حرفيًا</td></tr><tr><td><bdi dir="ltr" class="en">Evidence</bdi></td><td>سجل دليل غير قابل للتعديل لكل خطوة</td></tr><tr><td><bdi dir="ltr" class="en">Audit chain (HMAC)</bdi></td><td>سلسلة تدقيق مشفّرة تكشف التعديل والحذف</td></tr><tr><td><bdi dir="ltr" class="en">ADR</bdi></td><td>سجل قرار معماري</td></tr><tr><td><bdi dir="ltr" class="en">MVP</bdi></td><td>الحد الأدنى من المنتج القابل للاستخدام</td></tr><tr><td><bdi dir="ltr" class="en">Person-month</bdi></td><td>شهر-عمل: عمل شخص واحد بدوام كامل لمدة شهر</td></tr></table>
-<h2>وثائق المشروع</h2><ul><li><code>docs/FEATURE_STATUS.md</code> — حالة كل ميزة بالأدلة</li><li><code>docs/AUDIT_REPORT.md</code> — تقرير التدقيق الأمني</li><li><code>docs/THREAT_MODEL.md</code> — نموذج التهديد</li><li><code>docs/BENCHMARK_METHODOLOGY.md</code> — منهجية مقياس المرونة</li><li><code>docs/IMPLEMENTATION_ROADMAP.md</code> — خارطة الطريق التقنية</li><li><code>docs/adr/</code> — 10 قرارات معمارية</li><li><code>docs/proposal/model.py</code> — افتراضات التكلفة والجدول (قابلة للتعديل وإعادة التوليد)</li></ul>
+<h2>وثائق المشروع</h2><ul><li><code>docs/FEATURE_STATUS.md</code> — حالة كل ميزة بالأدلة</li><li><code>docs/AUDIT_REPORT.md</code> — تقرير التدقيق الأمني</li><li><code>docs/THREAT_MODEL.md</code> — نموذج التهديد</li><li><code>docs/BENCHMARK_METHODOLOGY.md</code> — منهجية مقياس المرونة</li><li><code>docs/IMPLEMENTATION_ROADMAP.md</code> — خارطة الطريق التقنية</li><li><code>docs/adr/</code> — 11 قرارًا معماريًا</li><li><code>docs/proposal/model.py</code> — افتراضات التكلفة والجدول (قابلة للتعديل وإعادة التوليد)</li></ul>
 <h2>إعادة توليد هذه الوثيقة</h2>
 <p>عدّل الافتراضات في <code>docs/proposal/model.py</code> ثم نفّذ <code>python3 docs/proposal/build.py</code>.</p>
 <p class="small">أُعدّت هذه الوثيقة في 21 نوفمبر 2026. الأرقام المقاسة صحيحة في تاريخ الإعداد، والتقديرات تحتاج مراجعة دورية.</p>

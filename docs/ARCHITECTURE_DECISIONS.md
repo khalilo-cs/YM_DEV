@@ -12,3 +12,4 @@
 | [0008](adr/0008-rate-limiting-and-token-expiry.md) | In-process rate limiting and mandatory token expiry | Accepted |
 | [0009](adr/0009-container-sandbox-backend.md) | Pluggable execution backend with Docker container sandbox | Accepted |
 | [0010](adr/0010-per-project-sandbox-images.md) | Per-project sandbox images (wheels only) and `auto` default backend | Accepted |
+| [0011](adr/0011-agents-fixed-allow-lists.md) | Agents with fixed allow-lists, recorded runs, conflict policy | Accepted |

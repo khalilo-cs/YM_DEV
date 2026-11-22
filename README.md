@@ -55,8 +55,9 @@ Optional model (any OpenAI-compatible server, e.g. llama.cpp / Ollama / vLLM):
 
 ## Documentation
 
-[Feature status](docs/FEATURE_STATUS.md) · [Audit report](docs/AUDIT_REPORT.md) ·
+[Overview](docs/PROJECT_OVERVIEW.md) · [Architecture](docs/ARCHITECTURE.md) · [Installation](docs/INSTALLATION.md) ·
+[Feature status](docs/FEATURE_STATUS.md) · [Audit report](docs/AUDIT_REPORT.md) · [API](docs/API_REFERENCE.md) ·
 [Threat model](docs/THREAT_MODEL.md) · [Roadmap](docs/IMPLEMENTATION_ROADMAP.md) ·
 [Risk register](docs/RISK_REGISTER.md) · [ADRs](docs/ARCHITECTURE_DECISIONS.md) · [Security](SECURITY.md)
 
-License: Apache-2.0 (declared in `pyproject.toml`).
+License: **pending the owner's decision** (`pyproject.toml` declares Apache-2.0 provisionally; no `LICENSE` file yet).

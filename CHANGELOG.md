@@ -19,6 +19,11 @@
 - Stage 11: per-project sandbox images (`yemendev sandbox build-image --project`,
   `POST /api/v1/projects/{id}/sandbox-image`); isolation report with warnings.
 
+- Agents as real components (registry, AgentRunner, `agent_runs` table / migration 3, security agent,
+  conflict policy SEC-BLOCK-WINS); API `/agents`, `/agents/{name}/runs`, `/tasks/{id}/agent-runs`.
+- Generated `DATABASE_SCHEMA.md` / `API_REFERENCE.md` with a drift test; all 24 documents of directive
+  section 18, `CONTRIBUTING.md`, `.env.example`.
+
 ### Changed (stage 11)
 - Default sandbox backend is now `auto` (docker when usable, else process with recorded warnings).
 
