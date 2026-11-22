@@ -14,3 +14,4 @@
 | [0010](adr/0010-per-project-sandbox-images.md) | Per-project sandbox images (wheels only) and `auto` default backend | Accepted |
 | [0011](adr/0011-agents-fixed-allow-lists.md) | Agents with fixed allow-lists, recorded runs, conflict policy | Accepted |
 | [0012](adr/0012-signed-offline-sync-and-passports.md) | Signed offline sync bundles and continuity passports | Accepted |
+| [0013](adr/0013-web-ui-static-same-origin.md) | Web UI as a static, same-origin client of the public API | Accepted |

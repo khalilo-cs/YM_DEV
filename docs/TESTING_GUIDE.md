@@ -9,6 +9,7 @@ Run everything: `.venv/bin/python -m pytest` (about 2 minutes with Docker availa
 | Security | `tests/security/` | audit tampering, governance, sandbox escape attempts, authorization isolation, agents, runtime-socket refusal, audit-finding regressions |
 | End-to-end | `tests/end_to_end/` | the 18 MVP criteria, crash at 9 points + resume, concurrency, offline |
 | Regression | `tests/regression/` | benchmark fixtures/scenarios, docs-in-sync |
+| Web UI | `tests/integration/test_web_ui.py`, `scripts/ui_e2e.py` | static serving + CSP + traversal; no remote resources; Arabic dictionary completeness (tsc); real-browser flow against a real server |
 
 ## Environment-dependent tests
 
@@ -31,4 +32,12 @@ before reporting results. Process-backend tests pin `backend="process"` explicit
 ## Not covered yet
 
 Long-horizon tests (many sequential changes), automated resource/performance tests, real-model
-evaluation, multi-host synchronization, UI tests (no UI exists).
+evaluation, multi-host synchronization, accessibility audit with assistive technology, UI tests on
+browsers other than Chromium.
+
+## Browser end-to-end
+
+`python scripts/ui_e2e.py --shots <dir>` (needs the built UI, Node.js and the `playwright` package with
+Chromium) creates a throw-away installation and drives the UI: sign-in, Arabic/English switch, scan,
+graph, a no-plan task (honest `no_action` with its recorded reason), a human-authored plan, refused
+self-approval, approval by a second human, successful verified repair, integrity check, phone width.

@@ -21,8 +21,8 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 13 | Digital immune system + continuity debt (5.9, 6.6) | **Done** |
 | 14 | Counterfactual future engine (6.2) | **Done** |
 | 15 | Synchronization + digital continuity passport (5.10, 6.3) | **Done** |
-| 16 | Web UI, Arabic/English (16, 17) | Next |
-| 17 | ORION queue, scheduling, retries (5.2) | Planned |
+| 16 | Web UI, Arabic/English (16, 17) | **Done - 256 tests; browser E2E 34/34 (`scripts/ui_e2e.py`)** |
+| 17 | ORION queue, scheduling, retries (5.2) | Next |
 | 18 | JS/TS scanning (Tree-sitter), SBOM, structured logging; installer | Planned |
 | blocked | Real-model evaluation, comparative baseline B, Android/desktop builds (no model / SDKs here) | Blocked in this environment |
-| later | Risk engine, sync queue, UI (web/desktop/mobile), i18n, real-model evaluation | Not started |
+| later | Desktop (Tauri) and mobile companion apps, real-model evaluation | Not started |

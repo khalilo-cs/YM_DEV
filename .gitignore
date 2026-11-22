@@ -10,3 +10,7 @@ dist/
 .yemendev/
 *.sqlite3
 .env
+
+# web UI build output and dependencies
+apps/web/node_modules/
+apps/web/dist/

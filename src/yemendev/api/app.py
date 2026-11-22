@@ -5,6 +5,9 @@
 * Errors use one envelope: ``{"error": {"code": ..., "message": ...}}``. Internal
   exceptions are logged server-side and returned as a generic 500 (no stack traces).
 * Bind to 127.0.0.1 by default (see cli ``serve``). There is no TLS termination here.
+* The web UI (apps/web, built with ``npm run build``) is served as static files under /app with a
+  strict Content-Security-Policy: same-origin scripts, styles, fonts and API calls only - no CDN,
+  no inline script, no framing. It authenticates with the same bearer tokens as any API client.
 """
 
 import hashlib
@@ -13,11 +16,13 @@ import logging
 import math
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from yemendev import __version__
@@ -37,6 +42,12 @@ from yemendev.twin.graph import DependencyGraph
 
 log = logging.getLogger("yemendev.api")
 MAX_BODY_BYTES = 5_000_000
+DEFAULT_WEB_DIR = Path(__file__).resolve().parents[3] / "apps" / "web" / "dist"
+# The UI needs nothing but its own origin. connect-src 'self' also means a compromised page cannot
+# exfiltrate the token to another host via fetch/XHR/WebSocket.
+UI_CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; "
+          "connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'")
+API_CSP = "default-src 'none'; frame-ancestors 'none'"
 
 STATUS_FOR = {
     ErrorCode.NOT_FOUND: 404, ErrorCode.INVALID_INPUT: 422, ErrorCode.PERMISSION_DENIED: 403,
@@ -151,8 +162,17 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
     @app.middleware("http")
     async def security_headers(request: Request, call_next: Any) -> Any:
         resp = await call_next(request)
+        path = request.url.path
         resp.headers["X-Content-Type-Options"] = "nosniff"
-        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["X-Frame-Options"] = "DENY"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        # Content-hashed build assets may be cached; everything else (API data, index.html) may not.
+        resp.headers["Cache-Control"] = ("public, max-age=31536000, immutable" if path.startswith("/app/assets/")
+                                         else "no-store")
+        if path == "/app" or path.startswith("/app/"):
+            resp.headers["Content-Security-Policy"] = UI_CSP
+        elif not path.startswith("/api/docs"):  # Swagger UI (developer aid) loads its own assets
+            resp.headers["Content-Security-Policy"] = API_CSP
         return resp
 
     app.add_middleware(BodySizeLimit, max_bytes=MAX_BODY_BYTES)
@@ -479,5 +499,19 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
     def models(a: Who) -> list[Any]:
         read(a, "models")
         return platform.models.status()
+
+    # ---- web UI (static, public: holds no data; every value it shows comes from the API) ----------
+    web_dir = platform.settings.web_dir or DEFAULT_WEB_DIR
+    if (web_dir / "index.html").is_file():
+        @app.get("/", include_in_schema=False)
+        def root() -> RedirectResponse:
+            return RedirectResponse("/app/")
+
+        app.mount("/app", StaticFiles(directory=web_dir, html=True), name="web")
+    else:
+        @app.get("/app", include_in_schema=False)
+        @app.get("/app/{_path:path}", include_in_schema=False)
+        def ui_not_built(_path: str = "") -> JSONResponse:
+            return _err(404, "not_found", "web UI is not built: run `npm ci && npm run build` in apps/web")
 
     return app

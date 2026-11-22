@@ -3,6 +3,9 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 16: web UI under `/app` (React + TypeScript, `apps/web`), Arabic-first with RTL and English;
+  every value from the API; confirmation dialogs for sensitive actions; strict CSP, bundled font, no CDN;
+  `YEMENDEV_WEB_DIR`; browser end-to-end script `scripts/ui_e2e.py`; ADR-0013.
 - Stage 1: SQLite storage + migrations, HMAC audit log, policy engine, bound approvals, evidence, living memory.
 - Stage 2: project scanner, dependency graph, scan-to-memory with staleness tracking.
 - Stage 3: sandboxed execution, pytest/JUnit runner, diagnostics.

@@ -4,7 +4,7 @@ A **modular monolith** (ADR-0001): one Python package, one process, clear intern
 Engines exchange typed Pydantic contracts; `platform.py` is the only composition root.
 
 ```
- Interfaces      CLI ─────────┐   HTTP API (/api/v1) ───┐        [web / desktop / mobile: not built]
+ Interfaces      CLI ─────────┐   HTTP API (/api/v1) ───┐   web UI /app (static, uses the API)  [desktop / mobile: not built]
                               ▼                          ▼
  Authorization   Platform / RepairWorkflow methods → Guard (policy + project membership) → audit
                               │

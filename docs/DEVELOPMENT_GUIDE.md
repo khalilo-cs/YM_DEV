@@ -21,6 +21,7 @@ src/yemendev/
   api/  cli/     HTTP API and command line (same service layer)
   benchmarks/    resilience benchmark
   platform.py    composition root - the only module that wires engines together
+apps/web/        web UI (React + TypeScript + Vite): src/pages/*, i18n.ts (en + ar), ui.tsx (shared states)
 ```
 
 ## Conventions
@@ -35,6 +36,9 @@ src/yemendev/
   `STEP_AGENTS` with the minimal actions it needs.
 * Schema changes: append a migration in `storage/migrations.py` (never edit a released one), then run
   `python scripts/gen_reference_docs.py`.
+* UI: every string goes in `apps/web/src/i18n.ts` (English and Arabic); use logical CSS properties
+  (`margin-inline-start`, not `margin-left`); show only API data; wrap sensitive actions in
+  `ConfirmButton`; never load anything from another origin.
 * Crash safety: a workflow step must be idempotent or reconcile real state first (see `_execute`).
   Add a fault point (`faults.check("...")`) for new crash-sensitive code and a resume test.
 
@@ -45,4 +49,6 @@ src/yemendev/
 .venv/bin/python scripts/gen_reference_docs.py        # regenerate DATABASE_SCHEMA.md / API_REFERENCE.md
 .venv/bin/python benchmarks/mutation_check.py         # check the benchmark still detects sabotage
 python3 docs/proposal/build.py                        # regenerate the Arabic proposal PDF
+(cd apps/web && npm ci && npm run build)              # build the web UI served at /app
+.venv/bin/python scripts/ui_e2e.py --shots /tmp/shots # real-browser end-to-end check of the UI
 ```

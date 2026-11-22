@@ -18,6 +18,7 @@ Threats and residual risks: [THREAT_MODEL.md](THREAT_MODEL.md). Findings and fix
 | Tamper evidence | HMAC hash-chained audit (key outside DB, 0600); evidence content-hashed and anchored in the chain; `/integrity/verify` | `security/audit.py`, `evidence/` |
 | Secrets | Secret-looking files never read or copied; redaction on audit/evidence; env scrubbed in sandbox | `security/redaction.py`, `twin/scanner.py` |
 | API | Error envelope without internals, body limit (incl. chunked), rate limits + failed-auth lockout, loopback default | `api/app.py` |
+| Web UI | Static same-origin client; strict CSP (no inline/third-party script, `connect-src 'self'`, no framing); token in `sessionStorage` (no cookies, no CSRF); no symlink following; confirmation before sensitive actions; all authorization server-side | `api/app.py`, `apps/web/` |
 | Platform state | data dir 0700, DB 0600, workspaces outside the data dir | `core/config.py`, `platform.py` |
 
 ## Verification

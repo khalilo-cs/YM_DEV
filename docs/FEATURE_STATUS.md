@@ -64,6 +64,9 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 | Crash resume (9 fault points, half-written project) | VERIFIED (local) | `orion/workflow.py` | `test_crash_at_any_point_then_resume` + manual probe | Injected exceptions, not real power loss |
 | HTTP API `/api/v1` | VERIFIED (local) | `api/app.py` | `tests/integration/test_api.py`; real `uvicorn` + `curl` | No TLS (loopback by default) |
 | CLI | TESTED | `cli/main.py` | `tests/integration/test_cli.py` | - |
+| Web UI (`/app`): dashboard, projects (scan, dependency graph, risks, immune, debt, what-if, members), recovery tasks with steps/agent runs/evidence, approvals with diff, AI control (agents, models, runs), skills, security (integrity, audit), continuity (sync jobs, conflict resolution), research | VERIFIED (local) | `apps/web/`, `api/app.py` | `tests/integration/test_web_ui.py`; `scripts/ui_e2e.py` - real Chromium against real `yemendev serve`: 34/34 checks over every screen incl. numbers equal to API, self-approval refused, second human approves, task succeeds, no off-origin requests, no CSP violations | Requires a Node.js build step; no in-UI plan authoring (CLI/API `--plan`); no charts beyond the dependency graph; desktop/mobile apps not built |
+| Arabic/English UI with RTL | VERIFIED (local) | `apps/web/src/i18n.ts`, `styles.css` | Arabic default, `dir`/`lang` switch checked in browser; tsc fails if an Arabic string is missing (mutation-checked) | Server messages (errors, reasons) are shown in English inside the Arabic UI |
+| UI security: strict CSP, no CDN, token in `sessionStorage`, no symlink following | TESTED | `api/app.py` | `tests/integration/test_web_ui.py` (3 mutations caught: CSP removed, symlinks followed, Arabic key missing) | `sessionStorage` token is readable by page script; relies on CSP + React escaping |
 
 ## Research & benchmarking
 
@@ -73,7 +76,7 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 
 ## Not started
 
-comparative benchmark baselines · web/desktop/mobile UI · i18n (Arabic/English) · PostgreSQL ·
+comparative benchmark baselines · desktop/mobile apps · PostgreSQL ·
 OpenTelemetry · Tree-sitter/LSP · VM-level (gVisor/Firecracker) sandboxing.
 
 ## MVP acceptance (directive §20)

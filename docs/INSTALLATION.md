@@ -9,7 +9,8 @@
 | Memory | 4 GB minimum, 8 GB recommended | |
 | Docker | Recommended | enables the container sandbox (`auto` default) |
 | Model | Optional | any OpenAI-compatible server; the platform works without one |
-| Internet | Not required at runtime | needed once to install packages / build the sandbox image |
+| Internet | Not required at runtime | needed once to install packages / build the sandbox image / build the UI |
+| Node.js | 20+ to build the web UI | not needed at runtime; the built UI is static files |
 
 ## Install
 
@@ -21,6 +22,17 @@ export YEMENDEV_DATA_DIR=$PWD/.yemendev
 export YEMENDEV_TOKEN=<that token>
 .venv/bin/yemendev health
 ```
+
+## Web UI
+
+```bash
+cd apps/web && npm ci && npm run build && cd ../..   # type-checks (incl. Arabic strings) and builds dist/
+.venv/bin/yemendev serve                             # then open http://127.0.0.1:8765/ and paste a token
+```
+
+The UI is Arabic by default (switch in the header). It stores the token only for the browser tab.
+To serve a UI built elsewhere, set `YEMENDEV_WEB_DIR=/path/to/dist`. Without a build, `/app` returns a
+404 that says how to build it; the API is unaffected.
 
 ## Container sandbox (recommended)
 

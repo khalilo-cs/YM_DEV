@@ -110,6 +110,8 @@ class Settings(BaseModel):
 
     # Sandbox workspaces must NOT live inside data_dir: untrusted code runs there.
     workspaces_root: Path | None = None
+    # Built web UI (apps/web/dist). None = the repository checkout's apps/web/dist, if it was built.
+    web_dir: Path | None = None
 
     @property
     def workspaces_dir(self) -> Path:
@@ -138,8 +140,9 @@ class Settings(BaseModel):
                                                 ("rate_limit_burst", "YEMENDEV_RATE_LIMIT_BURST"),
                                                 ("auth_failures_per_minute", "YEMENDEV_AUTH_FAILURES_PER_MINUTE"),
                                                 ("token_ttl_days", "YEMENDEV_TOKEN_TTL_DAYS")] if env.get(e)}
+        web = {"web_dir": Path(env["YEMENDEV_WEB_DIR"]).resolve()} if env.get("YEMENDEV_WEB_DIR") else {}
         return cls.model_validate({"data_dir": dd.resolve(), "allowed_project_roots": roots, "sandbox": sandbox,
-                                   "model": model, **limits})
+                                   "model": model, **limits, **web})
 
     def ensure_dirs(self) -> None:
         for d in (self.data_dir, self.keys_dir, self.checkpoints_dir):

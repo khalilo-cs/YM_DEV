@@ -20,8 +20,9 @@ Two views of the same plan:
 | 6 Offline continuity | Done for file-based sync (checkpoints, resume, offline workflow, signed sync bundles) |
 | 7 Risk & simulation | Done for the current scope (risk engine, anomalies, causal analysis, immune system, counterfactual engine) |
 | 8 Security & governance | Done for the current scope |
-| 9 User interfaces | CLI + API only |
+| 9 User interfaces | CLI, API and web UI (Arabic/English); desktop and mobile apps not built |
 | 10 Research & benchmarking | Partial (benchmark, no baselines) |
 | 11 Product readiness | Not started |
 
-Next engineering stage: one-command installer and packaging; JavaScript/TypeScript scanning.
+Next engineering stage: ORION task queue, scheduling, retries and timeouts; then JavaScript/TypeScript
+scanning, SBOM, structured logging and a one-command installer.
