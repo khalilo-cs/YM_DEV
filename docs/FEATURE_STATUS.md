@@ -39,6 +39,8 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 | Per-project sandbox images (wheels only, dependency-hash tags, evidence of wheel hashes) | VERIFIED (local) | `sandbox/project_image.py`, `Platform.build_project_image` | `tests/integration/test_project_image.py` (real build with `six`: fails without image, passes with it; reuse; stale-image avoidance; admin-only) | Packages without a wheel unsupported; unpinned deps resolve at build time |
 | Agents: registry with fixed allow-lists, AgentRunner, `agent_runs` (ADR-0011) | VERIFIED (local) | `agents/registry.py`, `agents/runner.py` | `tests/security/test_agents.py`; mutation: removing the allow-list fails a test | Agents are trusted in-process code (use is restricted and recorded, not sandboxed) |
 | Security agent + conflict policy SEC-BLOCK-WINS | TESTED | `agents/security_agent.py`, `orion/workflow.py` | `tests/security/test_agents.py`; mutation: ignoring a block fails a test | Static pattern review of added lines; evadable by obfuscation |
+| Predictive risk engine: test-failure predictions, robust anomaly detection, module change risk, dependency risk, repair reliability | TESTED | `risk/` | `tests/unit/test_risk.py`, `tests/integration/test_risk_engine.py` | Explainable statistics over recorded history; probabilities are smoothed frequencies (uncalibrated); returns *insufficient evidence* instead of predicting below minimum data (4 runs, 6 points, 3 scans, 3 repairs) |
+| Causal analysis: failure propagation paths, root-cause candidates (observed/inferred), single points of failure | TESTED | `twin/causal.py`, `diagnostics.root_causes` evidence | same | Static imports + traceback locations; candidates are never reported as proven causes; no fault trees |
 | Generated reference docs + drift test | TESTED | `scripts/gen_reference_docs.py` | `tests/regression/test_docs_in_sync.py` (fails on manual edits) | Covers schema and API only |
 | `auto` default backend + isolation warnings | TESTED | `docker_backend.isolation_report`, `yemendev sandbox status`, `/system/status` | `tests/unit/test_isolation_report.py`; benchmark 15/15 on `auto` | - |
 | pytest runner (JUnit parsing, honest statuses, hostile XML rejected) | TESTED | `sandbox/testrunner.py` | `tests/integration/test_testrunner_diagnostics.py` | Project can forge its own report (A-12) |
@@ -66,8 +68,7 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 
 ## Not started
 
-Predictive risk engine · anomaly detection · counterfactual/compound failure simulation (beyond
-fault points) · digital immune system · continuity passport · synchronization queue · continuity
+Counterfactual/compound failure simulation (beyond fault points) · digital immune system · continuity passport · synchronization queue · continuity
 debt metric · comparative benchmark baselines · web/desktop/mobile UI · i18n (Arabic/English) · PostgreSQL ·
 OpenTelemetry · Tree-sitter/LSP · VM-level (gVisor/Firecracker) sandboxing.
 

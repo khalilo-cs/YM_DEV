@@ -254,6 +254,14 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
     def project_image(project_id: str, a: Who) -> dict[str, Any]:
         return dict(platform.build_project_image(a, project_id).model_dump())
 
+    @app.get("/api/v1/projects/{project_id}/risks")
+    def risks(project_id: str, a: Who) -> dict[str, Any]:
+        return dict(platform.assess_risk(a, project_id).model_dump())
+
+    @app.get("/api/v1/projects/{project_id}/impact")
+    def impact(project_id: str, a: Who, module: Annotated[str, Query(min_length=1, max_length=500)]) -> dict[str, Any]:
+        return platform.impact(a, project_id, module)
+
     @app.get("/api/v1/projects/{project_id}/graph")
     def graph(project_id: str, a: Who) -> dict[str, Any]:
         platform.require_read(a, project_id)

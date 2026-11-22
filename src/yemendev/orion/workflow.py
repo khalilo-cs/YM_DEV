@@ -44,6 +44,7 @@ from yemendev.recovery.model_proposer import propose_with_model
 from yemendev.recovery.proposers import propose_from_skills
 from yemendev.sandbox.testrunner import TestRunReport, run_pytest
 from yemendev.sandbox.workspace import Workspace
+from yemendev.twin.causal import root_cause_candidates
 
 BASELINE_RUNS = 2
 LEARNING_AGENT = AGENTS["learning"].actor
@@ -234,7 +235,8 @@ class RepairWorkflow:
         self.p.evidence.record(
             action="tests.baseline", actor=actor.ref, target=t.project_id, outcome=r.status.value, task_id=t.id,
             body=EvidenceBody(tests={"runs": [{"status": x.status.value, "passed": x.passed, "failed": x.failed,
-                                               "errors": x.errors, "failing": x.failing_ids()} for x in runs]},
+                                               "errors": x.errors, "failing": x.failing_ids(),
+                                               "duration_seconds": x.execution.duration_seconds} for x in runs]},
                               environment={"network_isolated": r.execution.network_isolated,
                                            "limits": r.execution.limits, "backend": r.execution.backend,
                                            "image": r.execution.image, "run_as_uid": r.execution.run_as_uid,
@@ -255,6 +257,14 @@ class RepairWorkflow:
                                             subject=f"hypothesis:{h.category}", key=",".join(h.supporting_tests)[:200],
                                             value=h.model_dump(), verified=False, confidence=h.confidence,
                                             source=AGENTS["diagnostic"].actor.ref))
+        if d.failures:
+            _, snap = self.p.latest_scan(t.project_id)
+            candidates = root_cause_candidates(snap, d)
+            self.p.evidence.record(
+                action="diagnostics.root_causes", actor=AGENTS["diagnostic"].actor.ref, target=t.project_id,
+                outcome=f"{len(candidates)} candidate(s)", task_id=t.id,
+                body=EvidenceBody(details={"candidates": [c.model_dump() for c in candidates]},
+                                  limitations=["static imports + traceback locations; candidates, not proven causes"]))
         if not d.reproducible_problem:
             raise Stop(TaskStatus.NO_ACTION, d.summary)
         return d.model_dump(mode="json")

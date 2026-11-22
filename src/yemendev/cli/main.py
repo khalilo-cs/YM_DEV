@@ -103,6 +103,10 @@ def cmd_project(args: argparse.Namespace) -> int:
     elif args.pcmd == "revoke":
         p.revoke_member(a, args.project_id, args.actor_ref)
         print("revoked")
+    elif args.pcmd == "risks":
+        _print(p.assess_risk(a, args.project_id).model_dump())
+    elif args.pcmd == "impact":
+        _print(p.impact(a, args.project_id, args.module))
     elif args.pcmd == "members":
         _print([m.model_dump() for m in p.list_members(a, args.project_id)])
     return 0
@@ -250,8 +254,11 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("name")
     x.add_argument("path")
     ps.add_parser("list")
-    for name in ("scan", "graph", "members"):
+    for name in ("scan", "graph", "members", "risks"):
         ps.add_parser(name).add_argument("project_id")
+    x = ps.add_parser("impact", help="modules affected if MODULE fails (static import reachability)")
+    x.add_argument("project_id")
+    x.add_argument("module")
     x = ps.add_parser("grant", help="grant a human access to a project")
     x.add_argument("project_id")
     x.add_argument("actor_ref", help="e.g. human:bob")

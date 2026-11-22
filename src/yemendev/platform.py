@@ -289,6 +289,35 @@ class Platform:
                           outcome=outcome, details={"tag": img.tag, "image_id": img.image_id})
         return img
 
+    # ---- risk & causal analysis ----------------------------------------------------------------
+    def assess_risk(self, actor: Actor, project_id: str) -> Any:
+        from yemendev.risk.engine import assess
+
+        self.require_read(actor, project_id)
+        report = assess(self, project_id)
+        self.evidence.record(
+            action="risk.assessment", actor="system:risk-engine", target=project_id,
+            outcome=f"{len(report.predictions)} prediction(s), {len(report.anomalies)} anomaly(ies)",
+            body=EvidenceBody(details={"predictions": len(report.predictions), "anomalies": len(report.anomalies),
+                                       "risk_scores": len(report.risk_scores),
+                                       "insufficient": [x.analysis for x in report.insufficient_evidence]},
+                              limitations=report.limitations))
+        return report
+
+    def impact(self, actor: Actor, project_id: str, module: str) -> dict[str, Any]:
+        from yemendev.twin.causal import failure_propagation, single_points_of_failure
+        from yemendev.twin.graph import DependencyGraph
+
+        self.require_read(actor, project_id)
+        _, snap = self.latest_scan(project_id)
+        g = DependencyGraph.from_snapshot(snap)
+        if module not in g.nodes:
+            raise NotFoundError("module not found in the latest scan")
+        tests = {m.name for m in snap.modules if m.is_test}
+        return {"module": module, "impacted": [x.model_dump() for x in failure_propagation(g, module, tests)],
+                "single_points_of_failure": single_points_of_failure(g, snap),
+                "note": "static import reachability: where a failure CAN propagate, not where it did"}
+
     def latest_scan(self, project_id: str) -> tuple[str, ProjectSnapshot]:
         with self.db.read() as conn:
             r = conn.execute("SELECT id, snapshot_json FROM project_scans WHERE project_id = ? ORDER BY created_at"

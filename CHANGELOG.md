@@ -24,6 +24,9 @@
 - Generated `DATABASE_SCHEMA.md` / `API_REFERENCE.md` with a drift test; all 24 documents of directive
   section 18, `CONTRIBUTING.md`, `.env.example`.
 
+- Stage 12: predictive risk engine (`GET /projects/{id}/risks`, `yemendev project risks`) and causal
+  analysis (`GET /projects/{id}/impact`, root-cause candidates recorded by the diagnostic agent).
+
 ### Changed (stage 11)
 - Default sandbox backend is now `auto` (docker when usable, else process with recorded warnings).
 
