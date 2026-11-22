@@ -26,4 +26,5 @@ Crashes are tested by fault injection, **not** by real power cuts.
 
 ## Not implemented
 
-Deferred synchronization of work done offline to another node - see [SYNCHRONIZATION.md](SYNCHRONIZATION.md).
+Automatic network synchronization. File-based signed sync between installations **is** implemented - see
+[SYNCHRONIZATION.md](SYNCHRONIZATION.md).

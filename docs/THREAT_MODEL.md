@@ -26,4 +26,5 @@ Platform DB (approvals, tokens, evidence, memory), HMAC audit key, registered pr
 | DoS via large/many requests | Body limit (Content-Length and chunked), list limits, per-credential rate limit, failed-auth lockout | Per process only; behind a proxy all clients share the proxy IP |
 | Cross-project access by a legitimate user | Memberships; token role is a ceiling; scoped lists, reads and approval decisions; audit admin-only | Only global admins manage members |
 | Malicious or compromised project dependency | Wheels only (no build code on the host), no URL/VCS/path specs, `--network none` image build, wheel SHA-256 recorded, admin-only build | Dependency code still runs inside the sandbox during tests (by design); unpinned deps can change between builds |
+| Knowledge injection via sync bundle or passport | Ed25519 signatures; only explicitly trusted signers accepted; imported knowledge unverified; conflicts never auto-resolved | Manual key exchange; a trusted peer can still send wrong (but labelled unverified) knowledge |
 | Stolen long-lived token | Mandatory expiry (default 90 d), revocation | No refresh/rotation flow yet |

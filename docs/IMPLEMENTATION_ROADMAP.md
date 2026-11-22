@@ -20,8 +20,8 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 12 | Predictive risk engine + causal analysis (directive 5.5, 5.6) | **Done** |
 | 13 | Digital immune system + continuity debt (5.9, 6.6) | **Done** |
 | 14 | Counterfactual future engine (6.2) | **Done** |
-| 15 | Synchronization + digital continuity passport (5.10, 6.3) | Next |
-| 16 | Web UI, Arabic/English (16, 17) | Planned |
+| 15 | Synchronization + digital continuity passport (5.10, 6.3) | **Done** |
+| 16 | Web UI, Arabic/English (16, 17) | Next |
 | 17 | ORION queue, scheduling, retries (5.2) | Planned |
 | 18 | JS/TS scanning (Tree-sitter), SBOM, structured logging; installer | Planned |
 | blocked | Real-model evaluation, comparative baseline B, Android/desktop builds (no model / SDKs here) | Blocked in this environment |

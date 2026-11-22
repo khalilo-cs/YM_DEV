@@ -44,6 +44,8 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 | Digital immune system: drift vs baseline scan, platform-authorized vs unrecorded changes, auto-executing files (conftest/.pth/sitecustomize), build/CI changes, binaries, secret files, typosquatting, new deps, platform integrity, repeated-denial correlation | TESTED | `immune/` | `tests/unit/test_immune_rules.py`, `tests/integration/test_immune_and_debt.py`; mutation: 2/2 caught | Every finding is `operational` or `security` (anomalies are not called attacks); typosquat list is small and offline; read-only, no runtime monitoring |
 | Continuity debt (EXPERIMENTAL) | EXPERIMENTAL | `immune/continuity_debt.py` | `tests/integration/test_immune_and_debt.py` | **Not a validated metric**; unmeasurable components (backups) are excluded, never guessed |
 | Counterfactual future engine: module unavailable, dependency removed, file corrupted, compound faults; per-test impact, blind-spot detection (remembered), static-prediction precision/recall | VERIFIED (local) | `simulation/counterfactual.py`, `Platform.counterfactual` | `tests/integration/test_counterfactual.py`; manual run on the docker backend | Impact is observed only through the project's own tests; no timing/load faults; static scoring only for pure module scenarios |
+| Digital continuity passport (Ed25519-signed, schema-validated export/verify/import; no secrets) | TESTED | `continuity/passport.py`, `continuity/signing.py` | `tests/integration/test_continuity.py` (two installations, tampering, untrusted signer) | Data requirements not analysed (stated as unknown); manual key exchange |
+| Offline synchronization (signed bundles, trusted signers, unverified import, human-resolved conflicts, idempotent) | TESTED | `continuity/sync.py` | same; mutation: 3/3 caught | File transport only; no deletion propagation |
 | Generated reference docs + drift test | TESTED | `scripts/gen_reference_docs.py` | `tests/regression/test_docs_in_sync.py` (fails on manual edits) | Covers schema and API only |
 | `auto` default backend + isolation warnings | TESTED | `docker_backend.isolation_report`, `yemendev sandbox status`, `/system/status` | `tests/unit/test_isolation_report.py`; benchmark 15/15 on `auto` | - |
 | pytest runner (JUnit parsing, honest statuses, hostile XML rejected) | TESTED | `sandbox/testrunner.py` | `tests/integration/test_testrunner_diagnostics.py` | Project can forge its own report (A-12) |
@@ -71,7 +73,6 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 
 ## Not started
 
-Continuity passport · synchronization queue ·
 comparative benchmark baselines · web/desktop/mobile UI · i18n (Arabic/English) · PostgreSQL ·
 OpenTelemetry · Tree-sitter/LSP · VM-level (gVisor/Firecracker) sandboxing.
 

@@ -53,4 +53,5 @@ AGENTS: dict[str, AgentSpec] = {a.name: a for a in [
 # Actions no agent may ever hold: decisions reserved for humans or administrators.
 HUMAN_ONLY = frozenset({Action.DECIDE_APPROVAL, Action.REGISTER_PROJECT, Action.ISSUE_TOKEN, Action.MANAGE_MEMBERS,
                         Action.ACTIVATE_SKILL, Action.CREATE_TASK, Action.CANCEL_TASK, Action.BUILD_SANDBOX_IMAGE,
-                        Action.READ_AUDIT})
+                        Action.READ_AUDIT, Action.SYNC_EXPORT, Action.SYNC_IMPORT, Action.RESOLVE_SYNC_CONFLICT,
+                        Action.TRUST_KEY})

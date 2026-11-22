@@ -227,6 +227,42 @@ def cmd_sandbox(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_continuity(args: argparse.Namespace) -> int:
+    from yemendev.continuity.signing import fingerprint, public_hex
+
+    p = _platform(args)
+    a = _actor(p, args)
+    sub = args.ccmd
+    if sub == "passport-export":
+        sp = p.export_passport(a, args.project_id)
+        Path(args.out).write_text(sp.model_dump_json(indent=2))
+        print(f"passport written to {args.out} (signer {sp.signature.signer_fingerprint})")
+    elif sub == "passport-verify":
+        result, _ = p.verify_passport(a, Path(args.file).read_text())
+        _print({**result.model_dump(), "accepted": result.accepted})
+        return 0 if result.accepted else 2
+    elif sub == "passport-import":
+        _print(p.import_passport(a, args.project_id, Path(args.file).read_text()).model_dump())
+    elif sub == "sync-export":
+        bundle, job = p.sync_export(a, args.project_id)
+        Path(args.out).write_text(bundle.model_dump_json(indent=2))
+        _print(job.model_dump())
+    elif sub == "sync-import":
+        _print(p.sync_import(a, args.project_id, Path(args.file).read_text()).model_dump())
+    elif sub == "sync-status":
+        _print(p.sync_status(a))
+    elif sub == "sync-conflicts":
+        _print([c.model_dump() for c in p.sync_conflicts(a, args.project_id, "open")])
+    elif sub == "sync-resolve":
+        _print(p.resolve_sync_conflict(a, args.conflict_id, args.resolution).model_dump())
+    elif sub == "keys-show":
+        pub = public_hex(p.signing_key)
+        _print({"public_key": pub, "fingerprint": fingerprint(pub)})
+    elif sub == "keys-trust":
+        print(f"trusted {p.trust_key(a, args.public_key)}")
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     loopback = {"127.0.0.1", "::1", "localhost"}
     if args.host not in loopback and not args.allow_remote:
@@ -335,6 +371,30 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("--wheels", help="directory of pre-downloaded wheels (fully offline)")
     x.add_argument("--project", help="build the dependency image for this project id (needs an admin token)")
     s.set_defaults(fn=cmd_sandbox)
+
+    s = sub.add_parser("continuity", help="passports, offline sync bundles and trusted keys")
+    cs = s.add_subparsers(dest="ccmd", required=True)
+    x = cs.add_parser("passport-export")
+    x.add_argument("project_id")
+    x.add_argument("--out", required=True)
+    cs.add_parser("passport-verify").add_argument("file")
+    x = cs.add_parser("passport-import")
+    x.add_argument("project_id")
+    x.add_argument("file")
+    x = cs.add_parser("sync-export")
+    x.add_argument("project_id")
+    x.add_argument("--out", required=True)
+    x = cs.add_parser("sync-import")
+    x.add_argument("project_id")
+    x.add_argument("file")
+    cs.add_parser("sync-status")
+    cs.add_parser("sync-conflicts").add_argument("project_id")
+    x = cs.add_parser("sync-resolve")
+    x.add_argument("conflict_id")
+    x.add_argument("resolution", choices=["keep_local", "take_remote"])
+    cs.add_parser("keys-show")
+    cs.add_parser("keys-trust").add_argument("public_key")
+    s.set_defaults(fn=cmd_continuity)
 
     s = sub.add_parser("serve")
     s.add_argument("--host", default="127.0.0.1")

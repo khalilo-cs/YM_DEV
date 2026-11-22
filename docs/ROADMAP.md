@@ -17,7 +17,7 @@ Two views of the same plan:
 | 3 Intelligence & orchestration | Partial (orchestration, agents done; no model evaluated, no task queue) |
 | 4 Verified repair | Done |
 | 5 Continual learning | Done (one skill kind) |
-| 6 Offline continuity | Partial (checkpoints, resume, offline workflow; no sync) |
+| 6 Offline continuity | Done for file-based sync (checkpoints, resume, offline workflow, signed sync bundles) |
 | 7 Risk & simulation | Done for the current scope (risk engine, anomalies, causal analysis, immune system, counterfactual engine) |
 | 8 Security & governance | Done for the current scope |
 | 9 User interfaces | CLI + API only |

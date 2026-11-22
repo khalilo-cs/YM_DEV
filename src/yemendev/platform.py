@@ -24,7 +24,7 @@ from yemendev.core.contracts import (
 )
 from yemendev.core.faults import NO_FAULTS, FaultInjector
 from yemendev.evidence.store import EvidenceBody, EvidenceRecord, EvidenceStore
-from yemendev.governance.actors import ROLE_RANK, Actor, Role
+from yemendev.governance.actors import ROLE_RANK, Actor, ActorKind, Role
 from yemendev.governance.approvals import ApprovalRequest, ApprovalService, ApprovalStatus
 from yemendev.governance.guard import Guard
 from yemendev.governance.membership import Member, MembershipStore
@@ -360,6 +360,127 @@ class Platform:
                        "finding": "no test detected this fault"},
                 verified=True, confidence=1.0, source="counterfactual", evidence_ids=[ev.id]))
         return result
+
+    # ---- continuity: passports, synchronization, key trust -----------------------------------------
+    @property
+    def signing_key(self) -> Any:
+        from yemendev.continuity.signing import load_or_create_signing_key
+
+        if not hasattr(self, "_signing_key"):
+            self._signing_key = load_or_create_signing_key(self.settings.keys_dir)
+        return self._signing_key
+
+    def trusted_public_keys(self) -> set[str]:
+        from yemendev.continuity.signing import trusted_keys
+
+        return trusted_keys(self.settings.keys_dir, self.signing_key)
+
+    def export_passport(self, actor: Actor, project_id: str) -> Any:
+        from yemendev.continuity.passport import build_passport, sign_passport
+
+        self.require_read(actor, project_id)
+        signed = sign_passport(build_passport(self, project_id), self.signing_key)
+        self.audit.record(actor=actor.ref, action="passport.export", target=project_id, outcome="ok",
+                          details={"body_sha256": signed.signature.body_sha256,
+                                   "signer": signed.signature.signer_fingerprint})
+        return signed
+
+    def verify_passport(self, actor: Actor, raw: str | bytes) -> Any:
+        from yemendev.continuity.passport import verify_passport
+
+        self.guard.require(actor, Action.READ, "passport")
+        return verify_passport(raw, self.trusted_public_keys())
+
+    def import_passport(self, actor: Actor, project_id: str, raw: str | bytes) -> Any:
+        """Store a verified passport from another installation as UNVERIFIED project identity knowledge."""
+        from yemendev.continuity.passport import verify_passport
+        from yemendev.memory.model import MemoryCategory, MemoryWrite
+
+        self.project(project_id)
+        self.guard.require(actor, Action.SYNC_IMPORT, project_id, project_id=project_id)
+        result, sp = verify_passport(raw, self.trusted_public_keys())
+        if sp is None or not result.accepted:
+            raise PermissionDeniedError("passport rejected: " + "; ".join(result.problems))
+        if not result.signer_trusted:
+            raise PermissionDeniedError(f"passport signer {result.signer_fingerprint} is not trusted")
+        self.memory.write(MemoryWrite(
+            project_id=project_id, category=MemoryCategory.PROJECT_IDENTITY,
+            subject=f"passport:{result.signer_fingerprint}", key=sp.body.identity.get("name", "unknown"),
+            value={"identity": sp.body.identity, "dependencies": sp.body.dependencies,
+                   "recovery": sp.body.recovery, "generated_at": sp.body.generated_at},
+            verified=False, confidence=0.8, source=f"passport:{result.signer_fingerprint}"))
+        self.audit.record(actor=actor.ref, action="passport.import", target=project_id, outcome="ok",
+                          details={"signer": result.signer_fingerprint})
+        return result
+
+    def sync_export(self, actor: Actor, project_id: str) -> Any:
+        from yemendev.continuity.sync import export_bundle
+
+        self.project(project_id)
+        self.guard.require(actor, Action.SYNC_EXPORT, project_id, project_id=project_id)
+        bundle, job = export_bundle(self, project_id, self.signing_key)
+        self.audit.record(actor=actor.ref, action=Action.SYNC_EXPORT.value, target=project_id, outcome=job.status,
+                          details={"job_id": job.id, "records": job.records_total})
+        return bundle, job
+
+    def sync_import(self, actor: Actor, project_id: str, raw: str | bytes) -> Any:
+        from yemendev.continuity.sync import import_bundle
+
+        self.project(project_id)
+        self.guard.require(actor, Action.SYNC_IMPORT, project_id, project_id=project_id)
+        job = import_bundle(self, project_id, raw, self.trusted_public_keys(), actor.ref)
+        self.evidence.record(action="sync.import", actor=actor.ref, target=project_id, outcome=job.status,
+                             body=EvidenceBody(details=job.model_dump(),
+                                               limitations=["imported knowledge is unverified on this installation"]))
+        self.audit.record(actor=actor.ref, action=Action.SYNC_IMPORT.value, target=project_id, outcome=job.status,
+                          details={"job_id": job.id, "applied": job.records_applied, "conflicts": job.conflicts,
+                                   "peer": job.peer_fingerprint})
+        return job
+
+    def sync_conflicts(self, actor: Actor, project_id: str, status: str | None = None) -> Any:
+        from yemendev.continuity.sync import list_conflicts
+
+        self.require_read(actor, project_id)
+        return list_conflicts(self, project_id, status)
+
+    def resolve_sync_conflict(self, actor: Actor, conflict_id: str, resolution: str) -> Any:
+        from yemendev.continuity.sync import get_conflict, resolve_conflict
+
+        c = get_conflict(self, conflict_id)
+        if actor.kind is not ActorKind.HUMAN:
+            raise PermissionDeniedError("only humans resolve synchronization conflicts")
+        self.guard.require(actor, Action.RESOLVE_SYNC_CONFLICT, conflict_id, project_id=c.project_id)
+        out = resolve_conflict(self, conflict_id, resolution, actor.ref)
+        self.audit.record(actor=actor.ref, action=Action.RESOLVE_SYNC_CONFLICT.value, target=conflict_id,
+                          outcome=resolution, details={"project_id": c.project_id})
+        return out
+
+    def sync_status(self, actor: Actor) -> dict[str, Any]:
+        from yemendev.continuity.sync import list_jobs
+
+        self.guard.require(actor, Action.READ, "synchronization")
+        jobs = [j for j in list_jobs(self) if self.guard.can_read(actor, j.project_id)]
+        with self.db.read() as conn:
+            open_by_project = {r[0]: r[1] for r in conn.execute(
+                "SELECT project_id, COUNT(*) FROM sync_conflicts WHERE status = 'open' GROUP BY project_id")}
+        return {"transport": "signed file bundles only (no network transport)",
+                "jobs": [j.model_dump() for j in jobs],
+                "open_conflicts": {k: v for k, v in open_by_project.items() if self.guard.can_read(actor, k)},
+                "note": "an export is 'exported_not_delivered': delivery to the peer is not known to this node"}
+
+    def trust_key(self, actor: Actor, public_key_hex: str) -> str:
+        from yemendev.continuity.signing import fingerprint
+
+        self.guard.require(actor, Action.TRUST_KEY, "keys")
+        key = public_key_hex.strip().lower()
+        if len(key) != 64 or any(c not in "0123456789abcdef" for c in key):
+            raise InvalidInputError("public key must be 64 hex characters (raw Ed25519)")
+        d = self.settings.keys_dir / "trusted"
+        d.mkdir(mode=0o700, exist_ok=True)
+        fp = fingerprint(key)
+        (d / f"{fp}.pub").write_text(key + "\n")
+        self.audit.record(actor=actor.ref, action=Action.TRUST_KEY.value, target=fp, outcome="trusted")
+        return fp
 
     def impact(self, actor: Actor, project_id: str, module: str) -> dict[str, Any]:
         from yemendev.twin.causal import failure_propagation, single_points_of_failure

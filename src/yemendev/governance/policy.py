@@ -33,6 +33,10 @@ class Action(StrEnum):
     MANAGE_MEMBERS = "project.manage_members"
     READ_AUDIT = "audit.read"  # the audit log spans all projects
     BUILD_SANDBOX_IMAGE = "sandbox.build_image"  # downloads third-party code: admin only
+    SYNC_EXPORT = "sync.export"
+    SYNC_IMPORT = "sync.import"
+    RESOLVE_SYNC_CONFLICT = "sync.resolve_conflict"
+    TRUST_KEY = "keys.trust"
 
 
 class Sensitivity(StrEnum):
@@ -68,6 +72,10 @@ POLICY: dict[Action, Rule] = {
     Action.MANAGE_MEMBERS: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
     Action.READ_AUDIT: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
     Action.BUILD_SANDBOX_IMAGE: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
+    Action.SYNC_EXPORT: Rule(min_role=Role.OPERATOR, sensitivity=Sensitivity.LOW, agents_allowed=False),
+    Action.SYNC_IMPORT: Rule(min_role=Role.OPERATOR, sensitivity=Sensitivity.LOW, agents_allowed=False),
+    Action.RESOLVE_SYNC_CONFLICT: Rule(min_role=Role.OPERATOR, sensitivity=Sensitivity.LOW, agents_allowed=False),
+    Action.TRUST_KEY: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
 }
 
 

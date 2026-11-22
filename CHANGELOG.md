@@ -24,6 +24,9 @@
 - Generated `DATABASE_SCHEMA.md` / `API_REFERENCE.md` with a drift test; all 24 documents of directive
   section 18, `CONTRIBUTING.md`, `.env.example`.
 
+- Stage 15: Ed25519-signed digital continuity passports and offline sync bundles (`yemendev continuity ...`,
+  `/api/v1/synchronization/status|jobs`, `/projects/{id}/passport`, `/projects/{id}/sync/...`); new
+  dependency `cryptography`; DB migration 4 (`sync_jobs`, `sync_conflicts`).
 - Stage 14: counterfactual future engine (`POST /projects/{id}/counterfactual`, `yemendev project whatif`):
   sandboxed fault injection with per-test impact, blind spots and static-prediction precision/recall.
 - Stage 13: digital immune system (`GET /projects/{id}/immune`, `yemendev project immune`) and the

@@ -201,4 +201,40 @@ MIGRATIONS: list[tuple[int, str, str]] = [
         CREATE INDEX ix_agent_runs_agent ON agent_runs(agent, started_at)
         """,
     ),
+    (
+        4,
+        "synchronization",
+        """
+        CREATE TABLE sync_jobs (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            direction TEXT NOT NULL,
+            status TEXT NOT NULL,
+            peer_fingerprint TEXT,
+            bundle_sha256 TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            finished_at TEXT,
+            records_total INTEGER NOT NULL,
+            records_applied INTEGER NOT NULL,
+            conflicts INTEGER NOT NULL,
+            error TEXT
+        );
+        CREATE INDEX ix_sync_jobs_project ON sync_jobs(project_id, created_at);
+        CREATE TABLE sync_conflicts (
+            id TEXT PRIMARY KEY,
+            job_id TEXT NOT NULL REFERENCES sync_jobs(id) ON DELETE CASCADE,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            subject TEXT NOT NULL,
+            key TEXT NOT NULL,
+            local_id TEXT NOT NULL,
+            local_value_json TEXT NOT NULL,
+            remote_value_json TEXT NOT NULL,
+            status TEXT NOT NULL,
+            resolution TEXT,
+            resolved_by TEXT,
+            resolved_at TEXT
+        );
+        CREATE INDEX ix_sync_conflicts_project ON sync_conflicts(project_id, status)
+        """,
+    ),
 ]

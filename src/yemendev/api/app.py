@@ -8,6 +8,7 @@
 """
 
 import hashlib
+import json
 import logging
 import math
 import time
@@ -127,6 +128,14 @@ class Decide(BaseModel):
 class ProposeSkill(BaseModel):
     spec: SkillSpec
     skill_id: str | None = None
+
+
+class ResolveConflict(BaseModel):
+    resolution: str = Field(pattern="^(keep_local|take_remote)$")
+
+
+class TrustKey(BaseModel):
+    public_key: str = Field(min_length=64, max_length=64)
 
 
 class GrantMember(BaseModel):
@@ -270,6 +279,58 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
     @app.post("/api/v1/projects/{project_id}/counterfactual")
     def counterfactual(project_id: str, body: Scenario, a: Who) -> dict[str, Any]:
         return dict(platform.counterfactual(a, project_id, body).model_dump())
+
+    # ---- continuity: passports & synchronization ---------------------------------------------
+    @app.get("/api/v1/projects/{project_id}/passport")
+    def passport(project_id: str, a: Who) -> dict[str, Any]:
+        return dict(platform.export_passport(a, project_id).model_dump())
+
+    @app.post("/api/v1/passports/verify")
+    def passport_verify(body: dict[str, Any], a: Who) -> dict[str, Any]:
+        result, _ = platform.verify_passport(a, json.dumps(body))
+        return {**result.model_dump(), "accepted": result.accepted}
+
+    @app.post("/api/v1/projects/{project_id}/passport/import")
+    def passport_import(project_id: str, body: dict[str, Any], a: Who) -> dict[str, Any]:
+        r = platform.import_passport(a, project_id, json.dumps(body))
+        return {**r.model_dump(), "accepted": r.accepted}
+
+    @app.post("/api/v1/projects/{project_id}/sync/export")
+    def sync_export(project_id: str, a: Who) -> dict[str, Any]:
+        bundle, job = platform.sync_export(a, project_id)
+        return {"job": job.model_dump(), "bundle": bundle.model_dump()}
+
+    @app.post("/api/v1/projects/{project_id}/sync/import")
+    def sync_import(project_id: str, body: dict[str, Any], a: Who) -> dict[str, Any]:
+        return dict(platform.sync_import(a, project_id, json.dumps(body)).model_dump())
+
+    @app.get("/api/v1/projects/{project_id}/sync/conflicts")
+    def sync_conflicts(project_id: str, a: Who, status: str | None = None) -> list[Any]:
+        return [c.model_dump() for c in platform.sync_conflicts(a, project_id, status)]
+
+    @app.post("/api/v1/sync/conflicts/{conflict_id}/resolve")
+    def sync_resolve(conflict_id: str, body: ResolveConflict, a: Who) -> dict[str, Any]:
+        return dict(platform.resolve_sync_conflict(a, conflict_id, body.resolution).model_dump())
+
+    @app.get("/api/v1/synchronization/status")
+    def sync_status(a: Who) -> dict[str, Any]:
+        return platform.sync_status(a)
+
+    @app.get("/api/v1/synchronization/jobs")
+    def sync_jobs(a: Who) -> list[Any]:
+        return list(platform.sync_status(a)["jobs"])
+
+    @app.post("/api/v1/keys/trusted", status_code=201)
+    def trust_key(body: TrustKey, a: Who) -> dict[str, Any]:
+        return {"fingerprint": platform.trust_key(a, body.public_key)}
+
+    @app.get("/api/v1/keys/self")
+    def own_key(a: Who) -> dict[str, Any]:
+        from yemendev.continuity.signing import fingerprint, public_hex
+
+        read(a, "keys")
+        pub = public_hex(platform.signing_key)
+        return {"public_key": pub, "fingerprint": fingerprint(pub), "algorithm": "ed25519"}
 
     @app.get("/api/v1/projects/{project_id}/impact")
     def impact(project_id: str, a: Who, module: Annotated[str, Query(min_length=1, max_length=500)]) -> dict[str, Any]:

@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **41**.
+Routes: **52**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -26,7 +26,10 @@ Routes: **41**.
 | GET | `/api/v1/evidence/{evidence_id}` | Evidence One | - | - |
 | GET | `/api/v1/health` | Health | - | - |
 | GET | `/api/v1/integrity/verify` | Integrity Verify | - | - |
+| GET | `/api/v1/keys/self` | Own Key | - | - |
+| POST | `/api/v1/keys/trusted` | Trust Key | `TrustKey` | - |
 | GET | `/api/v1/models` | Models | - | - |
+| POST | `/api/v1/passports/verify` | Passport Verify | object | - |
 | GET | `/api/v1/projects` | Projects | - | - |
 | POST | `/api/v1/projects` | Register | `RegisterProject` | - |
 | GET | `/api/v1/projects/{project_id}` | Project | - | - |
@@ -39,15 +42,23 @@ Routes: **41**.
 | POST | `/api/v1/projects/{project_id}/members` | Grant | `GrantMember` | - |
 | DELETE | `/api/v1/projects/{project_id}/members/{actor_ref}` | Revoke | - | - |
 | GET | `/api/v1/projects/{project_id}/memory` | Memory | - | `category`, `include_inactive`, `limit` |
+| GET | `/api/v1/projects/{project_id}/passport` | Passport | - | - |
+| POST | `/api/v1/projects/{project_id}/passport/import` | Passport Import | object | - |
 | GET | `/api/v1/projects/{project_id}/risks` | Risks | - | - |
 | POST | `/api/v1/projects/{project_id}/sandbox-image` | Project Image | - | - |
 | POST | `/api/v1/projects/{project_id}/scan` | Scan | - | - |
+| GET | `/api/v1/projects/{project_id}/sync/conflicts` | Sync Conflicts | - | `status` |
+| POST | `/api/v1/projects/{project_id}/sync/export` | Sync Export | - | - |
+| POST | `/api/v1/projects/{project_id}/sync/import` | Sync Import | object | - |
 | GET | `/api/v1/skills` | Skills | - | `status` |
 | POST | `/api/v1/skills` | Propose Skill | `ProposeSkill` | - |
 | POST | `/api/v1/skills/activate/{approval_id}` | Activate | - | - |
 | GET | `/api/v1/skills/{skill_id}` | Skill | - | - |
 | POST | `/api/v1/skills/{skill_id}/activation-requests` | Request Activation | - | - |
 | POST | `/api/v1/skills/{skill_id}/validate` | Validate Skill | - | - |
+| POST | `/api/v1/sync/conflicts/{conflict_id}/resolve` | Sync Resolve | `ResolveConflict` | - |
+| GET | `/api/v1/synchronization/jobs` | Sync Jobs | - | - |
+| GET | `/api/v1/synchronization/status` | Sync Status | - | - |
 | GET | `/api/v1/system/status` | System Status | - | - |
 | GET | `/api/v1/tasks` | Tasks | - | `project_id` |
 | POST | `/api/v1/tasks` | Create Task | `CreateTask` | - |
@@ -95,9 +106,26 @@ Routes: **41**.
 | `name` | string | yes |
 | `path` | string | yes |
 
+### `ResolveConflict`
+
+| Field | Type | Required |
+|---|---|---|
+| `resolution` | string | yes |
+
 ### `Scenario`
 
 | Field | Type | Required |
 |---|---|---|
 | `faults` | array | yes |
 | `name` | string |  |
+
+### `TrustKey`
+
+| Field | Type | Required |
+|---|---|---|
+| `public_key` | string | yes |
+
+### `object`
+
+| Field | Type | Required |
+|---|---|---|
