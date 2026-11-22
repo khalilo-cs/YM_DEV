@@ -16,6 +16,7 @@ reuses the approval bound to this task).
 
 from __future__ import annotations
 
+import functools
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -23,6 +24,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from yemendev.agents.registry import AGENTS
+from yemendev.agents.security_agent import PlanReview, Verdict, review_plan
 from yemendev.core.contracts import NotFoundError, YemenDevError, digest, new_id
 from yemendev.core.faults import InjectedFault
 from yemendev.diagnostics.engine import DiagnosticReport, diagnose
@@ -43,7 +46,20 @@ from yemendev.sandbox.testrunner import TestRunReport, run_pytest
 from yemendev.sandbox.workspace import Workspace
 
 BASELINE_RUNS = 2
-LEARNING_AGENT = Actor(id="learning-agent", kind=ActorKind.AGENT, role=Role.OPERATOR)
+LEARNING_AGENT = AGENTS["learning"].actor
+
+# Which agent performs each step, and the actions that step needs (checked against the agent's allow-list).
+STEP_AGENTS: dict[str, tuple[str, tuple[Action, ...]]] = {
+    "scan": ("repository", (Action.SCAN_PROJECT, Action.WRITE_MEMORY)),
+    "baseline": ("testing", (Action.RUN_SANDBOXED,)),
+    "diagnose": ("diagnostic", (Action.WRITE_MEMORY,)),
+    "propose": ("planning", (Action.READ,)),
+    "simulate": ("testing", (Action.RUN_SANDBOXED,)),
+    "execute": ("recovery", (Action.APPLY_PATCH,)),
+    "verify": ("verification", (Action.RUN_SANDBOXED,)),
+    "rollback": ("recovery", (Action.ROLLBACK_OWN_CHANGE,)),
+    "learn": ("learning", (Action.WRITE_MEMORY, Action.PROPOSE_SKILL)),
+}
 
 
 class Stop(Exception):  # noqa: N818 - control flow signal, not an error
@@ -136,9 +152,23 @@ class RepairWorkflow:
 
     # ---- internals -------------------------------------------------------------------
     def _handlers(self) -> dict[str, Callable[[Actor, Task], Any]]:
-        return {"scan": self._scan, "baseline": self._baseline, "diagnose": self._diagnose,
-                "propose": self._propose, "simulate": self._simulate, "authorize": self._authorize,
-                "execute": self._execute, "verify": self._verify, "rollback": self._rollback, "learn": self._learn}
+        impl: dict[str, Callable[[Actor, Task], Any]] = {
+            "scan": self._scan, "baseline": self._baseline, "diagnose": self._diagnose, "propose": self._propose,
+            "simulate": self._simulate, "authorize": self._authorize, "execute": self._execute,
+            "verify": self._verify, "rollback": self._rollback, "learn": self._learn}
+
+        def via_agent(step: str, fn: Callable[[Actor, Task], Any]) -> Callable[[Actor, Task], Any]:
+            if step not in STEP_AGENTS:  # the human approval gate is ORION's own, never an agent's
+                return fn
+            agent, actions = STEP_AGENTS[step]
+
+            def run(actor: Actor, t: Task) -> Any:
+                return self.p.agents.run(agent, step, actions, lambda: fn(actor, t), task_id=t.id,
+                                         project_id=t.project_id, inputs={"task": t.id, "step": step},
+                                         passthrough=(Stop,))
+            return run
+
+        return {k: via_agent(k, v) for k, v in impl.items()}
 
     def _next_step(self, task_id: str) -> str | None:
         def done(n: str) -> bool:
@@ -217,14 +247,14 @@ class RepairWorkflow:
     def _diagnose(self, actor: Actor, t: Task) -> Any:
         runs = [TestRunReport(**r) for r in self._out(t.id, "baseline")["runs"]]
         d = diagnose(runs)
-        self.p.evidence.record(action="diagnostics.report", actor="agent:diagnostic", target=t.project_id,
+        self.p.evidence.record(action="diagnostics.report", actor=AGENTS["diagnostic"].actor.ref, target=t.project_id,
                                outcome="problem" if d.reproducible_problem else "no_problem", task_id=t.id,
                                body=EvidenceBody(details=d.model_dump(mode="json"), limitations=d.limitations))
         for h in d.hypotheses:
             self.p.memory.write(MemoryWrite(project_id=t.project_id, category=MemoryCategory.OBSERVATION,
                                             subject=f"hypothesis:{h.category}", key=",".join(h.supporting_tests)[:200],
                                             value=h.model_dump(), verified=False, confidence=h.confidence,
-                                            source="agent:diagnostic"))
+                                            source=AGENTS["diagnostic"].actor.ref))
         if not d.reproducible_problem:
             raise Stop(TaskStatus.NO_ACTION, d.summary)
         return d.model_dump(mode="json")
@@ -246,7 +276,7 @@ class RepairWorkflow:
                 plans.append(propose_with_model(adapter, diag, root))
             except (YemenDevError, ValueError) as exc:
                 notes.append(f"model proposal failed: {getattr(exc, 'message', str(exc))[:300]}")
-        self.p.evidence.record(action="repair.propose", actor="agent:planning", target=t.project_id,
+        self.p.evidence.record(action="repair.propose", actor=AGENTS["planning"].actor.ref, target=t.project_id,
                                outcome=f"{len(plans)} plan(s)", task_id=t.id,
                                body=EvidenceBody(details={"plans": [{"id": p.id, "source": p.source.value,
                                                                      "source_ref": p.source_ref,
@@ -254,7 +284,42 @@ class RepairWorkflow:
                                                                     for p in plans], "notes": notes}))
         if not plans:
             raise Stop(TaskStatus.NO_ACTION, "no repair plan could be proposed; " + "; ".join(notes))
-        return {"plans": [p.model_dump(mode="json") for p in plans], "notes": notes}
+        reviews: dict[str, PlanReview] = {}
+        kept: list[RepairPlan] = []
+        for plan in plans:
+            originals = self._originals(root, plan)
+            review = self.p.agents.run("security", "review_plan", (Action.READ,),
+                                       functools.partial(review_plan, plan, originals),
+                                       task_id=t.id, project_id=t.project_id, inputs={"plan": plan.id})
+            reviews[plan.id] = review
+            self.p.evidence.record(action="security.plan_review", actor=AGENTS["security"].actor.ref,
+                                   target=t.project_id, outcome=review.verdict.value, task_id=t.id,
+                                   body=EvidenceBody(inputs={"plan_id": plan.id},
+                                                     details=review.model_dump(mode="json"),
+                                                     limitations=[review.note]))
+            if review.verdict is Verdict.BLOCK:
+                # Conflict policy SEC-BLOCK-WINS: planning proposed it, security blocks it -> security prevails.
+                self.p.evidence.record(
+                    action="agent.conflict", actor="system:orion", target=t.project_id, outcome="security_prevails",
+                    task_id=t.id, body=EvidenceBody(details={
+                        "plan_id": plan.id, "planning": "proposed", "security": "block",
+                        "policy": "SEC-BLOCK-WINS: a security block always overrides a proposal",
+                        "findings": [f.model_dump() for f in review.findings]}))
+                continue
+            kept.append(plan)
+        if not kept:
+            raise Stop(TaskStatus.NO_ACTION, "every proposed plan was blocked by the security review")
+        return {"plans": [p.model_dump(mode="json") for p in kept], "notes": notes,
+                "reviews": {k: v.model_dump(mode="json") for k, v in reviews.items()}}
+
+    @staticmethod
+    def _originals(root: Path, plan: RepairPlan) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for p in plan.patches:
+            f = root / p.path
+            if f.is_file() and not f.is_symlink() and f.resolve().is_relative_to(root.resolve()):
+                out[p.path] = f.read_text("utf-8", "replace")
+        return out
 
     def _simulate(self, actor: Actor, t: Task) -> Any:
         self.p.guard.require(actor, Action.RUN_SANDBOXED, t.project_id, project_id=t.project_id)
@@ -271,7 +336,7 @@ class RepairWorkflow:
             except YemenDevError as exc:
                 entry = {"plan_id": plan.id, "passed": False, "problems": [exc.message], "comparison": None}
             results.append(entry)
-            self.p.evidence.record(action="repair.simulate", actor="agent:testing", target=t.project_id,
+            self.p.evidence.record(action="repair.simulate", actor=AGENTS["testing"].actor.ref, target=t.project_id,
                                    outcome="passed" if entry["passed"] else "failed", task_id=t.id,
                                    body=EvidenceBody(inputs={"plan_id": plan.id}, tests=entry,
                                                      limitations=["simulated in an isolated copy of the project"]))
@@ -300,7 +365,7 @@ class RepairWorkflow:
             req = self.p.approvals.request(
                 action=Action.APPLY_PATCH, target=t.project_id, operation_digest=dg, task_id=t.id,
                 requested_by=self._requester(t, plan),
-                summary=f"{plan.description}\nFiles: {', '.join(p.path for p in plan.patches)}\n\n{prep.diff[:1500]}")
+                summary=self._approval_summary(t, plan, prep.diff))
             self.p.audit.record(actor="system:orion", action="approval.request", target=req.id, outcome="pending",
                                 details={"task_id": t.id, "digest": dg})
         if req.status is ApprovalStatus.PENDING:
@@ -318,6 +383,15 @@ class RepairWorkflow:
                                    "approval_id": req.id, "decided_by": req.decided_by, "digest": dg,
                                    "policy": decision.model_dump(mode="json")}))
         return {"approval_id": req.id, "digest": dg}
+
+    def _approval_summary(self, t: Task, plan: RepairPlan, diff: str) -> str:
+        review = (self._out(t.id, "propose").get("reviews") or {}).get(plan.id)
+        sec = "Security review: not available"
+        if review:
+            sec = f"Security review: {review['verdict'].upper()}"
+            sec += "".join(f"\n  - [{f['severity']}] {f['path']}:{f['line'] or '-'} {f['detail']}"
+                           for f in review["findings"])
+        return f"{plan.description}\nFiles: {', '.join(p.path for p in plan.patches)}\n{sec}\n\n{diff[:1500]}"
 
     @staticmethod
     def _digest(t: Task, plan: RepairPlan) -> str:
@@ -368,7 +442,7 @@ class RepairWorkflow:
                                                   sandbox=self.p.sandbox_for(t.project_id)[0])
         out = {"passed": res.passed, "problems": res.problems,
                "comparison": res.comparison.model_dump() if res.comparison else None}
-        self.p.evidence.record(action="repair.verify", actor="agent:verification", target=t.project_id,
+        self.p.evidence.record(action="repair.verify", actor=AGENTS["verification"].actor.ref, target=t.project_id,
                                outcome="passed" if res.passed else "failed", task_id=t.id,
                                body=EvidenceBody(verification=out, limitations=[
                                    "verification = project's own test suite in a fresh sandbox copy"]))
@@ -415,7 +489,7 @@ class RepairWorkflow:
             key="outcome", value={"plan": plan.description, "source": plan.source_ref,
                                   "files": [x.path for x in plan.patches],
                                   "hypothesis": hyp.model_dump() if hyp else None},
-            verified=True, confidence=1.0, source="agent:learning", evidence_ids=[ev_id]))
+            verified=True, confidence=1.0, source=AGENTS["learning"].actor.ref, evidence_ids=[ev_id]))
         if hyp and plan.source.value != "skill":
             # originals come from the verified checkpoint taken before the change
             m = self.p.recovery.checkpoints.load(f"ckpt_{t.id}")

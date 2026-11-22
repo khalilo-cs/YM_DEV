@@ -160,7 +160,7 @@ def test_migration_gives_legacy_tokens_an_expiry(tmp_path):
                          " ('tok_old','h','old','admin','2026-01-01T00:00:00.000000+00:00')")
     finally:
         m.MIGRATIONS[:] = saved
-    assert db.migrate() == [2] and db.schema_version() == MIGRATIONS[-1][0]
+    assert db.migrate() == [v for v, _, _ in MIGRATIONS[1:]] and db.schema_version() == MIGRATIONS[-1][0]
     with db.read() as conn:
         exp = conn.execute("SELECT expires_at FROM api_tokens WHERE id='tok_old'").fetchone()[0]
     days = (parse_iso(exp) - utcnow()).total_seconds() / 86400

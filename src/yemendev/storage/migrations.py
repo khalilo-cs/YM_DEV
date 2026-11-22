@@ -179,4 +179,26 @@ MIGRATIONS: list[tuple[int, str, str]] = [
             WHERE expires_at IS NULL
         """,
     ),
+    (
+        3,
+        "agent_runs",
+        """
+        CREATE TABLE agent_runs (
+            id TEXT PRIMARY KEY,
+            task_id TEXT,
+            project_id TEXT,
+            agent TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            actions_json TEXT NOT NULL,
+            status TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            finished_at TEXT,
+            input_digest TEXT NOT NULL,
+            output_digest TEXT,
+            error TEXT
+        );
+        CREATE INDEX ix_agent_runs_task ON agent_runs(task_id);
+        CREATE INDEX ix_agent_runs_agent ON agent_runs(agent, started_at)
+        """,
+    ),
 ]

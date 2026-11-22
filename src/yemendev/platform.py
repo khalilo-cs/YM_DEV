@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from yemendev.agents.runner import AgentRunner
 from yemendev.core.config import SandboxSettings, Settings
 from yemendev.core.contracts import (
     ConflictError,
@@ -67,6 +68,7 @@ class Platform:
             actor=r.actor, action="evidence.recorded", target=r.id, outcome=r.outcome,
             details={"content_hash": r.content_hash, "task_id": r.task_id}))
         self.memory = MemoryEngine(self.db)
+        self.agents = AgentRunner(self.db, self.policy, self.audit)
         self.skills = SkillEngine(self.db)
         self.tokens = TokenStore(self.db)
         self.scanner = ProjectScanner()

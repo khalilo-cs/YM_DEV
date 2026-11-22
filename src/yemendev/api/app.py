@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from yemendev import __version__
+from yemendev.agents.registry import AGENTS
 from yemendev.core.contracts import ErrorCode, InvalidInputError, YemenDevError
 from yemendev.governance.actors import Actor, Role
 from yemendev.governance.approvals import ApprovalStatus
@@ -372,6 +373,25 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
     def integrity_verify(a: Who) -> dict[str, Any]:
         read_audit(a)
         return platform.verify_integrity()
+
+    # ---- agents (registry + traceable runs) --------------------------------------------
+    @app.get("/api/v1/agents")
+    def agents(a: Who) -> list[Any]:
+        read(a, "agents")
+        return [{"name": s.name, "responsibility": s.responsibility, "actor": s.actor.ref,
+                 "allowed_actions": sorted(x.value for x in s.allowed_actions)} for s in AGENTS.values()]
+
+    @app.get("/api/v1/agents/{name}/runs")
+    def agent_runs(name: str, a: Who, limit: Annotated[int, Query(ge=1, le=1000)] = 100) -> list[Any]:
+        read(a, "agents")
+        platform.agents.spec(name)
+        return [r.model_dump() for r in platform.agents.runs(agent=name, limit=2000)
+                if r.project_id and platform.guard.can_read(a, r.project_id)][-limit:]
+
+    @app.get("/api/v1/tasks/{task_id}/agent-runs")
+    def task_agent_runs(task_id: str, a: Who) -> list[Any]:
+        wf.get_task(a, task_id)
+        return [r.model_dump() for r in platform.agents.runs(task_id=task_id)]
 
     @app.get("/api/v1/models")
     def models(a: Who) -> list[Any]:
