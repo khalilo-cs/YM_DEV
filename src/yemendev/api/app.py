@@ -31,6 +31,7 @@ from yemendev.orion.workflow import RepairWorkflow
 from yemendev.platform import Platform
 from yemendev.recovery.model import RepairPlan
 from yemendev.security.ratelimit import TokenBucketLimiter
+from yemendev.simulation.counterfactual import Scenario
 from yemendev.twin.graph import DependencyGraph
 
 log = logging.getLogger("yemendev.api")
@@ -265,6 +266,10 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
     @app.get("/api/v1/projects/{project_id}/continuity-debt")
     def continuity_debt(project_id: str, a: Who) -> dict[str, Any]:
         return dict(platform.continuity_debt(a, project_id).model_dump())
+
+    @app.post("/api/v1/projects/{project_id}/counterfactual")
+    def counterfactual(project_id: str, body: Scenario, a: Who) -> dict[str, Any]:
+        return dict(platform.counterfactual(a, project_id, body).model_dump())
 
     @app.get("/api/v1/projects/{project_id}/impact")
     def impact(project_id: str, a: Who, module: Annotated[str, Query(min_length=1, max_length=500)]) -> dict[str, Any]:

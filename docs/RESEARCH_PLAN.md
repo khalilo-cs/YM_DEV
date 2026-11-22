@@ -7,8 +7,8 @@ has been done (directive section 6). That review is the first research task.
 |---|---|---|
 | Living System Memory | Can project memory stay accurate across long change sequences without stale or contradictory knowledge? | Core built (validity conditions, contradiction handling); long-horizon evaluation not started |
 | Proof-carrying skills | Do skills that carry test evidence transfer more safely than unvalidated ones? | Built (validation history, field outcomes) |
-| Compound failure testing | How well does recovery hold under simultaneous failures? | 2 compound scenarios in the benchmark |
-| Counterfactual future engine | Does simulating failures before risky changes reduce real failures? | Fault points only |
+| Compound failure testing | How well does recovery hold under simultaneous failures? | 2 compound benchmark scenarios + compound counterfactual scenarios |
+| Counterfactual future engine | Does simulating failures before risky changes reduce real failures? | Engine built (sandboxed fault injection, blind spots, static-analysis precision/recall); effect on real failures not evaluated |
 | Digital continuity passport | Can a signed, portable system description enable reconstruction elsewhere? | Not started |
 | Digital immune system | Can drift/unauthorised-change detection separate operational anomalies from attacks? | Rule-based detector built; separation not yet evaluated on real incidents |
 | Continuity debt | Is a continuity-risk metric reliable and useful? | Experimental metric computed; reliability/usefulness not evaluated |

@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from yemendev.agents.registry import AGENTS
 from yemendev.agents.runner import AgentRunner
 from yemendev.core.config import SandboxSettings, Settings
 from yemendev.core.contracts import (
@@ -327,6 +328,38 @@ class Platform:
 
         self.require_read(actor, project_id)
         return assess_debt(self, project_id)
+
+    def counterfactual(self, actor: Actor, project_id: str, scenario: Any) -> Any:
+        """Run a what-if scenario on a sandbox copy (the real project is never modified)."""
+        from yemendev.memory.model import MemoryCategory, MemoryWrite
+        from yemendev.simulation.counterfactual import run_counterfactual
+
+        root = self.project_root(project_id)
+        self.guard.require(actor, Action.RUN_SANDBOXED, project_id, project_id=project_id)
+        _, snap = self.latest_scan(project_id)
+        sandbox, image_note = self.sandbox_for(project_id)
+        result = self.agents.run(
+            "testing", "counterfactual", (Action.RUN_SANDBOXED,),
+            lambda: run_counterfactual(root, snap, scenario, sandbox, self.settings.workspaces_dir),
+            project_id=project_id, inputs=scenario.model_dump(mode="json"))
+        if image_note:
+            result.limitations.append(image_note)
+        ev = self.evidence.record(
+            action="counterfactual.run", actor=AGENTS["testing"].actor.ref, target=project_id,
+            outcome="blind_spot" if result.blind_spot else ("detected" if result.detected else "inconclusive"),
+            body=EvidenceBody(inputs=scenario.model_dump(mode="json"),
+                              details={"newly_failing": result.newly_failing, "baseline": result.baseline_status,
+                                       "outcome": result.outcome_status, "precision": result.static_precision,
+                                       "recall": result.static_recall, "notes": result.notes},
+                              limitations=result.limitations))
+        if result.blind_spot:
+            self.memory.write(MemoryWrite(
+                project_id=project_id, category=MemoryCategory.OBSERVATION, subject=f"blind_spot:{scenario.name}",
+                key=",".join(sorted(f.kind for f in scenario.faults)),
+                value={"faults": [f.model_dump() for f in scenario.faults],
+                       "finding": "no test detected this fault"},
+                verified=True, confidence=1.0, source="counterfactual", evidence_ids=[ev.id]))
+        return result
 
     def impact(self, actor: Actor, project_id: str, module: str) -> dict[str, Any]:
         from yemendev.twin.causal import failure_propagation, single_points_of_failure

@@ -18,7 +18,7 @@ Two views of the same plan:
 | 4 Verified repair | Done |
 | 5 Continual learning | Done (one skill kind) |
 | 6 Offline continuity | Partial (checkpoints, resume, offline workflow; no sync) |
-| 7 Risk & simulation | Partial (risk engine, anomalies, causal analysis; no counterfactual engine yet) |
+| 7 Risk & simulation | Done for the current scope (risk engine, anomalies, causal analysis, immune system, counterfactual engine) |
 | 8 Security & governance | Done for the current scope |
 | 9 User interfaces | CLI + API only |
 | 10 Research & benchmarking | Partial (benchmark, no baselines) |

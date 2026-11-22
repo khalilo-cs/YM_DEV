@@ -103,6 +103,15 @@ def cmd_project(args: argparse.Namespace) -> int:
     elif args.pcmd == "revoke":
         p.revoke_member(a, args.project_id, args.actor_ref)
         print("revoked")
+    elif args.pcmd == "whatif":
+        from yemendev.simulation.counterfactual import DependencyRemoved, FileCorrupted, ModuleUnavailable, Scenario
+
+        faults = ([ModuleUnavailable(module=m) for m in args.module or []]
+                  + [DependencyRemoved(import_name=d) for d in args.dependency or []]
+                  + [FileCorrupted(path=c) for c in args.corrupt or []])
+        if not faults:
+            raise SystemExit("error: give at least one --module, --dependency or --corrupt")
+        _print(p.counterfactual(a, args.project_id, Scenario(name=args.name, faults=faults)).model_dump())
     elif args.pcmd == "immune":
         _print(p.immune_check(a, args.project_id).model_dump())
     elif args.pcmd == "debt":
@@ -260,6 +269,12 @@ def build_parser() -> argparse.ArgumentParser:
     ps.add_parser("list")
     for name in ("scan", "graph", "members", "risks", "immune", "debt"):
         ps.add_parser(name).add_argument("project_id")
+    x = ps.add_parser("whatif", help="inject faults into a sandbox copy and run the tests (counterfactual)")
+    x.add_argument("project_id")
+    x.add_argument("--module", action="append", help="make this internal module unavailable (repeatable)")
+    x.add_argument("--dependency", action="append", help="make this import name fail (repeatable)")
+    x.add_argument("--corrupt", action="append", help="truncate this non-test file (repeatable)")
+    x.add_argument("--name", default="what-if")
     x = ps.add_parser("impact", help="modules affected if MODULE fails (static import reachability)")
     x.add_argument("project_id")
     x.add_argument("module")

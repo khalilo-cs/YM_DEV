@@ -24,6 +24,8 @@
 - Generated `DATABASE_SCHEMA.md` / `API_REFERENCE.md` with a drift test; all 24 documents of directive
   section 18, `CONTRIBUTING.md`, `.env.example`.
 
+- Stage 14: counterfactual future engine (`POST /projects/{id}/counterfactual`, `yemendev project whatif`):
+  sandboxed fault injection with per-test impact, blind spots and static-prediction precision/recall.
 - Stage 13: digital immune system (`GET /projects/{id}/immune`, `yemendev project immune`) and the
   EXPERIMENTAL continuity-debt metric (`GET /projects/{id}/continuity-debt`, `yemendev project debt`).
 - Stage 12: predictive risk engine (`GET /projects/{id}/risks`, `yemendev project risks`) and causal

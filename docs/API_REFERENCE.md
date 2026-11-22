@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **40**.
+Routes: **41**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -31,6 +31,7 @@ Routes: **40**.
 | POST | `/api/v1/projects` | Register | `RegisterProject` | - |
 | GET | `/api/v1/projects/{project_id}` | Project | - | - |
 | GET | `/api/v1/projects/{project_id}/continuity-debt` | Continuity Debt | - | - |
+| POST | `/api/v1/projects/{project_id}/counterfactual` | Counterfactual | `Scenario` | - |
 | GET | `/api/v1/projects/{project_id}/graph` | Graph | - | - |
 | GET | `/api/v1/projects/{project_id}/immune` | Immune | - | - |
 | GET | `/api/v1/projects/{project_id}/impact` | Impact | - | `module` |
@@ -93,3 +94,10 @@ Routes: **40**.
 |---|---|---|
 | `name` | string | yes |
 | `path` | string | yes |
+
+### `Scenario`
+
+| Field | Type | Required |
+|---|---|---|
+| `faults` | array | yes |
+| `name` | string |  |
