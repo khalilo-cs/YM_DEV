@@ -103,6 +103,10 @@ def cmd_project(args: argparse.Namespace) -> int:
     elif args.pcmd == "revoke":
         p.revoke_member(a, args.project_id, args.actor_ref)
         print("revoked")
+    elif args.pcmd == "immune":
+        _print(p.immune_check(a, args.project_id).model_dump())
+    elif args.pcmd == "debt":
+        _print(p.continuity_debt(a, args.project_id).model_dump())
     elif args.pcmd == "risks":
         _print(p.assess_risk(a, args.project_id).model_dump())
     elif args.pcmd == "impact":
@@ -254,7 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("name")
     x.add_argument("path")
     ps.add_parser("list")
-    for name in ("scan", "graph", "members", "risks"):
+    for name in ("scan", "graph", "members", "risks", "immune", "debt"):
         ps.add_parser(name).add_argument("project_id")
     x = ps.add_parser("impact", help="modules affected if MODULE fails (static import reachability)")
     x.add_argument("project_id")

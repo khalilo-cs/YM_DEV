@@ -304,6 +304,30 @@ class Platform:
                               limitations=report.limitations))
         return report
 
+    def immune_check(self, actor: Actor, project_id: str) -> Any:
+        from yemendev.immune.engine import check
+
+        self.require_read(actor, project_id)
+        report = check(self, project_id)
+        self.evidence.record(
+            action="immune.check", actor="system:immune", target=project_id,
+            outcome=f"{report.summary['security']} security / {report.summary['operational']} operational",
+            body=EvidenceBody(details={"summary": report.summary, "baseline_scan_id": report.baseline_scan_id,
+                                       "security_findings": [f.model_dump() for f in report.findings
+                                                             if f.category == "security"]},
+                              limitations=report.limitations))
+        if report.summary["security"]:
+            self.audit.record(actor="system:immune", action="immune.security_findings", target=project_id,
+                              outcome="flagged", details={"count": report.summary["security"],
+                                                          "high": report.summary["high"]})
+        return report
+
+    def continuity_debt(self, actor: Actor, project_id: str) -> Any:
+        from yemendev.immune.continuity_debt import assess_debt
+
+        self.require_read(actor, project_id)
+        return assess_debt(self, project_id)
+
     def impact(self, actor: Actor, project_id: str, module: str) -> dict[str, Any]:
         from yemendev.twin.causal import failure_propagation, single_points_of_failure
         from yemendev.twin.graph import DependencyGraph

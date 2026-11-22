@@ -10,8 +10,8 @@ has been done (directive section 6). That review is the first research task.
 | Compound failure testing | How well does recovery hold under simultaneous failures? | 2 compound scenarios in the benchmark |
 | Counterfactual future engine | Does simulating failures before risky changes reduce real failures? | Fault points only |
 | Digital continuity passport | Can a signed, portable system description enable reconstruction elsewhere? | Not started |
-| Digital immune system | Can drift/unauthorised-change detection separate operational anomalies from attacks? | Not started |
-| Continuity debt | Is a continuity-risk metric reliable and useful? | Not started |
+| Digital immune system | Can drift/unauthorised-change detection separate operational anomalies from attacks? | Rule-based detector built; separation not yet evaluated on real incidents |
+| Continuity debt | Is a continuity-risk metric reliable and useful? | Experimental metric computed; reliability/usefulness not evaluated |
 
 ## Evaluation design
 

@@ -18,8 +18,8 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 11 | Make `docker` the recommended default where available (`auto` + warnings); per-project sandbox images | **Done - 197 tests; benchmark 15/15 on auto** |
 | 11b | Agents as real components (registry, runner, security agent, conflict policy); generated reference docs + drift test; directive section-18 documents | **Done - 215 tests** |
 | 12 | Predictive risk engine + causal analysis (directive 5.5, 5.6) | **Done** |
-| 13 | Digital immune system + continuity debt (5.9, 6.6) | Next |
-| 14 | Counterfactual future engine (6.2) | Planned |
+| 13 | Digital immune system + continuity debt (5.9, 6.6) | **Done** |
+| 14 | Counterfactual future engine (6.2) | Next |
 | 15 | Synchronization + digital continuity passport (5.10, 6.3) | Planned |
 | 16 | Web UI, Arabic/English (16, 17) | Planned |
 | 17 | ORION queue, scheduling, retries (5.2) | Planned |
