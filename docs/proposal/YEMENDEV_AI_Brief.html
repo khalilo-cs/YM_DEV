@@ -1,0 +1,168 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>YEMENDEV AI — فكرة المشروع</title><style>@font-face{font-family:'Plex';font-weight:400;src:url(fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F;}@font-face{font-family:'Plex';font-weight:400;src:url(fonts/ibm-plex-sans-arabic-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2190-2199,U+2212,U+2215;}@font-face{font-family:'Plex';font-weight:600;src:url(fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F;}@font-face{font-family:'Plex';font-weight:600;src:url(fonts/ibm-plex-sans-arabic-latin-600-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2190-2199,U+2212,U+2215;}@font-face{font-family:'Plex';font-weight:700;src:url(fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F;}@font-face{font-family:'Plex';font-weight:700;src:url(fonts/ibm-plex-sans-arabic-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2190-2199,U+2212,U+2215;}
+@page{size:A4;margin:0;}
+:root{--teal:#0f6e6e;--teal-d:#0b4f4f;--teal-l:#e7f2f2;--ink:#1d2327;--muted:#5d6670;--gold:#b8860b;
+      --red:#b4442e;--line:#dde2e6;}
+*{box-sizing:border-box;}
+html{direction:rtl;}
+body{margin:0;font-family:'Plex',sans-serif;color:var(--ink);font-size:9.4pt;line-height:1.6;}
+.page{width:210mm;height:297mm;overflow:hidden;position:relative;break-after:page;padding:0 13mm 14mm;}
+.page:last-child{break-after:auto;}
+.band{margin:0 -13mm 4mm;padding:8mm 13mm 6mm;color:#fff;
+      background:linear-gradient(160deg,#0b4f4f 0%,#0f6e6e 60%,#17807a 100%);}
+.band .row{display:flex;justify-content:space-between;align-items:flex-end;gap:6mm;}
+.brand{font-size:25pt;font-weight:700;direction:ltr;line-height:1.1;letter-spacing:.5px;}
+.full{font-size:8.6pt;opacity:.9;direction:ltr;margin-top:1mm;}
+.slogan{font-size:12pt;font-weight:600;}
+.band h1{font-size:15pt;margin:4mm 0 0;font-weight:700;}
+.band .lead{font-size:9.6pt;opacity:.95;margin:1mm 0 0;}
+.band.slim{padding:6mm 13mm 4.5mm;}
+.band.slim h1{margin:0;}
+h2{font-size:11.6pt;color:var(--teal);margin:3.6mm 0 1.4mm;line-height:1.35;display:flex;align-items:center;gap:2mm;}
+h2::before{content:"";width:2.2mm;height:4.4mm;background:var(--teal);border-radius:1px;display:inline-block;}
+p{margin:1mm 0 1.6mm;text-align:justify;}
+ul{margin:.6mm 0 1.6mm;padding-inline-start:5mm;}
+li{margin:.45mm 0;}
+.what{border:1px solid var(--line);border-inline-start:5px solid var(--teal);background:#f8fbfb;padding:2.8mm 4mm;
+      border-radius:3px;font-size:9.9pt;line-height:1.72;}
+.what b{color:var(--teal-d);}
+.loop{display:flex;gap:1.6mm;align-items:stretch;margin:1.6mm 0 1mm;}
+.step{flex:1;border:1px solid var(--line);border-radius:5px;background:#fff;padding:2.2mm 2.2mm 2mm;position:relative;}
+.step .n{position:absolute;top:-2.6mm;inset-inline-start:2mm;background:var(--teal);color:#fff;border-radius:50%;
+         width:5.2mm;height:5.2mm;font-size:7.6pt;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.step b{display:block;color:var(--teal);font-size:10.6pt;margin-top:.6mm;}
+.step span{font-size:8.3pt;color:#34404a;line-height:1.5;display:block;}
+.arrow{align-self:center;color:var(--teal);font-size:11pt;font-weight:700;}
+.recover{margin:1.4mm 0 0;border:1px dashed var(--teal);border-radius:5px;padding:1.6mm 3mm;background:var(--teal-l);
+         font-size:8.7pt;}
+.recover b{color:var(--teal-d);}
+.chain{display:flex;flex-wrap:wrap;gap:1mm;align-items:center;margin-top:.6mm;}
+.chain i{font-style:normal;background:#fff;border:1px solid #b9d6d6;border-radius:9px;padding:0 2mm;font-size:8.3pt;}
+.chain i.h{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:600;}
+.chain em{font-style:normal;color:var(--teal);font-weight:700;}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm;margin-top:1mm;}
+.card{border:1px solid var(--line);border-radius:5px;padding:2mm 2.6mm;background:#fff;}
+.card b{display:block;color:var(--teal-d);font-size:9.6pt;margin-bottom:.4mm;}
+.card span{font-size:8.4pt;color:#34404a;line-height:1.5;display:block;}
+.two{display:flex;gap:4mm;}.two>div{flex:1;}
+.kpis{display:flex;gap:2mm;margin:1mm 0 1mm;}
+.kpi{flex:1;border:1px solid var(--line);border-radius:6px;padding:1.6mm 1mm;text-align:center;background:#fff;}
+.kpi b{display:block;font-size:14pt;color:var(--teal);line-height:1.25;direction:ltr;}
+.kpi span{font-size:7.9pt;color:var(--muted);line-height:1.35;display:block;}
+.done li::marker{content:"✓  ";color:#17663a;font-weight:700;}
+.todo li::marker{content:"○  ";color:var(--gold);font-weight:700;}
+.done,.todo{font-size:8.9pt;}
+table{width:100%;border-collapse:collapse;font-size:8.9pt;line-height:1.45;margin:1mm 0 .8mm;}
+th{background:var(--teal);color:#fff;font-weight:600;padding:1.6mm 2mm;text-align:right;}
+td{padding:1.35mm 2mm;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:nth-child(even) td{background:#f7f9fa;}
+td.num{white-space:nowrap;font-weight:700;color:var(--teal-d);text-align:left;}
+tr.lean td{background:#fffaf0!important;}
+.rng{white-space:nowrap;}
+.small{font-size:7.9pt;color:var(--muted);line-height:1.5;}
+.timeline{position:relative;height:15mm;margin:1mm 2mm 1mm;}
+.tl-bar{position:absolute;top:5.6mm;left:0;right:0;height:2.2mm;background:var(--teal-l);border-radius:2mm;}
+.tl-fill{position:absolute;top:5.6mm;right:0;height:2.2mm;background:var(--teal);border-radius:2mm;}
+.ms{position:absolute;top:0;transform:translateX(50%);text-align:center;font-size:7.9pt;white-space:nowrap;}
+.ms .dot{width:4mm;height:4mm;border-radius:50%;background:var(--gold);border:2px solid #fff;margin:4.7mm auto .6mm;
+         box-shadow:0 0 0 1px var(--gold);}
+.ms b{color:var(--teal-d);}
+.next{counter-reset:n;list-style:none;padding:0;margin:.8mm 0;display:grid;grid-template-columns:1fr 1fr;gap:1.4mm 3mm;}
+.next li{counter-increment:n;display:flex;gap:2mm;align-items:flex-start;font-size:8.9pt;margin:0;}
+.next li::before{content:counter(n);background:var(--teal);color:#fff;border-radius:50%;min-width:4.8mm;height:4.8mm;
+                 font-size:7.6pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:.5mm;}
+.example{margin:2mm 0 0;border:1px solid #ecd9a6;border-inline-start:5px solid var(--gold);background:#fffaf0;
+         padding:2.2mm 3.4mm;border-radius:3px;font-size:9pt;line-height:1.65;}
+.example b{color:#7a5c00;}
+.risks td{font-size:8.7pt;}
+.risks td:first-child{font-weight:600;color:var(--teal-d);width:30%;}
+.foot{position:absolute;bottom:6mm;left:13mm;right:13mm;border-top:1px solid var(--line);padding-top:1.6mm;
+      display:flex;justify-content:space-between;font-size:7.6pt;color:var(--muted);}
+.foot .ltr{direction:ltr;}
+</style></head><body>
+<section class="page">
+  <div class="band">
+    <div class="row">
+      <div><div class="brand">YEMENDEV AI</div>
+           <div class="full">Global Autonomous Digital Resilience &amp; Evolution Platform</div></div>
+      <div class="slogan">افهم · تنبّأ · احمِ · تعافَ · تطوّر</div>
+    </div>
+    <h1>فكرة المشروع في صفحتين</h1>
+    <p class="lead">منصة المرونة الرقمية: تحمي الأنظمة البرمجية من الأعطال وتعيدها للعمل بأمان، حتى دون إنترنت.</p>
+  </div>
+
+  <div class="what">
+    <b>ما هو المشروع؟</b> YEMENDEV AI منصة ذكية تعمل مثل <b>«طبيب دائم» للأنظمة البرمجية</b>: تفهم بنية
+    المشروع، وتتنبأ بأعطاله قبل وقوعها، وعند حدوث عطل تشخّصه وتقترح إصلاحًا <b>تجرّبه أولًا في بيئة معزولة،
+    ولا تطبّقه إلا بموافقة إنسان</b>، ثم تتحقق من نجاحه وتتراجع عنه تلقائيًا إن فشل، وتتعلّم من كل إصلاح ناجح.
+    كل خطوة تُسجَّل بدليل يمكن مراجعته، والمنصة تعمل محليًا دون الحاجة إلى اتصال دائم بالإنترنت.
+  </div>
+
+  <h2>المشكلة</h2>
+  <ul>
+    <li>الأنظمة البرمجية تتعطّل باستمرار: تحديث مكتبة، أو تغيير في واجهة برمجية، أو خطأ بشري صغير قد يوقف خدمة كاملة.</li>
+    <li>الإصلاح اليدوي بطيء ومكلف، ويعتمد على خبراء قد لا يتوفرون وقت الحاجة.</li>
+    <li>أدوات الذكاء الاصطناعي الحالية تقترح تعديلات دون دليل على صحتها، ودون ضمان للتراجع، وتحتاج إنترنت دائمًا.</li>
+    <li>في بيئات مثل اليمن، حيث انقطاع الكهرباء وضعف الاتصال، تشتد هذه المشكلات ولا توجد أدوات مصممة لها.</li>
+  </ul>
+
+  <h2>كيف يعمل؟ دورة من خمس مراحل</h2>
+  <div class="loop"><div class="step"><div class="n">1</div><b>افهم</b><span>يفحص الشيفرة ويبني «توأمًا رقميًا» يوضّح أجزاء النظام وكيف يعتمد بعضها على بعض.</span></div><div class="arrow">←</div><div class="step"><div class="n">2</div><b>تنبّأ</b><span>يقدّر احتمال الأعطال من التاريخ الفعلي للمشروع، ويقول صراحةً متى تكون الأدلة غير كافية.</span></div><div class="arrow">←</div><div class="step"><div class="n">3</div><b>احمِ</b><span>يرصد علامات الخلل والتغييرات الخطرة، ويشغّل أي شيفرة غير موثوقة في بيئة معزولة.</span></div><div class="arrow">←</div><div class="step"><div class="n">4</div><b>تعافَ</b><span>عند العطل: يشخّص السبب ويقترح إصلاحًا ويجرّبه ويطبّقه بأمان (التفاصيل أدناه).</span></div><div class="arrow">←</div><div class="step"><div class="n">5</div><b>تطوّر</b><span>يحوّل كل إصلاح ناجح إلى مهارة موثّقة يعيد استخدامها، ولا تُفعَّل إلا بموافقة بشرية.</span></div></div>
+  <div class="recover"><b>مرحلة «تعافَ» بالتفصيل:</b>
+    <div class="chain"><i>تشخيص</i><em>←</em><i>اقتراح إصلاح</i><em>←</em><i>تجربة في نسخة معزولة</i><em>←</em><i class="h">موافقة إنسان آخر</i><em>←</em><i>تطبيق</i><em>←</em><i>تحقّق</i><em>←</em><i>تراجع تلقائي إن فشل</i></div>
+  </div>
+
+  <div class="example"><b>مثال حقيقي من اختبارات المشروع:</b> مكتبة داخلية غيّرت اسم دالة فتعطّلت اختبارات
+    المشروع. حدّدت المنصة السبب، واقترحت تعديل الاستدعاء، وجرّبته في نسخة معزولة، وانتظرت موافقة مهندس ثانٍ، ثم
+    طبّقته وتحقّقت أن كل الاختبارات تنجح. بعد ذلك حوّلت الإصلاح إلى مهارة، فأصلحت بها مشروعًا آخر فيه العطل نفسه
+    (بعد التحقق والموافقة أيضًا).</div>
+
+  <h2>ما الذي يميّزه؟</h2>
+  <div class="grid"><div class="card"><b>دليل لكل قرار</b><span>كل نتيجة مرتبطة بدليلها، في سجل تدقيق متسلسل يكشف أي تلاعب.</span></div><div class="card"><b>الإنسان صاحب القرار</b><span>لا تعديل دون موافقة؛ صاحب الطلب لا يوافق على طلبه، والوكلاء الآليون لا يوافقون أبدًا.</span></div><div class="card"><b>تجربة قبل التطبيق</b><span>كل إصلاح يُختبر أولًا في حاوية معزولة بلا شبكة، مع تراجع مضمون إلى الحالة الأصلية.</span></div><div class="card"><b>يعمل دون إنترنت</b><span>التحليل والإصلاح والواجهة تعمل محليًا، والمزامنة بين الأجهزة عبر حزم موقّعة رقميًا.</span></div><div class="card"><b>يتعلّم ويتذكّر</b><span>ذاكرة حيّة لكل معلومة فيها مصدرها ودرجة الثقة بها، وتكشف التناقضات والمعلومات القديمة.</span></div><div class="card"><b>عربي أولًا</b><span>واجهة عربية كاملة من اليمين إلى اليسار، مع الإنجليزية، وتوثيق بالعربية.</span></div></div>
+
+  <h2>لمن هذا المشروع؟</h2>
+  <p>شركات البرمجيات الصغيرة والمتوسطة، والمؤسسات والجهات الحكومية في بيئات الاتصال الضعيف، وفرق التطوير التي
+  تدير أنظمة حرجة، والجامعات ومراكز البحث المهتمة بموثوقية البرمجيات والذكاء الاصطناعي الآمن.</p>
+
+  <div class="foot"><span>YEMENDEV AI · فكرة المشروع</span><span class="ltr">1 / 2</span></div>
+</section>
+<section class="page">
+  <div class="band slim"><h1>أين وصلنا؟ وماذا يلزم للإصدار الأول؟</h1>
+    <p class="lead">الوضع الفعلي للمشروع كما تحقّقنا منه في نوفمبر 2026، والتكلفة والمدة المتوقعتان.</p></div>
+
+  <div class="kpis"><div class="kpi"><b>268</b><span>اختبارًا آليًا ناجحًا</span></div><div class="kpi"><b>0–16</b><span>مراحل مكتملة ومختبرة</span></div><div class="kpi"><b>15/15</b><span>سيناريو أعطال في مقياس المرونة</span></div><div class="kpi"><b>34/34</b><span>فحصًا للواجهة في متصفح حقيقي</span></div><div class="kpi"><b>13</b><span>قرارًا معماريًا موثّقًا</span></div></div>
+
+  <div class="two">
+    <div><h2>ما تم بناؤه فعليًا ويعمل</h2><ul class="done"><li>فحص مشاريع بايثون وبناء رسم الترابط وتحديد الوحدات الحرجة.</li><li>تشغيل الاختبارات في بيئة معزولة (حاويات Docker أو عزل العمليات).</li><li>دورة الإصلاح كاملة: تشخيص، اقتراح، محاكاة، موافقة، تطبيق، تحقّق، تراجع.</li><li>محرك المخاطر والتنبؤ، والتحليل السببي، ونظام المناعة، ومحرك «ماذا لو».</li><li>ذاكرة حيّة ومهارات متعلَّمة، و8 وكلاء بصلاحيات محددة لا يتجاوزونها.</li><li>مزامنة دون اتصال بحزم موقّعة، و«جواز استمرارية» رقمي للنظام.</li><li>واجهة برمجية وسطر أوامر وواجهة ويب بالعربية والإنجليزية.</li></ul></div>
+    <div><h2>ما لم يُنجز بعد</h2><ul class="todo"><li>تقييم الإصلاحات مع نموذج ذكاء اصطناعي حقيقي (يحتاج نموذجًا وعتادًا).</li><li>مقارنة علمية مع أنظمة أخرى.</li><li>طابور المهام والجدولة: الجزء الأول مكتمل، والباقي قيد التنفيذ.</li><li>دعم JavaScript/TypeScript (حاليًا بايثون فقط).</li><li>تطبيقا سطح المكتب والجوال.</li><li>تدقيق أمني خارجي قبل الإصدار 1.0.</li></ul></div>
+  </div>
+
+  <h2>التكلفة والمدة (بآلاف الدولارات)</h2>
+  <table>
+    <tr><th>المسار</th><th>المدة</th><th>الفريق</th><th>النتيجة</th><th>التكلفة التقديرية</th></tr>
+    <tr class="lean"><td><b>المسار المختصر</b></td><td>6 أشهر</td><td>3 أفراد</td><td>إصدار تجريبي خاص للتجربة مع عملاء أوائل</td><td class="num"><bdi class="rng" dir="ltr">34–41</bdi></td></tr><tr><td><b>السيناريو أ</b>: فريق إقليمي عن بُعد</td><td>12 شهرًا</td><td>11 دورًا</td><td>الإصدار 1.0 كاملًا</td><td class="num"><bdi class="rng" dir="ltr">211–300</bdi></td></tr><tr><td><b>السيناريو ب</b>: فريق مختلط: إقليمي وخبراء دوليون</td><td>12 شهرًا</td><td>11 دورًا</td><td>الإصدار 1.0 كاملًا</td><td class="num"><bdi class="rng" dir="ltr">341–430</bdi></td></tr><tr><td><b>السيناريو ج</b>: أسعار السوق الدولية</td><td>12 شهرًا</td><td>11 دورًا</td><td>الإصدار 1.0 كاملًا</td><td class="num"><bdi class="rng" dir="ltr">854–943</bdi></td></tr>
+  </table>
+  <p class="small">الأرقام تقديرات تخطيطية وليست عروض أسعار، وتشمل احتياطيًا 15٪ للطوارئ.
+  الفريق الكامل للإصدار 1.0 يضم 11 دورًا (85 شهر عمل): قائد تقني، ومهندسو خلفية، ومهندس ذكاء اصطناعي، ومهندس أمن،
+  ومهندس واجهات، ومهندس سطح مكتب وجوال، وجودة وتشغيل، ومصمم، وباحث، وكاتب تقني. وتشمل التكلفة الخوادم وتقييم
+  النماذج وأجهزة الفريق والطاقة الاحتياطية والتدقيق الأمني الخارجي.</p>
+
+  <h2>الجدول الزمني للإصدار 1.0 (12 شهرًا)</h2>
+  <div class="timeline"><div class="tl-bar"></div><div class="ms" style="right:25.00%"><div class="dot"></div><b>الشهر 3</b><br>إصدار تجريبي خاص</div><div class="ms" style="right:58.33%"><div class="dot"></div><b>الشهر 7</b><br>إصدار تجريبي عام</div><div class="ms" style="right:100.00%"><div class="dot"></div><b>الشهر 12</b><br>الإصدار 1.0</div></div>
+
+  <h2>أهم المخاطر وكيف نتعامل معها</h2>
+  <table class="risks">
+    <tr><th>الخطر</th><th>طريقة التعامل</th></tr>
+    <tr><td>جودة إصلاحات الذكاء الاصطناعي غير مُثبتة بعد</td><td>المنصة تعمل وتُصلح دون نموذج (بالمهارات والخطط
+      البشرية)، والنموذج يقترح فقط؛ لا شيء يُطبَّق دون تجربة معزولة وموافقة بشرية وتحقّق، والتقييم مخطط في الأشهر 2–7.</td></tr>
+    <tr><td>ثغرة أمنية تسمح لشيفرة المشروع بالإضرار بالجهاز</td><td>تشغيل معزول بلا شبكة وبلا صلاحيات، واختبارات هجوم
+      آلية؛ ومراجعتان أمنيتان داخليتان اكتشفتا ثغرتين حرجتين وأُصلحتا مع اختبارات تمنع عودتهما، ثم تدقيق خارجي قبل الإصدار 1.0.</td></tr>
+    <tr><td>التمويل أو صعوبة توفير الفريق</td><td>المسار المختصر (3 أفراد، 6 أشهر) يوصل إلى إصدار تجريبي يثبت القيمة
+      قبل الالتزام بالفريق الكامل.</td></tr>
+  </table>
+
+  <h2>المطلوب لاتخاذ الخطوة التالية</h2>
+  <ol class="next"><li>اختيار مسار التمويل: المختصر أو أحد السيناريوهات.</li><li>اختيار ترخيص المشروع: مفتوح المصدر أو تجاري.</li><li>توفير نموذج ذكاء اصطناعي (محلي أو عبر خدمة) لتقييم جودة الإصلاحات.</li><li>جهة أو جهتان تجريبيتان تستخدمان الإصدار التجريبي على أنظمة حقيقية.</li></ol>
+
+  <div class="foot"><span>التفاصيل الكاملة في «وثيقة المشروع الشاملة» (22 صفحة) في المستودع: docs/proposal</span>
+    <span class="ltr">2 / 2</span></div>
+</section></body></html>
