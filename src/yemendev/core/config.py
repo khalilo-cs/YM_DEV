@@ -73,6 +73,19 @@ class SandboxSettings(BaseModel):
         return v
 
 
+class OrionSettings(BaseModel):
+    """Background execution of queued tasks (directive 5.2)."""
+
+    workers: int = Field(default=1, ge=0, le=32)            # per `yemendev serve` / `yemendev worker` process
+    max_concurrent_runs: int = Field(default=4, ge=1, le=256)  # across all worker processes sharing the DB
+    run_timeout_seconds: int = Field(default=3600, ge=10, le=86400)  # default per-run wall-clock budget
+    max_attempts: int = Field(default=3, ge=1, le=10)       # default attempts for transient failures
+    retry_base_seconds: float = Field(default=5.0, gt=0, le=3600)  # backoff: base * 2^(attempt-1), capped
+    retry_max_seconds: float = Field(default=300.0, gt=0, le=86400)
+    heartbeat_seconds: float = Field(default=30.0, ge=1, le=3600)  # a claim not renewed for this long is stale
+    poll_seconds: float = Field(default=1.0, gt=0, le=60)
+
+
 class ModelSettings(BaseModel):
     """Optional OpenAI-compatible endpoint (llama.cpp server, Ollama, vLLM, hosted)."""
 
@@ -95,6 +108,7 @@ class Settings(BaseModel):
     auth_failures_per_minute: int = Field(default=30, ge=1)
     sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
+    orion: OrionSettings = Field(default_factory=OrionSettings)
 
     @property
     def db_path(self) -> Path:
@@ -136,13 +150,17 @@ class Settings(BaseModel):
             model=env.get("YEMENDEV_MODEL_NAME") or None,
             api_key_env=env.get("YEMENDEV_MODEL_API_KEY_ENV") or None,
         )
+        orion = OrionSettings.model_validate({k: env[e] for k, e in [
+            ("workers", "YEMENDEV_WORKERS"), ("max_concurrent_runs", "YEMENDEV_MAX_CONCURRENT_RUNS"),
+            ("run_timeout_seconds", "YEMENDEV_RUN_TIMEOUT"), ("max_attempts", "YEMENDEV_MAX_ATTEMPTS")]
+            if env.get(e)})
         limits = {k: int(env[e]) for k, e in [("rate_limit_per_minute", "YEMENDEV_RATE_LIMIT_PER_MINUTE"),
                                                 ("rate_limit_burst", "YEMENDEV_RATE_LIMIT_BURST"),
                                                 ("auth_failures_per_minute", "YEMENDEV_AUTH_FAILURES_PER_MINUTE"),
                                                 ("token_ttl_days", "YEMENDEV_TOKEN_TTL_DAYS")] if env.get(e)}
         web = {"web_dir": Path(env["YEMENDEV_WEB_DIR"]).resolve()} if env.get("YEMENDEV_WEB_DIR") else {}
         return cls.model_validate({"data_dir": dd.resolve(), "allowed_project_roots": roots, "sandbox": sandbox,
-                                   "model": model, **limits, **web})
+                                   "model": model, "orion": orion, **limits, **web})
 
     def ensure_dirs(self) -> None:
         for d in (self.data_dir, self.keys_dir, self.checkpoints_dir):

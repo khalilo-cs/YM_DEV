@@ -237,4 +237,48 @@ MIGRATIONS: list[tuple[int, str, str]] = [
         CREATE INDEX ix_sync_conflicts_project ON sync_conflicts(project_id, status)
         """,
     ),
+    (
+        5,
+        "orion_queue_and_trace",
+        """
+        ALTER TABLE tasks ADD COLUMN cancel_requested_at TEXT;
+        ALTER TABLE tasks ADD COLUMN cancel_requested_by TEXT;
+
+        -- One row per task (re-used when a task is queued again). The task row stays the state machine;
+        -- this row only says when, how often and with whose rights a background worker may advance it.
+        CREATE TABLE task_queue (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            state TEXT NOT NULL,
+            priority INTEGER NOT NULL,
+            run_after TEXT NOT NULL,
+            enqueued_at TEXT NOT NULL,
+            enqueued_by TEXT NOT NULL,
+            enqueued_role TEXT NOT NULL,
+            depends_on_json TEXT NOT NULL,
+            attempts INTEGER NOT NULL,
+            max_attempts INTEGER NOT NULL,
+            timeout_seconds INTEGER NOT NULL,
+            worker TEXT,
+            run_id TEXT,
+            heartbeat_until TEXT,
+            last_error TEXT,
+            finished_at TEXT
+        );
+        CREATE INDEX ix_task_queue_ready ON task_queue(state, priority, run_after);
+        CREATE INDEX ix_task_queue_project ON task_queue(project_id, state);
+
+        -- Execution trace: an append-only timeline per task (queue, runs, steps, status changes).
+        CREATE TABLE task_events (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            at TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            actor TEXT NOT NULL,
+            detail_json TEXT NOT NULL
+        );
+        CREATE INDEX ix_task_events_task ON task_events(task_id, seq)
+        """,
+    ),
 ]

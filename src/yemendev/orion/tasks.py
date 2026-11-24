@@ -46,6 +46,17 @@ class Task(BaseModel):
     params: dict[str, Any]
     current_step: str | None
     error: str | None
+    cancel_requested_at: str | None = None
+    cancel_requested_by: str | None = None
+
+
+class TaskEvent(BaseModel):
+    seq: int
+    task_id: str
+    at: str
+    kind: str
+    actor: str
+    detail: dict[str, Any]
 
 
 class StepRecord(BaseModel):
@@ -61,7 +72,15 @@ class StepRecord(BaseModel):
 def _task(r: Any) -> Task:
     return Task(id=r["id"], project_id=r["project_id"], kind=r["kind"], status=TaskStatus(r["status"]),
                 created_by=r["created_by"], created_at=r["created_at"], updated_at=r["updated_at"],
-                params=json.loads(r["params_json"]), current_step=r["current_step"], error=r["error"])
+                params=json.loads(r["params_json"]), current_step=r["current_step"], error=r["error"],
+                cancel_requested_at=r["cancel_requested_at"], cancel_requested_by=r["cancel_requested_by"])
+
+
+def add_event(conn: Any, task_id: str, kind: str, actor: str = "system:orion",
+              detail: dict[str, Any] | None = None) -> None:
+    """Append to the task's execution trace inside the caller's transaction."""
+    conn.execute("INSERT INTO task_events(task_id, at, kind, actor, detail_json) VALUES (?,?,?,?,?)",
+                 (task_id, iso(), kind, actor, canonical_json(detail or {})))
 
 
 class TaskStore:
@@ -76,6 +95,7 @@ class TaskStore:
                 " VALUES (?,?,?,?,?,?,?,?)",
                 (tid, project_id, kind, TaskStatus.PENDING.value, created_by, now, now, canonical_json(params)),
             )
+            add_event(conn, tid, "task.created", created_by, {"kind": kind})
         return self.get(tid)
 
     def get(self, task_id: str) -> Task:
@@ -114,6 +134,7 @@ class TaskStore:
                 if t is None:
                     raise NotFoundError("task not found")
                 raise ConflictError(f"task is {t['status']} and cannot be run now (terminal or leased)")
+            add_event(conn, task_id, "run.started", owner, {"lease_seconds": lease_seconds})
         return self.get(task_id)
 
     def release(self, task_id: str, status: TaskStatus, error: str | None = None) -> Task:
@@ -123,6 +144,7 @@ class TaskStore:
                 " WHERE id = ?",
                 (status.value, error, iso(), task_id),
             )
+            add_event(conn, task_id, "task.status", detail={"status": status.value, "error": error})
         return self.get(task_id)
 
     def expire_lease(self, task_id: str) -> None:
@@ -140,7 +162,27 @@ class TaskStore:
             )
             if cur.rowcount != 1:
                 raise ConflictError("only pending or waiting tasks can be cancelled")
+            add_event(conn, task_id, "task.cancelled")
         return self.get(task_id)
+
+    def request_cancel(self, task_id: str, actor_ref: str) -> Task:
+        """Ask a RUNNING task to stop. Honoured at the next step boundary (or sooner by a queue worker
+        for steps that do not touch the project); a change already applied is rolled back."""
+        with self._db.transaction() as conn:
+            cur = conn.execute(
+                "UPDATE tasks SET cancel_requested_at = ?, cancel_requested_by = ?, updated_at = ? WHERE id = ?"
+                " AND status = ? AND cancel_requested_at IS NULL",
+                (iso(), actor_ref, iso(), task_id, TaskStatus.RUNNING.value))
+            if cur.rowcount == 1:
+                add_event(conn, task_id, "cancel.requested", actor_ref)
+        return self.get(task_id)
+
+    def events(self, task_id: str, limit: int = 2000) -> builtins.list[TaskEvent]:
+        with self._db.read() as conn:
+            rows = conn.execute("SELECT * FROM task_events WHERE task_id = ? ORDER BY seq LIMIT ?",
+                                (task_id, max(1, min(limit, 10000)))).fetchall()
+        return [TaskEvent(seq=r["seq"], task_id=r["task_id"], at=r["at"], kind=r["kind"], actor=r["actor"],
+                          detail=json.loads(r["detail_json"])) for r in rows]
 
     # ---- steps -----------------------------------------------------------------------
     def step(self, task_id: str, name: str) -> StepRecord | None:
@@ -170,14 +212,17 @@ class TaskStore:
                 (task_id, name, StepStatus.RUNNING.value, attempt, iso()),
             )
             conn.execute("UPDATE tasks SET current_step = ?, updated_at = ? WHERE id = ?", (name, iso(), task_id))
+            add_event(conn, task_id, "step.started", detail={"step": name, "attempt": attempt})
         return attempt
 
     def finish_step(self, task_id: str, name: str, output: Any) -> None:
         with self._db.transaction() as conn:
             conn.execute("UPDATE task_steps SET status = ?, finished_at = ?, output_json = ? WHERE task_id = ? AND"
                          " name = ?", (StepStatus.DONE.value, iso(), canonical_json(output), task_id, name))
+            add_event(conn, task_id, "step.finished", detail={"step": name})
 
     def fail_step(self, task_id: str, name: str, error: str) -> None:
         with self._db.transaction() as conn:
             conn.execute("UPDATE task_steps SET status = ?, finished_at = ?, error = ? WHERE task_id = ? AND name = ?",
                          (StepStatus.FAILED.value, iso(), error[:4000], task_id, name))
+            add_event(conn, task_id, "step.failed", detail={"step": name, "error": error[:500]})

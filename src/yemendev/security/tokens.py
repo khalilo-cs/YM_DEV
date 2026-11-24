@@ -7,7 +7,7 @@ import secrets
 from datetime import timedelta
 
 from yemendev.core.contracts import InvalidInputError, NotFoundError, iso, new_id, utcnow
-from yemendev.governance.actors import Actor, ActorKind, Role
+from yemendev.governance.actors import ROLE_RANK, Actor, ActorKind, Role
 from yemendev.storage.db import Database
 
 TOKEN_PREFIX = "ydv_"  # noqa: S105 - public prefix, not a secret
@@ -51,6 +51,18 @@ class TokenStore:
         if row is None:
             return None
         return Actor(id=row["actor_id"], kind=ActorKind.HUMAN, role=Role(row["role"]))
+
+    def current_role(self, actor_id: str) -> Role | None:
+        """Highest role among the actor's active (unrevoked, unexpired) tokens; None if it has none.
+
+        Background work queued by a human runs with at most this role, so revoking a person's tokens
+        (or letting them expire) also stops work queued in their name.
+        """
+        with self._db.read() as conn:
+            roles = [Role(r["role"]) for r in conn.execute(
+                "SELECT role FROM api_tokens WHERE actor_id = ? AND revoked_at IS NULL AND expires_at IS NOT NULL"
+                " AND expires_at > ?", (actor_id, iso())).fetchall()]
+        return max(roles, key=lambda r: ROLE_RANK[r]) if roles else None
 
     def revoke(self, token_id: str) -> None:
         with self._db.transaction() as conn:
