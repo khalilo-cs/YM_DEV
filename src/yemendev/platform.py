@@ -558,6 +558,7 @@ class Platform:
                       for t in ("projects", "tasks", "approval_requests", "evidence_records", "skills",
                                 "memory_records", "audit_events")}
             pending = conn.execute("SELECT COUNT(*) FROM approval_requests WHERE status = 'pending'").fetchone()[0]
+            queue = {r[0]: r[1] for r in conn.execute("SELECT state, COUNT(*) FROM task_queue GROUP BY state")}
         from yemendev.sandbox.docker_backend import isolation_report
         from yemendev.sandbox.workspace import network_namespace_available
 
@@ -565,6 +566,7 @@ class Platform:
             "schema_version": self.db.schema_version(),
             "counts": counts,
             "pending_approvals": pending,
+            "queue": {s: queue.get(s, 0) for s in ("queued", "running", "waiting")},
             "models": self.models.status(),
             "sandbox": {"network_isolation_mode": self.settings.sandbox.network_isolation,
                         "network_namespace_available": network_namespace_available(),

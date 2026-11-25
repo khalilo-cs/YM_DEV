@@ -5,7 +5,12 @@
 
 ## Supported topology
 
-Single node. One process serves the API (`yemendev serve`) and runs tasks synchronously per request.
+Single node. `yemendev serve` serves the API and, by default, one background worker that runs queued
+tasks (`--workers N`, `0` to disable). More workers can run in separate processes on the same host
+(`yemendev worker --workers N`, admin token); they share the queue through the database, and
+`YEMENDEV_MAX_CONCURRENT_RUNS` caps runs across all of them. Each run is a separate process with a
+wall-clock budget (`YEMENDEV_RUN_TIMEOUT`, default 3600 s); stopping a worker hands its runs back to the
+queue without using an attempt.
 State lives in `YEMENDEV_DATA_DIR` (SQLite + audit key + checkpoints).
 
 ## Recommended setup
@@ -33,5 +38,5 @@ Migrations run automatically at startup and are append-only. Back up before upgr
 
 ## Not supported yet
 
-PostgreSQL / multi-user scale-out, high availability, background workers, TLS termination, central
+PostgreSQL / multi-user scale-out, high availability, workers on several hosts, TLS termination, central
 logging/metrics (OpenTelemetry), Windows hosts.

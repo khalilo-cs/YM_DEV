@@ -140,3 +140,42 @@ def test_full_workflow_over_http(ctx, tmp_path):
     st = c.get("/api/v1/system/status", headers=viewer).json()
     assert st["counts"]["tasks"] == 1 and st["models"][0]["available"] is False
     assert "ydv_" not in json.dumps(c.get("/api/v1/audit?limit=1000", headers=admin).json())
+
+
+def test_queue_api_enqueue_trace_cancel_and_visibility(ctx, tmp_path):
+    from helpers import make_passing_project
+
+    from yemendev.orion.scheduler import Scheduler
+
+    p, c, admin, op, viewer, _ = ctx
+    root = make_passing_project(tmp_path / "ok")
+    pid = c.post("/api/v1/projects", json={"name": "ok", "path": str(root)}, headers=admin).json()["id"]
+    r = c.post("/api/v1/tasks", json={"project_id": pid, "queue": {"priority": 2, "timeout_seconds": 120}},
+               headers=admin)
+    assert r.status_code == 201 and r.json()["queue"]["state"] == "queued"
+    tid = r.json()["id"]
+    assert c.post(f"/api/v1/tasks/{tid}/enqueue", json={}, headers=admin).status_code == 409  # already queued
+    listed = {t["id"]: t for t in c.get("/api/v1/tasks", headers=admin).json()}
+    assert listed[tid]["queue_state"] == "queued"
+    q = c.get("/api/v1/queue", headers=admin).json()
+    assert [e["task_id"] for e in q["entries"]] == [tid] and q["limits"]["max_concurrent_runs"] >= 1
+    assert q["workers_in_this_process"]["running"] is False
+    # a viewer with no membership sees neither the entry nor the task, and cannot queue anything
+    assert c.get("/api/v1/queue", headers=viewer).json()["entries"] == []
+    t2 = c.post("/api/v1/tasks", json={"project_id": pid}, headers=admin).json()["id"]
+    assert c.post(f"/api/v1/tasks/{t2}/enqueue", json={}, headers=viewer).status_code == 403
+    assert c.post(f"/api/v1/tasks/{t2}/enqueue", json={"priority": 99}, headers=admin).status_code == 422
+    # cancel a queued task: entry and task are both cancelled, a worker finds nothing to do
+    assert c.post(f"/api/v1/tasks/{tid}/cancel", headers=admin).json()["status"] == "cancelled"
+    assert c.get("/api/v1/queue", headers=admin).json()["entries"][0]["state"] == "cancelled"
+    # queue t2 and let a worker run it for real
+    assert c.post(f"/api/v1/tasks/{t2}/enqueue", json={"timeout_seconds": 120}, headers=admin).status_code == 201
+    p.settings.sandbox.backend = "process"
+    [out] = Scheduler(p).drain()
+    assert out.task_id == t2 and out.task_status == "no_action"
+    tr = c.get(f"/api/v1/tasks/{t2}/trace", headers=admin).json()
+    assert tr["queue"]["state"] == "done" and len(tr["plan"]) == 10
+    assert any(e["kind"] == "queue.run_finished" and e["detail"]["cpu_seconds"] > 0 for e in tr["events"])
+    assert c.get(f"/api/v1/tasks/{t2}/trace", headers=viewer).status_code == 403
+    st = c.get("/api/v1/system/status", headers=admin).json()
+    assert st["queue"] == {"queued": 0, "running": 0, "waiting": 0}

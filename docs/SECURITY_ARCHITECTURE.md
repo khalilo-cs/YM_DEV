@@ -11,6 +11,7 @@ Threats and residual risks: [THREAT_MODEL.md](THREAT_MODEL.md). Findings and fix
 | Authorization | Static role policy + per-project memberships (token role = ceiling) | `governance/policy.py`, `membership.py`, `guard.py` |
 | Human control | Approvals bound to action + target + digest(task, project, files); single-use; expiring; revoked on cancel; requester ≠ decider; agents never decide | `governance/approvals.py` |
 | Agent control | Fixed allow-lists, intersection with the human's rights, every run recorded | `agents/` |
+| Background runs | Act as the human who queued them with min(role at enqueue, current active-token role); dropped when that human has no active token; fenced claims; killed runs take their sandboxed programs (parent-death signal) and containers (label) with them | `orion/queue.py`, `orion/scheduler.py` |
 | Change review | Security agent blocks dangerous added code; caution findings shown to approver | `agents/security_agent.py` |
 | Untrusted code | Copy-on-run workspace; docker backend (no network, read-only rootfs, cap-drop ALL, no-new-privileges, non-root, pids/memory/cpu limits) or process backend (rlimits, netns, uid drop); refusal if the run identity can reach a container runtime socket | `sandbox/` |
 | Supply chain | Project images from wheels only, no URL/VCS/path specs, `--network none` builds, wheel hashes recorded; `pip-audit` clean | `sandbox/project_image.py` |

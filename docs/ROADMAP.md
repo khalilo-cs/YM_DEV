@@ -14,7 +14,7 @@ Two views of the same plan:
 | 0 Audit | Done |
 | 1 Core foundation | Done |
 | 2 Project intelligence | Done for Python |
-| 3 Intelligence & orchestration | Partial (orchestration, agents done; no model evaluated, no task queue) |
+| 3 Intelligence & orchestration | Partial (orchestration with queue/scheduling/retries/timeouts and agents done; no model evaluated) |
 | 4 Verified repair | Done |
 | 5 Continual learning | Done (one skill kind) |
 | 6 Offline continuity | Done for file-based sync (checkpoints, resume, offline workflow, signed sync bundles) |
@@ -24,5 +24,5 @@ Two views of the same plan:
 | 10 Research & benchmarking | Partial (benchmark, no baselines) |
 | 11 Product readiness | Not started |
 
-Next engineering stage: ORION task queue, scheduling, retries and timeouts; then JavaScript/TypeScript
-scanning, SBOM, structured logging and a one-command installer.
+Next engineering stage: JavaScript/TypeScript scanning, SBOM, structured logging and a one-command
+installer.

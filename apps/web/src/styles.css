@@ -113,3 +113,7 @@ details { margin-block: 0.25rem; }
 .node.crit rect { fill: var(--warn-bg); stroke: var(--warn); }
 .node.cyc rect { stroke: var(--danger); stroke-width: 2; }
 .edge { stroke: var(--muted); stroke-opacity: 0.5; fill: none; }
+.live { font-size: 0.8rem; font-weight: 400; }
+.nowrap { white-space: nowrap; }
+.small { font-size: 0.85em; }
+.timeline-table td { font-size: 0.9rem; }

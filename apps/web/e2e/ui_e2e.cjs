@@ -114,6 +114,14 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   const nTask = await api(aliceTok, "/tasks/" + nid);
   const nStep = await api(aliceTok, `/tasks/${nid}/steps/${nTask.current_step || "propose"}`);
   check(nTask.status === "no_action" && (await page.textContent("main .notice")).includes(nStep.output.reason), `no-plan task shows recorded stop reason: "${nStep.output.reason}"`);
+  // it ran in the background: the page followed it by itself and shows the queue and the trace
+  const nTrace = await api(aliceTok, `/tasks/${nid}/trace`);
+  await page.waitForFunction((n) => document.querySelectorAll("main table.timeline-table tbody tr").length >= n, Math.min(nTrace.events.length, 150), { timeout: 10000 }).catch(() => {});
+  const queueCard = await page.locator("main .card", { hasText: "طابور الخلفية" }).textContent();
+  check(nTrace.queue.state === "done" && queueCard.includes("done") && nTrace.events.some((e) => e.kind === "queue.run_finished"),
+    `no-plan task ran in the background worker (queue ${nTrace.queue.state})`);
+  check(await page.locator("main table.timeline-table tbody tr").count() === Math.min(nTrace.events.length, 150),
+    `timeline shows the ${nTrace.events.length} trace events`);
   await page.screenshot({ path: shots + "/06-task-no-action-ar.png", fullPage: true });
 
   // 4b. a human-authored plan (created by alice through the API), advanced from the UI
@@ -129,8 +137,8 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   check(task.status === "waiting_approval", `task ${tid} is waiting_approval (API: ${task.status})`);
   check((await page.textContent("main h1")).includes(task.status), "task page shows API status");
   const evCount = (await api(aliceTok, `/evidence?task_id=${tid}&limit=500`)).length;
-  await page.waitForFunction((n) => { const t = document.querySelectorAll("main table"); return t.length >= 3 && t[2].querySelectorAll("tbody tr").length === n; }, evCount, { timeout: 10000 }).catch(() => {});
-  const evRows = await page.locator("main table").nth(2).locator("tbody tr").count();
+  await page.waitForFunction((n) => document.querySelectorAll("main table.evidence-table tbody tr").length === n, evCount, { timeout: 10000 }).catch(() => {});
+  const evRows = await page.locator("main table.evidence-table tbody tr").count();
   check(evRows === evCount, `evidence rows ${evRows} = API ${evCount}`);
   await page.screenshot({ path: shots + "/07-task-waiting-ar.png", fullPage: true });
 

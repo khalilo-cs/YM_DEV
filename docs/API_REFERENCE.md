@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **52**.
+Routes: **55**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -50,6 +50,7 @@ Routes: **52**.
 | GET | `/api/v1/projects/{project_id}/sync/conflicts` | Sync Conflicts | - | `status` |
 | POST | `/api/v1/projects/{project_id}/sync/export` | Sync Export | - | - |
 | POST | `/api/v1/projects/{project_id}/sync/import` | Sync Import | object | - |
+| GET | `/api/v1/queue` | Queue | - | `limit` |
 | GET | `/api/v1/skills` | Skills | - | `status` |
 | POST | `/api/v1/skills` | Propose Skill | `ProposeSkill` | - |
 | POST | `/api/v1/skills/activate/{approval_id}` | Activate | - | - |
@@ -66,7 +67,9 @@ Routes: **52**.
 | POST | `/api/v1/tasks/{task_id}/advance` | Advance | - | - |
 | GET | `/api/v1/tasks/{task_id}/agent-runs` | Task Agent Runs | - | - |
 | POST | `/api/v1/tasks/{task_id}/cancel` | Cancel | - | - |
+| POST | `/api/v1/tasks/{task_id}/enqueue` | Enqueue | `QueueOptions` | - |
 | GET | `/api/v1/tasks/{task_id}/steps/{name}` | Task Step | - | - |
+| GET | `/api/v1/tasks/{task_id}/trace` | Trace | - | - |
 
 ## Request schemas
 
@@ -77,6 +80,7 @@ Routes: **52**.
 | `kind` | string |  |
 | `plan` | `RepairPlan` or null |  |
 | `project_id` | string | yes |
+| `queue` | `QueueOptions` or null |  |
 
 ### `Decide`
 
@@ -98,6 +102,16 @@ Routes: **52**.
 |---|---|---|
 | `skill_id` | string or null |  |
 | `spec` | `SkillSpec` | yes |
+
+### `QueueOptions`
+
+| Field | Type | Required |
+|---|---|---|
+| `delay_seconds` | integer |  |
+| `depends_on` | array |  |
+| `max_attempts` | integer or null |  |
+| `priority` | integer |  |
+| `timeout_seconds` | integer or null |  |
 
 ### `RegisterProject`
 

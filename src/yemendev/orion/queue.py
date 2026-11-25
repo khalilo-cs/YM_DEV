@@ -191,6 +191,15 @@ class TaskQueue:
         with self._db.read() as conn:
             return [_entry(r) for r in conn.execute(q, (*args, max(1, min(limit, 1000)))).fetchall()]
 
+    def states_for(self, task_ids: builtins.list[str]) -> dict[str, QueueEntry]:
+        if not task_ids:
+            return {}
+        marks = ",".join("?" * len(task_ids))  # only placeholders are interpolated; values are bound
+        with self._db.read() as conn:
+            rows = conn.execute(f"SELECT * FROM task_queue WHERE task_id IN ({marks})",  # noqa: S608
+                                task_ids).fetchall()
+        return {r["task_id"]: _entry(r) for r in rows}
+
     # ---- claiming ------------------------------------------------------------------------
     def claim(self, worker: str) -> Claim | None:
         """Atomically pick the next runnable entry, or None. Resolves dependencies as a side effect."""

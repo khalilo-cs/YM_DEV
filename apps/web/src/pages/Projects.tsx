@@ -61,8 +61,7 @@ function Overview({ id }: { id: string }) {
       <div className="row">
         <button className="primary" onClick={doScan} disabled={busy}>{busy ? t("scanning") : t("scan")}</button>
         <ConfirmButton label={t("start_repair")} question={t("start_repair_q")} onConfirm={async () => {
-          const task = await api<{ id: string }>("/tasks", { method: "POST", body: { project_id: id } });
-          await api(`/tasks/${task.id}/advance`, { method: "POST" });
+          const task = await api<{ id: string }>("/tasks", { method: "POST", body: { project_id: id, queue: {} } });
           location.hash = `#/tasks/${task.id}`;
         }} />
       </div>

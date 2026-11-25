@@ -2,6 +2,7 @@ import { Async, Badge, ShortId, Stat, useApi, useI18n } from "../ui";
 
 type Status = {
   schema_version: number; counts: Record<string, number>; pending_approvals: number; offline_capable: boolean;
+  queue: { queued: number; running: number; waiting: number };
   models: { adapter: string; available: boolean; reason: string }[];
   sandbox: { isolation_effective: string; isolation_warnings: string[] };
 };
@@ -20,6 +21,8 @@ export default function Dashboard() {
             <Stat label={t("projects")} value={fmtNum(s.counts.projects)} />
             <Stat label={t("tasks")} value={fmtNum(s.counts.tasks)} />
             <Stat label={t("pending_approvals")} value={<a href="#/approvals">{fmtNum(s.pending_approvals)}</a>} />
+            <Stat label={t("running_tasks")} value={<a href="#/tasks">{fmtNum(s.queue.running)}</a>} />
+            <Stat label={t("queued_tasks")} value={<a href="#/tasks">{fmtNum(s.queue.queued)}</a>} />
             <Stat label={t("evidence")} value={fmtNum(s.counts.evidence_records)} />
             <Stat label={t("skills")} value={fmtNum(s.counts.skills)} />
             <Stat label={t("memory")} value={fmtNum(s.counts.memory_records)} />

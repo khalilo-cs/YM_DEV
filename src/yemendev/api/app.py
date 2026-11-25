@@ -33,6 +33,7 @@ from yemendev.governance.approvals import ApprovalStatus
 from yemendev.governance.policy import Action
 from yemendev.learning.skills import SkillSpec, SkillStatus
 from yemendev.memory.model import MemoryCategory
+from yemendev.orion.queue import QueueOptions
 from yemendev.orion.workflow import RepairWorkflow
 from yemendev.platform import Platform
 from yemendev.recovery.model import RepairPlan
@@ -129,6 +130,7 @@ class CreateTask(BaseModel):
     project_id: str = Field(min_length=1, max_length=100)
     kind: str = Field(default="repair", pattern="^repair$")
     plan: RepairPlan | None = None
+    queue: QueueOptions | None = Field(default=None, description="run in the background via the ORION queue")
 
 
 class Decide(BaseModel):
@@ -154,7 +156,9 @@ class GrantMember(BaseModel):
     role: Role
 
 
-def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) -> FastAPI:
+def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
+               workers: Callable[[], dict[str, Any]] | None = None) -> FastAPI:
+    """``workers`` reports the background workers running in this process (``yemendev serve``)."""
     app = FastAPI(title="YEMENDEV AI", version=__version__, docs_url="/api/docs", openapi_url="/api/openapi.json",
                   redoc_url=None)
     wf = RepairWorkflow(platform)
@@ -372,11 +376,35 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic) 
     # ---- tasks ---------------------------------------------------------------------
     @app.post("/api/v1/tasks", status_code=201)
     def create_task(body: CreateTask, a: Who) -> dict[str, Any]:
-        return wf.create(a, body.project_id, human_plan=body.plan).model_dump()
+        t = wf.create(a, body.project_id, human_plan=body.plan)
+        queued = wf.enqueue(a, t.id, body.queue).model_dump() if body.queue is not None else None
+        return {**t.model_dump(), "queue": queued}
 
     @app.get("/api/v1/tasks")
     def tasks(a: Who, project_id: str | None = None) -> list[Any]:
-        return [t.model_dump() for t in wf.visible_tasks(a, project_id=project_id)]
+        ts = wf.visible_tasks(a, project_id=project_id)
+        qs = wf.queue.states_for([t.id for t in ts])
+        return [{**t.model_dump(), "queue_state": qs[t.id].state.value if t.id in qs else None} for t in ts]
+
+    @app.post("/api/v1/tasks/{task_id}/enqueue", status_code=201)
+    def enqueue(task_id: str, body: QueueOptions, a: Who) -> dict[str, Any]:
+        return wf.enqueue(a, task_id, body).model_dump()
+
+    @app.get("/api/v1/tasks/{task_id}/trace")
+    def trace(task_id: str, a: Who) -> dict[str, Any]:
+        return wf.trace(a, task_id)
+
+    @app.get("/api/v1/queue")
+    def queue(a: Who, limit: Annotated[int, Query(ge=1, le=1000)] = 200) -> dict[str, Any]:
+        read(a, "tasks")
+        entries = [e.model_dump() for e in wf.queue.list(limit=limit) if platform.guard.can_read(a, e.project_id)]
+        o = platform.settings.orion
+        return {"entries": entries,
+                "limits": {"max_concurrent_runs": o.max_concurrent_runs, "default_timeout_seconds":
+                           o.run_timeout_seconds, "default_max_attempts": o.max_attempts,
+                           "retry_base_seconds": o.retry_base_seconds, "retry_max_seconds": o.retry_max_seconds},
+                "workers_in_this_process": workers() if workers else {"count": 0, "running": False,
+                                                                       "note": "no workers in this process"}}
 
     @app.get("/api/v1/tasks/{task_id}")
     def task(task_id: str, a: Who) -> dict[str, Any]:

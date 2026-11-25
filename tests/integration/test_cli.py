@@ -76,3 +76,36 @@ def test_cli_project_access_requires_grant(cli, tmp_path, capsys, monkeypatch):
     monkeypatch.setenv("YEMENDEV_TOKEN", bob)
     assert [p["id"] for p in json.loads(run(capsys, "--data-dir", dd, "project", "list")[1])] == [pid]
     assert run(capsys, "--data-dir", dd, "project", "scan", pid)[0] == 0
+
+
+def test_cli_queue_worker_and_trace(cli, tmp_path, capsys, monkeypatch):
+    dd, admin, bob = cli
+    from helpers import make_passing_project
+
+    monkeypatch.setenv("YEMENDEV_SANDBOX_BACKEND", "process")
+    root = make_passing_project(tmp_path / "ok")
+    pid = json.loads(run(capsys, "--data-dir", dd, "project", "add", "ok", str(root))[1])["id"]
+    rc, out, _ = run(capsys, "--data-dir", dd, "task", "repair", pid, "--queue", "--priority", "3", "--timeout", "120")
+    queued = json.loads(out)
+    tid = queued["task_id"]
+    assert rc == 0 and queued["queued"]["state"] == "queued" and queued["queued"]["priority"] == 3
+    entries = json.loads(run(capsys, "--data-dir", dd, "queue")[1])
+    assert [e["task_id"] for e in entries] == [tid]
+    # starting workers is an admin operation
+    monkeypatch.setenv("YEMENDEV_TOKEN", bob)
+    with pytest.raises(SystemExit, match="admin"):
+        main(["--data-dir", dd, "worker", "--once"])
+    monkeypatch.setenv("YEMENDEV_TOKEN", admin)
+    rc, out, _ = run(capsys, "--data-dir", dd, "worker", "--once")
+    [outcome] = json.loads(out)
+    assert rc == 0 and outcome["task_id"] == tid and outcome["task_status"] == "no_action", outcome
+    trace = json.loads(run(capsys, "--data-dir", dd, "task", "trace", tid)[1])
+    assert trace["queue"]["state"] == "done" and trace["task"]["status"] == "no_action"
+    assert [s["step"] for s in trace["plan"]][:3] == ["scan", "baseline", "diagnose"]
+    assert trace["plan"][0]["status"] == "done" and trace["plan"][0]["duration_seconds"] is not None
+    kinds = [e["kind"] for e in trace["events"]]
+    for k in ("task.created", "queue.enqueued", "queue.claimed", "run.started", "step.started", "queue.run_finished"):
+        assert k in kinds
+    # dependencies are validated through the CLI as well
+    rc, _, err = run(capsys, "--data-dir", dd, "task", "repair", pid, "--queue", "--after", "tsk_missing")
+    assert rc == 1 and "does not exist" in err

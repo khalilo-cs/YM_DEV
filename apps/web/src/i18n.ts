@@ -16,7 +16,7 @@ const en = {
   yes: "yes", no: "no", scan: "Scan", scanning: "Scanning…", open: "Open", overview: "Overview",
   graph: "Dependency graph", risks: "Risks", immune: "Immune check", debt: "Continuity debt", members: "Members",
   whatif: "What-if", files: "Files", modules: "Modules", languages: "Languages", findings: "Findings",
-  start_repair: "Start repair task", start_repair_q: "Start a repair task for this project? Tests will run in the sandbox.",
+  start_repair: "Start repair task", start_repair_q: "Start a repair task for this project in the background? Tests run in the sandbox; you can follow it on the task page.",
   critical_modules: "Critical modules", cycles: "Import cycles", edges: "Edges", no_scan: "Not scanned yet. Run a scan first.",
   predictions: "Predictions", probability: "Probability", horizon: "Horizon", insufficient: "Insufficient evidence",
   anomalies: "Anomalies", risk_scores: "Risk scores", dependency_risks: "Dependency risks", limitations: "Limitations",
@@ -44,6 +44,11 @@ const en = {
   attempt: "Attempt", stop_reason: "Why the task stopped",
   no_plan_hint: "Without a configured model or an active learned skill, no plan is invented. A human can supply a repair plan:",
   waiting_hint: "Waiting for a human decision. Another person must approve the exact change:",
+  queue: "Background queue", attempts: "Attempts", priority: "Priority", timeout: "Time limit", seconds: "s",
+  run_after: "Not before", depends_on: "Runs after", plan: "Plan", performed_by: "Performed by", duration: "Duration",
+  timeline: "Timeline", event: "Event", live: "updating…", queued_tasks: "Queued", running_tasks: "Running now",
+  run_background: "Run in background", run_background_q: "Queue this task? A background worker runs it with your current rights.",
+  cancel_requested: "Cancellation requested; the task stops at a safe point (an applied change is rolled back). Requested by",
 };
 export type Dict = typeof en;
 
@@ -64,7 +69,7 @@ const ar: Dict = {
   yes: "نعم", no: "لا", scan: "فحص", scanning: "جارٍ الفحص…", open: "فتح", overview: "نظرة عامة",
   graph: "رسم التبعيات", risks: "المخاطر", immune: "فحص المناعة", debt: "دَين الاستمرارية", members: "الأعضاء",
   whatif: "ماذا لو", files: "الملفات", modules: "الوحدات", languages: "اللغات", findings: "النتائج",
-  start_repair: "بدء مهمة إصلاح", start_repair_q: "بدء مهمة إصلاح لهذا المشروع؟ ستُشغَّل الاختبارات في البيئة المعزولة.",
+  start_repair: "بدء مهمة إصلاح", start_repair_q: "بدء مهمة إصلاح لهذا المشروع في الخلفية؟ ستُشغَّل الاختبارات في البيئة المعزولة، ويمكنك متابعتها في صفحة المهمة.",
   critical_modules: "الوحدات الحرجة", cycles: "حلقات الاستيراد", edges: "الروابط", no_scan: "لم يُفحص بعد. شغّل الفحص أولًا.",
   predictions: "التنبؤات", probability: "الاحتمال", horizon: "الأفق", insufficient: "أدلة غير كافية",
   anomalies: "حالات الشذوذ", risk_scores: "درجات المخاطر", dependency_risks: "مخاطر التبعيات", limitations: "القيود",
@@ -92,6 +97,11 @@ const ar: Dict = {
   attempt: "المحاولة", stop_reason: "سبب توقف المهمة",
   no_plan_hint: "بدون نموذج مُعدّ أو مهارة مُتعلَّمة مفعّلة لا تُخترع أي خطة. يمكن لإنسان تقديم خطة إصلاح:",
   waiting_hint: "بانتظار قرار بشري. يجب أن يوافق شخص آخر على التعديل نفسه:",
+  queue: "طابور الخلفية", attempts: "المحاولات", priority: "الأولوية", timeout: "الحد الزمني", seconds: "ث",
+  run_after: "ليس قبل", depends_on: "تُنفَّذ بعد", plan: "الخطة", performed_by: "المنفِّذ", duration: "المدة",
+  timeline: "التسلسل الزمني", event: "الحدث", live: "يتحدّث تلقائيًا…", queued_tasks: "في الطابور", running_tasks: "قيد التشغيل الآن",
+  run_background: "تشغيل في الخلفية", run_background_q: "إضافة المهمة إلى الطابور؟ سيشغّلها عامل في الخلفية بصلاحياتك الحالية.",
+  cancel_requested: "طُلب الإلغاء؛ ستتوقف المهمة عند نقطة آمنة (ويُتراجع عن أي تعديل طُبِّق). طلبه",
 };
 
 export type Lang = "ar" | "en";

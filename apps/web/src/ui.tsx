@@ -88,7 +88,7 @@ type Tone = "good" | "warn" | "bad" | "neutral";
 export function Badge({ v, tone: forced }: { v: string; tone?: Tone }) {
   const tone = forced ?? (/fail|error|block|denied|high|security|rolled|cancel/.test(v) ? "bad"
     : /pending|waiting|caution|medium|stale|running|unverified|blind/.test(v) ? "warn"
-    : /pass|succeed|verified|active|allow|ok|completed|detected/.test(v) ? "good" : "neutral");
+    : /pass|succeed|verified|active|allow|ok|completed|detected|^done$/.test(v) ? "good" : "neutral");
   return <span className={`badge ${tone}`}><bdi>{v}</bdi></span>;
 }
 

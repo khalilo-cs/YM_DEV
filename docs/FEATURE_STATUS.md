@@ -60,7 +60,10 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 | Feature | Status | Location | Tests / evidence | Known limitations |
 |---|---|---|---|---|
 | ORION persistent tasks, leases, single active worker | TESTED | `orion/tasks.py` | crash tests, `test_concurrent_advance_only_one_worker_runs` | Time-based lease (15 min) |
-| RACE-X repair workflow | VERIFIED (local) | `orion/workflow.py` | `tests/end_to_end/test_mvp_workflow.py` | Synchronous per `advance` call; no background scheduler |
+| RACE-X repair workflow | VERIFIED (local) | `orion/workflow.py` | `tests/end_to_end/test_mvp_workflow.py` | - |
+| ORION queue: priority/delay scheduling, inter-task dependencies (cycle check, failed dependency cancels), one run per project + global concurrency limit, re-run after approval, heartbeat claims + recovery, enqueuer's *current* rights | TESTED | `orion/queue.py` | `tests/unit/test_orion_queue.py` (12) | Recurring schedules not implemented; no preemption by priority |
+| ORION workers: one supervised process per run, wall-clock timeouts (process tree + containers killed), retry with exponential backoff, cancellation of running tasks (immediate for non-mutating steps, rollback after execute), fencing, graceful shutdown, CPU/memory accounting | VERIFIED (local) | `orion/scheduler.py`, `orion/runner.py` | `tests/integration/test_orion_scheduler.py` (11, real kills on process and docker backends); mutation check 7/7; browser E2E | Detached grandchildren of a sandboxed test are bounded by rlimits/container lifetime, not by the parent-death signal |
+| Execution trace (`/tasks/{id}/trace`, `yemendev task trace`, task page timeline) | TESTED | `orion/tasks.py`, `orion/workflow.py` | API/CLI tests; browser E2E | Events are per task; no cross-task tracing (OpenTelemetry) |
 | Crash resume (9 fault points, half-written project) | VERIFIED (local) | `orion/workflow.py` | `test_crash_at_any_point_then_resume` + manual probe | Injected exceptions, not real power loss |
 | HTTP API `/api/v1` | VERIFIED (local) | `api/app.py` | `tests/integration/test_api.py`; real `uvicorn` + `curl` | No TLS (loopback by default) |
 | CLI | TESTED | `cli/main.py` | `tests/integration/test_cli.py` | - |

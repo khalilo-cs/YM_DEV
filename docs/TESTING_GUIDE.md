@@ -9,6 +9,7 @@ Run everything: `.venv/bin/python -m pytest` (about 2 minutes with Docker availa
 | Security | `tests/security/` | audit tampering, governance, sandbox escape attempts, authorization isolation, agents, runtime-socket refusal, audit-finding regressions |
 | End-to-end | `tests/end_to_end/` | the 18 MVP criteria, crash at 9 points + resume, concurrency, offline |
 | Regression | `tests/regression/` | benchmark fixtures/scenarios, docs-in-sync |
+| ORION queue/workers | `tests/unit/test_orion_queue.py`, `tests/integration/test_orion_scheduler.py` | scheduling, dependencies, rights, recovery; real timeouts/kills/cancellation/retries with child processes, sandbox processes and containers |
 | Web UI | `tests/integration/test_web_ui.py`, `scripts/ui_e2e.py` | static serving + CSP + traversal; no remote resources; Arabic dictionary completeness (tsc); real-browser flow against a real server |
 
 ## Environment-dependent tests

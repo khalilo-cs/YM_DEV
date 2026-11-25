@@ -9,6 +9,7 @@ Engines exchange typed Pydantic contracts; `platform.py` is the only composition
  Authorization   Platform / RepairWorkflow methods → Guard (policy + project membership) → audit
                               │
  Orchestration   ORION: persistent tasks, leases, steps ──► AgentRunner (fixed per-agent allow-lists)
+                 ORION queue + workers: scheduling, dependencies, one process per run (timeouts, retries, cancel)
                               │
  Agents          repository · testing · diagnostic · planning · security · recovery · verification · learning
                               │

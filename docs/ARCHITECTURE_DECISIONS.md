@@ -15,3 +15,4 @@
 | [0011](adr/0011-agents-fixed-allow-lists.md) | Agents with fixed allow-lists, recorded runs, conflict policy | Accepted |
 | [0012](adr/0012-signed-offline-sync-and-passports.md) | Signed offline sync bundles and continuity passports | Accepted |
 | [0013](adr/0013-web-ui-static-same-origin.md) | Web UI as a static, same-origin client of the public API | Accepted |
+| [0014](adr/0014-orion-queue-process-per-run.md) | ORION queue with one supervised process per run | Accepted |

@@ -18,6 +18,7 @@ from yemendev.core.config import Settings
 from yemendev.core.contracts import YemenDevError
 from yemendev.governance.actors import Actor, Role
 from yemendev.governance.policy import Action
+from yemendev.orion.queue import QueueOptions
 from yemendev.orion.workflow import RepairWorkflow
 from yemendev.platform import Platform
 from yemendev.recovery.model import RepairPlan
@@ -125,6 +126,11 @@ def cmd_project(args: argparse.Namespace) -> int:
     return 0
 
 
+def _queue_opts(args: argparse.Namespace) -> QueueOptions:
+    return QueueOptions(priority=args.priority, delay_seconds=args.delay, max_attempts=args.max_attempts,
+                        timeout_seconds=args.timeout, depends_on=args.after or [])
+
+
 def cmd_task(args: argparse.Namespace) -> int:
     p = _platform(args)
     a = _actor(p, args)
@@ -132,8 +138,17 @@ def cmd_task(args: argparse.Namespace) -> int:
     if args.tcmd == "repair":
         plan = RepairPlan(**json.loads(Path(args.plan).read_text())) if args.plan else None
         t = wf.create(a, args.project_id, human_plan=plan)
+        if args.queue:
+            e = wf.enqueue(a, t.id, _queue_opts(args))
+            _print({"task_id": t.id, "queued": e.model_dump(),
+                    "note": "a worker (`yemendev serve` or `yemendev worker`) runs it in the background"})
+            return 0
         r = wf.advance(a, t.id)
         _print({"task_id": t.id, "status": r.task.status.value, "ran": r.ran_steps, "message": r.message})
+    elif args.tcmd == "enqueue":
+        _print(wf.enqueue(a, args.task_id, _queue_opts(args)).model_dump())
+    elif args.tcmd == "trace":
+        _print(wf.trace(a, args.task_id))
     elif args.tcmd == "advance":
         r = wf.advance(a, args.task_id)
         _print({"task_id": args.task_id, "status": r.task.status.value, "ran": r.ran_steps, "message": r.message})
@@ -146,6 +161,43 @@ def cmd_task(args: argparse.Namespace) -> int:
                 for t in wf.visible_tasks(a)])
     elif args.tcmd == "cancel":
         _print(wf.cancel(a, args.task_id).model_dump())
+    return 0
+
+
+def cmd_queue(args: argparse.Namespace) -> int:
+    p = _platform(args)
+    a = _actor(p, args)
+    wf = RepairWorkflow(p)
+    p.guard.require(a, Action.READ, "tasks")
+    _print([e.model_dump() for e in wf.queue.list() if p.guard.can_read(a, e.project_id)])
+    return 0
+
+
+def cmd_worker(args: argparse.Namespace) -> int:
+    """Run queued tasks in the background (each run acts with the rights of the human who queued it)."""
+    import signal
+    import threading
+
+    from yemendev.orion.scheduler import Scheduler
+
+    p = _platform(args)
+    a = _actor(p, args)
+    if not a.has_role(Role.ADMIN):
+        raise SystemExit("error: starting workers requires an admin token")
+    sched = Scheduler(p)
+    if args.once:
+        _print([o.model_dump() for o in sched.drain()])
+        return 0
+    stop = threading.Event()
+    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    sched.start(args.workers)
+    print(f"ORION: {args.workers if args.workers is not None else p.settings.orion.workers} worker(s) running; "
+          "Ctrl-C to stop", file=sys.stderr)
+    try:
+        stop.wait()
+    except KeyboardInterrupt:
+        pass
+    sched.stop()
     return 0
 
 
@@ -271,9 +323,30 @@ def cmd_serve(args: argparse.Namespace) -> int:
     import uvicorn
 
     from yemendev.api.app import create_app
+    from yemendev.orion.scheduler import Scheduler
 
-    uvicorn.run(create_app(_platform(args)), host=args.host, port=args.port, log_level="info")
+    p = _platform(args)
+    n = p.settings.orion.workers if args.workers is None else args.workers
+    sched = Scheduler(p)
+
+    def workers() -> dict[str, Any]:
+        return {"count": n, "running": sched.running}
+
+    if n:
+        sched.start(n)
+    try:
+        uvicorn.run(create_app(p, workers=workers), host=args.host, port=args.port, log_level="info")
+    finally:
+        sched.stop()  # runs in progress are handed back to the queue without using an attempt
     return 0
+
+
+def _queue_args(x: argparse.ArgumentParser) -> None:
+    x.add_argument("--priority", type=int, default=0, help="-10..10, higher runs first")
+    x.add_argument("--delay", type=int, default=0, help="seconds to wait before running")
+    x.add_argument("--max-attempts", type=int, default=None, help="attempts for transient failures")
+    x.add_argument("--timeout", type=int, default=None, help="wall-clock seconds per run")
+    x.add_argument("--after", action="append", metavar="TASK_ID", help="run only after this task (repeatable)")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -328,10 +401,19 @@ def build_parser() -> argparse.ArgumentParser:
     x = tsub.add_parser("repair", help="start a repair task and run it until it needs approval or finishes")
     x.add_argument("project_id")
     x.add_argument("--plan", help="JSON file with a human-authored RepairPlan")
-    for name in ("advance", "show", "cancel"):
-        tsub.add_parser(name).add_argument("task_id")
+    x.add_argument("--queue", action="store_true", help="run it in the background (ORION queue) instead of now")
+    _queue_args(x)
+    _queue_args(tsub.add_parser("enqueue", help="queue an existing task for background execution"))
+    for name in ("advance", "show", "cancel", "trace", "enqueue"):
+        (tsub.choices[name] if name in tsub.choices else tsub.add_parser(name)).add_argument("task_id")
     tsub.add_parser("list")
     s.set_defaults(fn=cmd_task)
+
+    sub.add_parser("queue", help="background task queue (ORION)").set_defaults(fn=cmd_queue)
+    x = sub.add_parser("worker", help="run queued tasks in the background (requires an admin token)")
+    x.add_argument("--workers", type=int, default=None, help="number of workers (default: $YEMENDEV_WORKERS or 1)")
+    x.add_argument("--once", action="store_true", help="run what is runnable now, then exit")
+    x.set_defaults(fn=cmd_worker)
 
     s = sub.add_parser("approvals")
     asub = s.add_subparsers(dest="acmd", required=True)
@@ -400,6 +482,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--allow-remote", action="store_true")
+    s.add_argument("--workers", type=int, default=None,
+                   help="background workers in this process (default: $YEMENDEV_WORKERS or 1; 0 = none)")
     s.set_defaults(fn=cmd_serve)
     return ap
 

@@ -25,14 +25,14 @@ connectivity; universities (teaching and reproducible research); individual deve
 The verified core: scanning, sandboxed test execution (process or Docker), diagnostics, repair with
 simulation / approval / verification / rollback, skills and learning, persistent resumable tasks,
 governance (roles, project memberships, bound approvals), tamper-evident audit and evidence, agents
-with fixed permissions, a predictive risk engine with causal analysis, a digital immune system, a
+with fixed permissions, a background task queue with scheduling, retries and timeouts, a predictive risk engine with causal analysis, a digital immune system, a
 counterfactual (what-if) engine, signed offline synchronization and continuity passports, HTTP API, CLI,
 a web UI in Arabic and English, and a resilience benchmark. All 18 MVP criteria are covered by
 automated tests. Exact status per feature: [FEATURE_STATUS.md](FEATURE_STATUS.md).
 
 ## What does not exist yet
 
-Desktop and mobile apps, a background task queue/scheduler, JavaScript/TypeScript analysis, PostgreSQL,
+Desktop and mobile apps, JavaScript/TypeScript analysis, PostgreSQL,
 network synchronization transport, comparative research baselines, and evaluation with a real model.
 
 ## Read next

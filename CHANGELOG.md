@@ -3,6 +3,13 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 17: ORION queue and background workers - priority/delay scheduling, inter-task dependencies,
+  one run per project + global limit, one supervised process per run with wall-clock timeouts,
+  retries with exponential backoff, cancellation of running tasks (rollback after execute), fencing,
+  claim recovery, CPU/memory accounting, execution trace (`/tasks/{id}/trace`), migration 5; API
+  `POST /tasks` with `queue`, `POST /tasks/{id}/enqueue`, `GET /queue`; CLI `task repair --queue`,
+  `task enqueue|trace`, `queue`, `worker`, `serve --workers`; task page with queue, plan and timeline;
+  ADR-0014.
 - Stage 16: web UI under `/app` (React + TypeScript, `apps/web`), Arabic-first with RTL and English;
   every value from the API; confirmation dialogs for sensitive actions; strict CSP, bundled font, no CDN;
   `YEMENDEV_WEB_DIR`; browser end-to-end script `scripts/ui_e2e.py`; ADR-0013.

@@ -42,6 +42,7 @@ from yemendev.core.contracts import (
     YemenDevError,
     digest,
     new_id,
+    parse_iso,
 )
 from yemendev.core.faults import InjectedFault
 from yemendev.diagnostics.engine import DiagnosticReport, diagnose
@@ -82,6 +83,21 @@ STEP_AGENTS: dict[str, tuple[str, tuple[Action, ...]]] = {
     "rollback": ("recovery", (Action.ROLLBACK_OWN_CHANGE,)),
     "learn": ("learning", (Action.WRITE_MEMORY, Action.PROPOSE_SKILL)),
 }
+
+
+# Task planning: the fixed, dependency-ordered plan of a repair task (who performs each step, after what).
+PLAN_STEPS: list[tuple[str, str, str]] = [
+    ("scan", "-", "repository"),
+    ("baseline", "scan", "testing"),
+    ("diagnose", "baseline", "diagnostic"),
+    ("propose", "diagnose", "planning"),
+    ("simulate", "propose", "testing"),
+    ("authorize", "simulate", "human approval (ORION gate)"),
+    ("execute", "authorize", "recovery"),
+    ("verify", "execute", "verification"),
+    ("rollback", "verify failed, or cancellation after execute", "recovery"),
+    ("learn", "verify or rollback", "learning"),
+]
 
 
 class Stop(Exception):  # noqa: N818 - control flow signal, not an error
@@ -206,6 +222,26 @@ class RepairWorkflow:
                             details={"priority": e.priority, "run_after": e.run_after, "depends_on": e.depends_on,
                                      "max_attempts": e.max_attempts, "timeout_seconds": e.timeout_seconds})
         return e
+
+    def trace(self, actor: Actor, task_id: str) -> dict[str, Any]:
+        """Execution trace: plan with per-step status and duration, queue state, timeline, agent runs."""
+        t = self.get_task(actor, task_id)
+        steps = {s.name: s for s in self.tasks.steps(task_id)}
+        plan = []
+        for name, after, by in PLAN_STEPS:
+            s = steps.get(name)
+            dur = None
+            if s and s.started_at and s.finished_at:
+                dur = round((parse_iso(s.finished_at) - parse_iso(s.started_at)).total_seconds(), 3)
+            plan.append({"step": name, "after": after, "performed_by": by,
+                         "actions": [x.value for x in STEP_AGENTS[name][1]] if name in STEP_AGENTS else [],
+                         "status": s.status.value if s else "not_started", "attempt": s.attempt if s else 0,
+                         "started_at": s.started_at if s else None, "finished_at": s.finished_at if s else None,
+                         "duration_seconds": dur, "error": s.error if s else None})
+        q = self.queue.get(task_id)
+        return {"task": t.model_dump(), "queue": q.model_dump() if q else None, "plan": plan,
+                "events": [e.model_dump() for e in self.tasks.events(task_id)],
+                "agent_runs": [r.model_dump() for r in self.p.agents.runs(task_id=task_id)]}
 
     def terminate(self, task_id: str, status: TaskStatus, reason: str, detail: dict[str, Any] | None = None) -> Task:
         """End a task that cannot finish normally (killed on timeout / cancel, retries exhausted).
