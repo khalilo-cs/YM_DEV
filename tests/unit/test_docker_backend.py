@@ -31,6 +31,20 @@ def test_network_flag_follows_setting():
     assert cmd[cmd.index("--network") + 1] == "bridge"
 
 
+def test_queue_runs_label_their_containers_so_a_killed_run_can_be_cleaned_up():
+    plain = db.docker_run_command(SandboxSettings(), Path("/w"), (1, 1), ["x"], "n", 5)
+    assert not any(a.startswith("org.yemendev.run=") for a in plain)
+    cmd = db.docker_run_command(SandboxSettings(run_label="run_abc123"), Path("/w"), (1, 1), ["x"], "n", 5)
+    i = cmd.index("org.yemendev.run=run_abc123")
+    assert cmd[i - 1] == "--label" and cmd.index("--entrypoint") > i  # a label, never part of the program argv
+
+
+@pytest.mark.parametrize("bad", ["Run-1", "a b", "x;rm", "", "a" * 65])
+def test_run_label_is_validated(bad):
+    with pytest.raises(ValueError):
+        SandboxSettings(run_label=bad)
+
+
 @pytest.mark.parametrize("root", [Path("relative"), Path("/tmp/a,b")])
 def test_unsafe_mount_paths_rejected(root):
     with pytest.raises(InvalidInputError):

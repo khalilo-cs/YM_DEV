@@ -146,6 +146,7 @@ def docker_run_command(
         "--env", "PYTHONDONTWRITEBYTECODE=1", "--env", "PYTHONHASHSEED=0", "--env", "PYTHONNOUSERSITE=1",
         "--env", "NO_COLOR=1",
         "--label", "org.yemendev.sandbox=1",
+        *(["--label", f"org.yemendev.run={s.run_label}"] if s.run_label else []),
         "--entrypoint", argv[0],
         s.docker_image, *argv[1:],
     ]

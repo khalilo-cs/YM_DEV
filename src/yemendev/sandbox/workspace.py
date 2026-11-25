@@ -70,7 +70,13 @@ _LAUNCHER = (
     "if uid>=0:\n"
     "    os.setgroups([]);os.setgid(gid);os.setuid(uid)\n"
     "    assert os.getuid()==uid and os.geteuid()==uid, 'privilege drop failed'\n"
-    "argv=sys.argv[7:]\n"
+    # Die with the parent (set after the uid change, which clears it): a killed queue run must not leave
+    # sandboxed code running. If the parent is already gone, do not start at all.
+    "if sys.platform.startswith('linux'):\n"
+    "    import ctypes\n"
+    "    ctypes.CDLL(None).prctl(1,9,0,0,0)\n"
+    "    if os.getppid()!=int(sys.argv[6]): os._exit(70)\n"
+    "argv=sys.argv[8:]\n"
     "os.execvp(argv[0],argv)\n"
 )
 
@@ -289,7 +295,7 @@ class Workspace:
         uid, gid = self.identity if self.identity is not None else (-1, -1)
         launcher = [
             sys.executable, "-I", "-c", _LAUNCHER, str(s.max_memory_mb * 1024 * 1024),
-            str(int(timeout) + 5), str(s.max_file_size_mb * 1024 * 1024), str(uid), str(gid), "--",
+            str(int(timeout) + 5), str(s.max_file_size_mb * 1024 * 1024), str(uid), str(gid), str(os.getpid()), "--",
         ]
         full = [*(_unshare_prefix(self.identity is not None) if isolate else []), *launcher, *argv]
         env = {

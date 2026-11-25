@@ -65,7 +65,7 @@ class QueueOptions(BaseModel):
     priority: int = Field(default=0, ge=-10, le=10)
     delay_seconds: int = Field(default=0, ge=0, le=30 * 86400)
     max_attempts: int | None = Field(default=None, ge=1, le=10)
-    timeout_seconds: int | None = Field(default=None, ge=10, le=86400)
+    timeout_seconds: int | None = Field(default=None, ge=5, le=86400)
     depends_on: list[str] = Field(default_factory=list, max_length=20)
 
 
@@ -301,6 +301,16 @@ class TaskQueue:
         """Exponential backoff without jitter (deterministic, auditable): base * 2^(attempts-1), capped."""
         s = self.settings
         return float(min(s.retry_max_seconds, s.retry_base_seconds * 2 ** max(0, attempts - 1)))
+
+    def release_claim(self, entry_id: str, run_id: str, reason: str) -> QueueEntry:
+        """Give a claim back without counting the attempt (the worker is shutting down, not the task failing)."""
+        with self._db.transaction() as conn:
+            e = self._own(conn, entry_id, run_id)
+            conn.execute("UPDATE task_queue SET state = 'queued', worker = NULL, heartbeat_until = NULL,"
+                         " attempts = MAX(0, attempts - 1), run_after = ? WHERE id = ?", (iso(), entry_id))
+            add_event(conn, e.task_id, "queue.released", e.worker or "system:orion",
+                      {"run_id": run_id, "reason": reason})
+        return self.get(e.task_id)  # type: ignore[return-value]
 
     def cancel(self, task_id: str, actor_ref: str, reason: str = "cancelled") -> QueueEntry | None:
         """Remove a queued/waiting entry. A running entry is stopped by the worker via the task's cancel flag."""

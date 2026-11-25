@@ -42,6 +42,9 @@ class SandboxSettings(BaseModel):
     docker_pids_limit: int = Field(default=256, ge=16, le=65536)
     docker_cpus: float = Field(default=2.0, gt=0, le=256)
     docker_tmpfs_mb: int = Field(default=256, ge=16, le=65536)
+    # Set by ORION for queue runs: containers get the label org.yemendev.run=<run_label> so a killed run's
+    # containers can be found and removed.
+    run_label: str | None = Field(default=None, pattern=r"^[a-z0-9_]{1,64}$")
 
     @field_validator("backend")
     @classmethod
