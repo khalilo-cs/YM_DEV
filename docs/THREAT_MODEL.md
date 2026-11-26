@@ -22,6 +22,7 @@ Platform DB (approvals, tokens, evidence, memory), HMAC audit key, registered pr
 | Self-approval | Requester ≠ decider; only humans decide; plan provenance set server-side | Single-user installs need a second identity to approve human-authored plans |
 | Path traversal / symlink writes | Normalized relative patch paths; per-component symlink refusal; root re-validation on use | - |
 | Audit tampering | HMAC chain, key outside DB (0600), evidence anchored in chain | Key + DB both compromised → forgeable; tail truncation needs external head |
+| Malicious source file exploits a parser | Python parsed with `ast`, JS/TS with Tree-sitter (C library) in-process, read-only, 2 MB cap per file; JS/TS import resolution only matches already-scanned files (never opens paths from the source) | A memory-safety bug in a parser could affect the platform process; parsing is not sandboxed |
 | Secret leakage | `.env`/keys never read by scanner nor copied into sandbox; redaction on audit/evidence; tokens hashed | Pattern-based redaction can miss novel formats |
 | DoS via large/many requests | Body limit (Content-Length and chunked), list limits, per-credential rate limit, failed-auth lockout | Per process only; behind a proxy all clients share the proxy IP |
 | Cross-project access by a legitimate user | Memberships; token role is a ceiling; scoped lists, reads and approval decisions; audit admin-only | Only global admins manage members |

@@ -58,6 +58,13 @@ def test_dependency_risks():
     assert not any(r.subject in ("b", "c") for r in out)
 
 
+def test_npm_dependency_pinning_uses_npm_semantics():
+    out = dependency_risks([("react", "react@^18.3.1", "npm"), ("left-pad", "left-pad@1.3.0", "npm"),
+                            ("x", "x@latest", "npm"), ("y", "y@=2.0.0-rc.1", "npm"), ("@s/z", "@s/z@~1.2.0", "npm")],
+                           [])
+    assert sorted(r.subject for r in out) == ["npm:@s/z", "npm:react", "npm:x"]
+
+
 def test_repair_reliability():
     assert repair_reliability([True])[1]
     [s], _ = repair_reliability([True, False, False, True])

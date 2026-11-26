@@ -105,3 +105,13 @@ def test_viewer_cannot_run_scenarios(proc_platform, tmp_path):
     with pytest.raises(PermissionDeniedError):
         proc_platform.counterfactual(ALICE if False else viewer, proj.id,
                                      Scenario(faults=[ModuleUnavailable(module="pkg.m")]))
+
+
+def test_what_if_refuses_javascript_modules_with_a_reason(platform, tmp_path):
+    root = make_passing_project(tmp_path / "mixed")
+    write(root, "web/app.ts", "export const a = 1;\n")
+    pid = platform.register_project(ALICE, "mixed", str(root)).id
+    platform.scan_project(ALICE, pid)
+    scenario = Scenario(name="js", faults=[ModuleUnavailable(kind="module_unavailable", module="web/app.ts")])
+    with pytest.raises(InvalidInputError, match="is typescript: what-if scenarios run the project's Python tests"):
+        platform.counterfactual(ALICE, pid, scenario)

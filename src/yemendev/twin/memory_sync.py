@@ -31,9 +31,10 @@ def record_scan(memory: MemoryEngine, project_id: str, snap: ProjectSnapshot, ev
                         evidence_ids=[evidence_id],
                         validity=[ValidityCondition(kind="file_sha256", path=m.path, sha256=hashes[m.path])]))
     for d in snap.declared_dependencies:
+        dep_subject = f"dependency:{d.name}" if d.ecosystem == "pypi" else f"dependency:{d.ecosystem}:{d.name}"
         cond = [ValidityCondition(kind="file_sha256", path=d.source_file, sha256=hashes[d.source_file])] \
             if d.source_file in hashes else []
-        put(MemoryWrite(project_id=project_id, category=MemoryCategory.DEPENDENCY, subject=f"dependency:{d.name}",
+        put(MemoryWrite(project_id=project_id, category=MemoryCategory.DEPENDENCY, subject=dep_subject,
                         key=f"declared:{d.group}", value=d.spec, verified=bool(cond), confidence=1.0 if cond else 0.6,
                         source=SOURCE, evidence_ids=[evidence_id], validity=cond))
     for f in snap.findings:

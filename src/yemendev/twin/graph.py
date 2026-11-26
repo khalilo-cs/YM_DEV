@@ -32,10 +32,11 @@ class GraphReport(BaseModel):
 class DependencyGraph:
     def __init__(self, nodes: list[str], edges: list[Edge]) -> None:
         self.nodes = sorted(set(nodes))
+        node_set = set(self.nodes)  # O(1) membership: JS projects can have thousands of modules
         self.out: dict[str, set[str]] = defaultdict(set)
         self.inc: dict[str, set[str]] = defaultdict(set)
         for e in edges:
-            if e.kind is EdgeKind.INTERNAL_IMPORT and e.target in self.nodes and e.source in self.nodes:
+            if e.kind is EdgeKind.INTERNAL_IMPORT and e.target in node_set and e.source in node_set:
                 self.out[e.source].add(e.target)
                 self.inc[e.target].add(e.source)
 

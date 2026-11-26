@@ -104,13 +104,27 @@ def module_change_risk(transitive_dependents: dict[str, int], churn: dict[str, i
 
 
 _PINNED = re.compile(r"(==|~=|<=|<(?!=))")
+# npm: only an exact version is pinned; ^ ~ > * x ranges and tags (latest) follow upstream releases
+_NPM_EXACT = re.compile(r"^=?v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")
 
 
-def dependency_risks(declared: list[tuple[str, str]], findings: list[tuple[str, str, str]]) -> list[DependencyRisk]:
-    """declared: (name, spec); findings: (kind, message, certainty) from the scanner."""
-    out = [DependencyRisk(subject=name, severity="low", certainty="observed",
-                          reason=f"unpinned requirement '{spec}': a new upstream release can change behaviour")
-           for name, spec in declared if not _PINNED.search(spec.split(";", 1)[0])]  # ignore env markers
+def _pinned(spec: str, ecosystem: str) -> bool:
+    if ecosystem == "npm":
+        return bool(_NPM_EXACT.match(spec.rpartition("@")[2].strip()))  # spec is "name@range"
+    return bool(_PINNED.search(spec.split(";", 1)[0]))  # ignore environment markers
+
+
+def dependency_risks(declared: list[tuple[str, str]] | list[tuple[str, str, str]],
+                     findings: list[tuple[str, str, str]]) -> list[DependencyRisk]:
+    """declared: (name, spec[, ecosystem - default pypi]); findings: (kind, message, certainty) from the scanner."""
+    out = []
+    for d in declared:
+        name, spec, eco = d[0], d[1], (d[2] if len(d) > 2 else "pypi")
+        if not _pinned(spec, eco):
+            out.append(DependencyRisk(subject=name if eco == "pypi" else f"{eco}:{name}", severity="low",
+                                      certainty="observed",
+                                      reason=f"unpinned requirement '{spec}': a new upstream release can change "
+                                             "behaviour"))
     for kind, message, certainty in findings:
         if kind == "undeclared_import":
             out.append(DependencyRisk(subject=message.split("'")[1] if "'" in message else message,

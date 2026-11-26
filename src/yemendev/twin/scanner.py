@@ -5,7 +5,8 @@ Security properties:
 * never reads contents of files that look like secrets (.env, keys) - presence only;
 * every path is resolved and confirmed to be inside the project root;
 * bounded: max files and max bytes parsed per file;
-* never executes project code (Python is parsed with ``ast``, TOML with ``tomllib``).
+* never executes project code (Python is parsed with ``ast``, JavaScript/TypeScript with Tree-sitter
+  - see ``js_scanner.py`` -, TOML with ``tomllib``, JSON with ``json``).
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ import tomllib
 from pathlib import Path
 
 from yemendev.core.contracts import InvalidInputError, sha256_text
+from yemendev.twin.js_scanner import JsAnalysis, is_js_path
 from yemendev.twin.model import (
     Certainty,
     DeclaredDependency,
@@ -36,7 +38,8 @@ SKIP_DIRS = {
 }
 LANGUAGES = {
     ".py": "python", ".pyi": "python", ".js": "javascript", ".mjs": "javascript", ".cjs": "javascript",
-    ".ts": "typescript", ".tsx": "typescript", ".jsx": "javascript", ".rs": "rust", ".go": "go",
+    ".ts": "typescript", ".tsx": "typescript", ".mts": "typescript", ".cts": "typescript", ".jsx": "javascript",
+    ".rs": "rust", ".go": "go",
     ".java": "java", ".kt": "kotlin", ".c": "c", ".h": "c", ".cpp": "cpp", ".hpp": "cpp", ".cs": "csharp",
     ".rb": "ruby", ".php": "php", ".sh": "shell", ".md": "markdown", ".rst": "restructuredtext",
     ".toml": "toml", ".yaml": "yaml", ".yml": "yaml", ".json": "json", ".sql": "sql", ".html": "html",
@@ -81,6 +84,7 @@ class ProjectScanner:
         sensitive: list[str] = []
         findings: list[Finding] = []
         sources: dict[str, str] = {}
+        js_sources: dict[str, bytes] = {}
 
         for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
             d = Path(dirpath)
@@ -122,6 +126,8 @@ class ProjectScanner:
                         sources[rel] = data.decode("utf-8")
                     except UnicodeDecodeError:
                         fi.parse_error = "not valid UTF-8"
+                elif is_js_path(rel) and len(data) <= MAX_PARSE_BYTES:
+                    js_sources[rel] = data
                 files.append(fi)
 
         file_index = {f.path: f for f in files}
@@ -142,12 +148,19 @@ class ProjectScanner:
             edges.extend(self._imports(tree, m, module_names))
 
         declared = self._declared_deps(root, findings)
-        findings.extend(self._dependency_findings(edges, declared))
+        findings.extend(self._dependency_findings(edges, declared))  # Python imports vs PyPI declarations
+        js = JsAnalysis(root, js_sources, files).run()
+        if module_names & {m.name for m in js.modules}:  # cannot happen with path-style names; be explicit
+            raise InvalidInputError("module name collision between Python and JS/TS modules")
+        modules += js.modules
+        edges += js.edges
+        findings += js.findings
+        declared += js.declared
         langs: dict[str, int] = {}
         for f in files:
             langs[f.language] = langs.get(f.language, 0) + 1
         tree_hash = sha256_text("\n".join(f"{f.path}\0{f.sha256}" for f in sorted(files, key=lambda f: f.path)))
-        test_framework = self._test_framework(root, files, declared)
+        test_framework = self._test_framework(root, files, declared) or js.test_framework
         if sensitive:
             findings.append(Finding(kind="sensitive_files_present", severity="medium",
                                     message=f"{len(sensitive)} file(s) look like secrets; contents not read",
@@ -275,7 +288,7 @@ class ProjectScanner:
     @staticmethod
     def _dependency_findings(edges: list[Edge], declared: list[DeclaredDependency]) -> list[Finding]:
         out: list[Finding] = []
-        declared_names = {d.name for d in declared}
+        declared_names = {d.name for d in declared if d.ecosystem == "pypi"}
         used_external = sorted({e.target for e in edges if e.kind is EdgeKind.EXTERNAL_IMPORT})
         matched: set[str] = set()
         for imp in used_external:
@@ -287,7 +300,7 @@ class ProjectScanner:
             if guess and normalize_dist(guess) in declared_names:
                 matched.add(normalize_dist(guess))
                 continue
-            if declared:
+            if declared_names:
                 out.append(Finding(kind="undeclared_import", severity="medium", certainty=Certainty.INFERRED,
                                    message=f"import '{imp}' has no matching declared dependency"
                                            " (import and distribution names may differ)"))
@@ -299,7 +312,7 @@ class ProjectScanner:
 
     @staticmethod
     def _test_framework(root: Path, files: list[FileInfo], declared: list[DeclaredDependency]) -> str | None:
-        names = {d.name for d in declared}
+        names = {d.name for d in declared if d.ecosystem == "pypi"}
         has_tests = any(Path(f.path).name.startswith("test_") and f.path.endswith(".py") for f in files)
         if "pytest" in names or (root / "pytest.ini").is_file() or (root / "conftest.py").is_file() or has_tests:
             return "pytest"

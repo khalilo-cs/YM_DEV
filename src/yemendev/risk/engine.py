@@ -67,7 +67,7 @@ def assess(p: Platform, project_id: str) -> RiskReport:
         s, i = module_change_risk(g.transitive_dependent_counts(), churn, len(scans))
         scores += s
         insufficient += i
-        deps = dependency_risks([(d.name, d.spec) for d in latest.declared_dependencies],
+        deps = dependency_risks([(d.name, d.spec, d.ecosystem) for d in latest.declared_dependencies],
                                 [(f.kind, f.message, f.certainty.value) for f in latest.findings])
     s, i = repair_reliability(repairs)
     scores += s

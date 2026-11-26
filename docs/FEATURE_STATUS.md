@@ -25,7 +25,8 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 
 | Feature | Status | Location | Tests / evidence | Known limitations |
 |---|---|---|---|---|
-| Scanner (files, languages, Python AST imports, declared deps, secret-file detection, symlink safety) | TESTED | `twin/scanner.py` | `tests/unit/test_scanner.py` | Python imports only; other languages counted, not parsed |
+| Scanner (files, languages, Python AST imports, declared deps, secret-file detection, symlink safety) | TESTED | `twin/scanner.py` | `tests/unit/test_scanner.py` | Languages other than Python and JS/TS are counted, not parsed |
+| JavaScript/TypeScript understanding with Tree-sitter: ES/CommonJS/dynamic imports, `import type`, re-exports, TS `import = require`; resolution (extensions, index files, `.js`->`.ts`, tsconfig `baseUrl`/`paths`), Node built-ins, npm packages; `package.json` dependencies; undeclared / unused / unresolved / parse-error findings; npm-aware pinning risk | TESTED | `twin/js_scanner.py` | `tests/unit/test_js_scanner.py` (10), `tests/regression/test_scan_own_web_ui.py` (this repo's UI: 0 unresolved imports); mutation check 7/7 after one test was strengthened | Analysis only: JS/TS tests are not executed and JS repairs are not proposed; tsconfig `extends`, monorepo workspaces and package `exports` maps are not resolved; LSP not used |
 | Dependency graph (impact, cycles, critical modules), O(V+E) metrics | TESTED | `twin/graph.py` | incl. equivalence with BFS on 60 random graphs; 10k modules in 0.17 s | Static imports, not runtime causation |
 | Scan → memory with file-hash validity | TESTED | `twin/memory_sync.py` | `test_scan_recorded_in_memory_goes_stale_on_change` | - |
 
@@ -80,7 +81,7 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 ## Not started
 
 comparative benchmark baselines · desktop/mobile apps · PostgreSQL ·
-OpenTelemetry · Tree-sitter/LSP · VM-level (gVisor/Firecracker) sandboxing.
+OpenTelemetry · LSP integration · JS/TS test execution and repair · VM-level (gVisor/Firecracker) sandboxing.
 
 ## MVP acceptance (directive §20)
 

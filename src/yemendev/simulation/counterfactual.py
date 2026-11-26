@@ -82,6 +82,9 @@ def _apply(ws: Workspace, fault: ModuleUnavailable | DependencyRemoved | FileCor
         mod = next((m for m in snap.modules if m.name == fault.module and not m.is_test), None)
         if mod is None:
             raise InvalidInputError(f"module {fault.module!r} not found among non-test modules")
+        if mod.language != "python":
+            raise InvalidInputError(f"module {fault.module!r} is {mod.language}: what-if scenarios run the project's "
+                                    "Python tests, so only Python modules can be made unavailable")
         ws.write(mod.path, f'raise ImportError("counterfactual: module {fault.module} unavailable")\n'.encode())
         return f"{mod.path} replaced by a module that raises ImportError"
     if isinstance(fault, DependencyRemoved):

@@ -13,7 +13,7 @@ Two views of the same plan:
 |---|---|
 | 0 Audit | Done |
 | 1 Core foundation | Done |
-| 2 Project intelligence | Done for Python |
+| 2 Project intelligence | Done for Python; JavaScript/TypeScript analysis (Tree-sitter), no JS test execution yet |
 | 3 Intelligence & orchestration | Partial (orchestration with queue/scheduling/retries/timeouts and agents done; no model evaluated) |
 | 4 Verified repair | Done |
 | 5 Continual learning | Done (one skill kind) |

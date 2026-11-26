@@ -3,6 +3,11 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 18a: JavaScript/TypeScript understanding with Tree-sitter (`twin/js_scanner.py`): imports of all
+  forms, resolution incl. tsconfig paths, npm dependencies from `package.json`, findings, npm-aware
+  dependency risk; new runtime dependencies `tree-sitter`, `tree-sitter-javascript`,
+  `tree-sitter-typescript`; graph membership made O(1). `apps/web` declares Playwright as an optional
+  peer dependency (found by the new analysis).
 - Stage 17: ORION queue and background workers - priority/delay scheduling, inter-task dependencies,
   one run per project + global limit, one supervised process per run with wall-clock timeouts,
   retries with exponential backoff, cancellation of running tasks (rollback after execute), fencing,

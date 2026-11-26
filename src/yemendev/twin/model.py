@@ -35,10 +35,11 @@ class FileInfo(BaseModel):
 
 
 class ModuleInfo(BaseModel):
-    name: str
+    name: str          # Python: dotted module name; JS/TS: project-relative file path
     path: str
     is_package: bool
     is_test: bool
+    language: str = "python"
 
 
 class Edge(BaseModel):
@@ -47,6 +48,7 @@ class Edge(BaseModel):
     kind: EdgeKind
     certainty: Certainty
     line: int | None = None
+    type_only: bool = False  # TypeScript `import type`: erased at runtime
 
 
 class DeclaredDependency(BaseModel):
@@ -54,6 +56,7 @@ class DeclaredDependency(BaseModel):
     spec: str          # raw requirement string
     source_file: str
     group: str = "main"
+    ecosystem: str = "pypi"  # pypi | npm
 
 
 class Finding(BaseModel):
