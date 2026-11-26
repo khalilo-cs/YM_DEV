@@ -109,3 +109,17 @@ def test_cli_queue_worker_and_trace(cli, tmp_path, capsys, monkeypatch):
     # dependencies are validated through the CLI as well
     rc, _, err = run(capsys, "--data-dir", dd, "task", "repair", pid, "--queue", "--after", "tsk_missing")
     assert rc == 1 and "does not exist" in err
+
+
+def test_cli_sbom_to_file(cli, tmp_path, capsys):
+    dd, admin, bob = cli
+    from helpers import make_passing_project
+
+    root = make_passing_project(tmp_path / "ok")
+    pid = json.loads(run(capsys, "--data-dir", dd, "project", "add", "ok", str(root))[1])["id"]
+    run(capsys, "--data-dir", dd, "project", "scan", pid)
+    out = tmp_path / "sbom.json"
+    rc, _, err = run(capsys, "--data-dir", dd, "project", "sbom", pid, "--out", str(out))
+    assert rc == 0 and "written" in err and json.loads(out.read_text())["specVersion"] == "1.5"
+    rc, text, _ = run(capsys, "--data-dir", dd, "sbom")
+    assert rc == 0 and json.loads(text)["metadata"]["component"]["name"] == "yemendev"

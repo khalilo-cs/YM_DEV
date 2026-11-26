@@ -179,3 +179,23 @@ def test_queue_api_enqueue_trace_cancel_and_visibility(ctx, tmp_path):
     assert c.get(f"/api/v1/tasks/{t2}/trace", headers=viewer).status_code == 403
     st = c.get("/api/v1/system/status", headers=admin).json()
     assert st["queue"] == {"queued": 0, "running": 0, "waiting": 0}
+
+
+def test_sbom_api_requires_a_scan_and_project_access_and_is_recorded(ctx, tmp_path):
+    from helpers import write
+
+    p, c, admin, op, viewer, _ = ctx
+    root = tmp_path / "web"
+    write(root, "package.json", '{"dependencies": {"react": "18.3.1"}}')
+    write(root, "src/a.js", 'import React from "react";\n')
+    pid = c.post("/api/v1/projects", json={"name": "web", "path": str(root)}, headers=admin).json()["id"]
+    assert c.get(f"/api/v1/projects/{pid}/sbom", headers=admin).status_code == 404  # not scanned yet
+    c.post(f"/api/v1/projects/{pid}/scan", headers=admin)
+    r = c.get(f"/api/v1/projects/{pid}/sbom", headers=admin)
+    assert r.status_code == 200 and r.json()["bomFormat"] == "CycloneDX"
+    assert [x["purl"] for x in r.json()["components"]] == ["pkg:npm/react@18.3.1"]
+    assert c.get(f"/api/v1/projects/{pid}/sbom", headers=viewer).status_code == 403
+    ev = [e for e in p.evidence.list() if e.action == "sbom.generated"]
+    assert len(ev) == 1 and ev[0].body.details["components"] == 1
+    sys_sbom = c.get("/api/v1/system/sbom", headers=viewer)
+    assert sys_sbom.status_code == 200 and any(x["name"] == "fastapi" for x in sys_sbom.json()["components"])

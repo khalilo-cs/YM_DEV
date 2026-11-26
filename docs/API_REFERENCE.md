@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **55**.
+Routes: **57**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -46,6 +46,7 @@ Routes: **55**.
 | POST | `/api/v1/projects/{project_id}/passport/import` | Passport Import | object | - |
 | GET | `/api/v1/projects/{project_id}/risks` | Risks | - | - |
 | POST | `/api/v1/projects/{project_id}/sandbox-image` | Project Image | - | - |
+| GET | `/api/v1/projects/{project_id}/sbom` | Sbom | - | - |
 | POST | `/api/v1/projects/{project_id}/scan` | Scan | - | - |
 | GET | `/api/v1/projects/{project_id}/sync/conflicts` | Sync Conflicts | - | `status` |
 | POST | `/api/v1/projects/{project_id}/sync/export` | Sync Export | - | - |
@@ -60,6 +61,7 @@ Routes: **55**.
 | POST | `/api/v1/sync/conflicts/{conflict_id}/resolve` | Sync Resolve | `ResolveConflict` | - |
 | GET | `/api/v1/synchronization/jobs` | Sync Jobs | - | - |
 | GET | `/api/v1/synchronization/status` | Sync Status | - | - |
+| GET | `/api/v1/system/sbom` | System Sbom | - | - |
 | GET | `/api/v1/system/status` | System Status | - | - |
 | GET | `/api/v1/tasks` | Tasks | - | `project_id` |
 | POST | `/api/v1/tasks` | Create Task | `CreateTask` | - |

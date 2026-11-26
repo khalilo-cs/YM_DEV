@@ -17,7 +17,8 @@ Threats and residual risks: [THREAT_MODEL.md](THREAT_MODEL.md). Findings and fix
 | Supply chain | Project images from wheels only, no URL/VCS/path specs, `--network none` builds, wheel hashes recorded; `pip-audit` clean | `sandbox/project_image.py` |
 | File integrity | Normalized relative patch paths, original-hash preconditions, per-component symlink refusal, root re-validation, atomic writes, verified byte-exact rollback | `recovery/` |
 | Tamper evidence | HMAC hash-chained audit (key outside DB, 0600); evidence content-hashed and anchored in the chain; `/integrity/verify` | `security/audit.py`, `evidence/` |
-| Secrets | Secret-looking files never read or copied; redaction on audit/evidence; env scrubbed in sandbox | `security/redaction.py`, `twin/scanner.py` |
+| Secrets | Secret-looking files never read or copied; file contents scanned for credentials (location reported, value never stored); redaction on audit/evidence; env scrubbed in sandbox | `security/secret_scan.py`, `security/redaction.py`, `twin/scanner.py` |
+| Supply-chain inventory | CycloneDX SBOM per project and for the platform | `security/sbom.py` |
 | API | Error envelope without internals, body limit (incl. chunked), rate limits + failed-auth lockout, loopback default | `api/app.py` |
 | Web UI | Static same-origin client; strict CSP (no inline/third-party script, `connect-src 'self'`, no framing); token in `sessionStorage` (no cookies, no CSRF); no symlink following; confirmation before sensitive actions; all authorization server-side | `api/app.py`, `apps/web/` |
 | Platform state | data dir 0700, DB 0600, workspaces outside the data dir | `core/config.py`, `platform.py` |
@@ -30,5 +31,5 @@ audits. Two critical issues were found and fixed (A-01, A-16).
 
 ## Not provided (yet)
 
-External penetration test, TLS, SBOM generation, syscall-level isolation beyond Docker defaults
+External penetration test, TLS, vulnerability matching of SBOM components, syscall-level isolation beyond Docker defaults
 (gVisor/Firecracker), prompt-injection defences beyond "model output is untrusted and only proposes".

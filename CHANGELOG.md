@@ -3,6 +3,9 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 18b: secret scanning of file contents (`security/secret_scan.py`, immune rule `secret-in-source`)
+  and CycloneDX 1.5 SBOMs for projects and the platform (`GET /projects/{id}/sbom`, `GET /system/sbom`,
+  `yemendev project sbom`, `yemendev sbom`).
 - Stage 18a: JavaScript/TypeScript understanding with Tree-sitter (`twin/js_scanner.py`): imports of all
   forms, resolution incl. tsconfig paths, npm dependencies from `package.json`, findings, npm-aware
   dependency risk; new runtime dependencies `tree-sitter`, `tree-sitter-javascript`,

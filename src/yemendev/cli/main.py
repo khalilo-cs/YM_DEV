@@ -121,6 +121,8 @@ def cmd_project(args: argparse.Namespace) -> int:
         _print(p.assess_risk(a, args.project_id).model_dump())
     elif args.pcmd == "impact":
         _print(p.impact(a, args.project_id, args.module))
+    elif args.pcmd == "sbom":
+        _write_or_print(p.project_sbom(a, args.project_id), args.out)
     elif args.pcmd == "members":
         _print([m.model_dump() for m in p.list_members(a, args.project_id)])
     return 0
@@ -129,6 +131,20 @@ def cmd_project(args: argparse.Namespace) -> int:
 def _queue_opts(args: argparse.Namespace) -> QueueOptions:
     return QueueOptions(priority=args.priority, delay_seconds=args.delay, max_attempts=args.max_attempts,
                         timeout_seconds=args.timeout, depends_on=args.after or [])
+
+
+def _write_or_print(doc: Any, out: str | None) -> None:
+    if out:
+        Path(out).write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
+        print(f"written: {out}", file=sys.stderr)
+    else:
+        _print(doc)
+
+
+def cmd_sbom(args: argparse.Namespace) -> int:
+    p = _platform(args)
+    _write_or_print(p.platform_sbom(_actor(p, args)), args.out)
+    return 0
 
 
 def cmd_task(args: argparse.Namespace) -> int:
@@ -376,6 +392,9 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("name")
     x.add_argument("path")
     ps.add_parser("list")
+    x = ps.add_parser("sbom", help="CycloneDX 1.5 software bill of materials of a project (latest scan)")
+    x.add_argument("project_id")
+    x.add_argument("--out", help="write to this file instead of stdout")
     for name in ("scan", "graph", "members", "risks", "immune", "debt"):
         ps.add_parser(name).add_argument("project_id")
     x = ps.add_parser("whatif", help="inject faults into a sandbox copy and run the tests (counterfactual)")
@@ -410,6 +429,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_task)
 
     sub.add_parser("queue", help="background task queue (ORION)").set_defaults(fn=cmd_queue)
+    x = sub.add_parser("sbom", help="CycloneDX 1.5 software bill of materials of the platform itself")
+    x.add_argument("--out", help="write to this file instead of stdout")
+    x.set_defaults(fn=cmd_sbom)
     x = sub.add_parser("worker", help="run queued tasks in the background (requires an admin token)")
     x.add_argument("--workers", type=int, default=None, help="number of workers (default: $YEMENDEV_WORKERS or 1)")
     x.add_argument("--once", action="store_true", help="run what is runnable now, then exit")

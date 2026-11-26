@@ -20,6 +20,7 @@ import tomllib
 from pathlib import Path
 
 from yemendev.core.contracts import InvalidInputError, sha256_text
+from yemendev.security.secret_scan import scan_text
 from yemendev.twin.js_scanner import JsAnalysis, is_js_path
 from yemendev.twin.model import (
     Certainty,
@@ -56,6 +57,8 @@ IMPORT_TO_DIST = {
     "Crypto": "pycryptodome", "attr": "attrs", "pkg_resources": "setuptools", "OpenSSL": "pyopenssl",
 }
 MAX_FILES = 50_000
+# Lockfiles are large, machine-written and full of hashes: not worth secret-scanning.
+_NO_SECRET_SCAN = re.compile(r"(\.lock|-lock\.json|-lock\.yaml|\.min\.js|\.map)$")
 MAX_PARSE_BYTES = 2_000_000
 
 
@@ -85,6 +88,7 @@ class ProjectScanner:
         findings: list[Finding] = []
         sources: dict[str, str] = {}
         js_sources: dict[str, bytes] = {}
+        secrets_suppressed = 0
 
         for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
             d = Path(dirpath)
@@ -128,6 +132,13 @@ class ProjectScanner:
                         fi.parse_error = "not valid UTF-8"
                 elif is_js_path(rel) and len(data) <= MAX_PARSE_BYTES:
                     js_sources[rel] = data
+                if not _NO_SECRET_SCAN.search(name):
+                    hits, suppressed = scan_text(data)
+                    secrets_suppressed += suppressed
+                    findings.extend(Finding(kind="secret_in_source", severity=h.severity, path=rel,
+                                            certainty=Certainty.INFERRED,
+                                            message=f"line {h.line}: possible {h.description} ({h.rule}); "
+                                                    "value not shown") for h in hits)
                 files.append(fi)
 
         file_index = {f.path: f for f in files}
@@ -161,6 +172,10 @@ class ProjectScanner:
             langs[f.language] = langs.get(f.language, 0) + 1
         tree_hash = sha256_text("\n".join(f"{f.path}\0{f.sha256}" for f in sorted(files, key=lambda f: f.path)))
         test_framework = self._test_framework(root, files, declared) or js.test_framework
+        if secrets_suppressed:
+            findings.append(Finding(kind="secret_scan_suppressed", severity="info", certainty=Certainty.OBSERVED,
+                                    message=f"{secrets_suppressed} line(s) marked 'yemendev:allow-secret' were not "
+                                            "reported"))
         if sensitive:
             findings.append(Finding(kind="sensitive_files_present", severity="medium",
                                     message=f"{len(sensitive)} file(s) look like secrets; contents not read",

@@ -496,6 +496,29 @@ class Platform:
                 "single_points_of_failure": single_points_of_failure(g, snap),
                 "note": "static import reachability: where a failure CAN propagate, not where it did"}
 
+    def project_sbom(self, actor: Actor, project_id: str) -> dict[str, Any]:
+        """CycloneDX SBOM of a project from its latest scan; generating one is recorded as evidence."""
+        from yemendev.core.contracts import digest
+        from yemendev.security.sbom import project_sbom
+
+        self.require_read(actor, project_id)
+        sid, snap = self.latest_scan(project_id)
+        doc = project_sbom(snap, self.project(project_id).name)
+        self.evidence.record(action="sbom.generated", actor=actor.ref, target=project_id, outcome="ok",
+                             body=EvidenceBody(details={
+                                 "scan_id": sid, "components": len(doc["components"]),
+                                 "components_sha256": digest(doc["components"]),
+                                 "compositions": {c["description"][:60]: c["aggregate"] for c in doc["compositions"]}},
+                                 limitations=["versions are exact only where a lockfile or an exact pin exists"]))
+        return doc
+
+    def platform_sbom(self, actor: Actor) -> dict[str, Any]:
+        from yemendev.security.sbom import platform_sbom
+
+        self.guard.require(actor, Action.READ, "system")
+        lock = Path(__file__).resolve().parents[2] / "apps" / "web" / "package-lock.json"
+        return platform_sbom(lock if lock.is_file() else None)
+
     def latest_scan(self, project_id: str) -> tuple[str, ProjectSnapshot]:
         with self.db.read() as conn:
             r = conn.execute("SELECT id, snapshot_json FROM project_scans WHERE project_id = ? ORDER BY created_at"

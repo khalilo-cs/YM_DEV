@@ -52,6 +52,12 @@ def check(p: Platform, project_id: str, audit_window: int = 1000) -> ImmuneRepor
                                           certainty="inferred", subject=path,
                                           detail="new file that looks like a secret (contents not read)",
                                           recommended_action="make sure it is not committed or shared"))
+    for f in current.findings:
+        if f.kind == "secret_in_source":
+            findings.append(ImmuneFinding(rule="secret-in-source", category="security", severity=f.severity,
+                                          certainty="inferred", subject=f.path or "?", detail=f.message,
+                                          recommended_action="remove it from the code, rotate the credential, "
+                                                             "load it from the environment or a secret store"))
     findings += typosquat_candidates(sorted({d.name for d in current.declared_dependencies}))
 
     integ = p.verify_integrity()

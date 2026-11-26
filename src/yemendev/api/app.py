@@ -360,6 +360,14 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
     def impact(project_id: str, a: Who, module: Annotated[str, Query(min_length=1, max_length=500)]) -> dict[str, Any]:
         return platform.impact(a, project_id, module)
 
+    @app.get("/api/v1/projects/{project_id}/sbom")
+    def sbom(project_id: str, a: Who) -> dict[str, Any]:
+        return platform.project_sbom(a, project_id)
+
+    @app.get("/api/v1/system/sbom")
+    def system_sbom(a: Who) -> dict[str, Any]:
+        return platform.platform_sbom(a)
+
     @app.get("/api/v1/projects/{project_id}/graph")
     def graph(project_id: str, a: Who) -> dict[str, Any]:
         platform.require_read(a, project_id)
