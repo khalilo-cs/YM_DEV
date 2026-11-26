@@ -123,3 +123,27 @@ def test_cli_sbom_to_file(cli, tmp_path, capsys):
     assert rc == 0 and "written" in err and json.loads(out.read_text())["specVersion"] == "1.5"
     rc, text, _ = run(capsys, "--data-dir", dd, "sbom")
     assert rc == 0 and json.loads(text)["metadata"]["component"]["name"] == "yemendev"
+
+
+def test_cli_advisories_import_status_and_project_vulns(cli, tmp_path, capsys, monkeypatch):
+    dd, admin, bob = cli
+    from helpers import write
+
+    d = tmp_path / "osv"
+    write(d, "a.json", json.dumps({"id": "TEST-PYPI-9", "modified": "2026-01-01T00:00:00Z", "summary": "s",
+                                   "affected": [{"package": {"ecosystem": "PyPI", "name": "Rich"},
+                                                 "versions": ["13.7.1"]}]}))
+    monkeypatch.setenv("YEMENDEV_TOKEN", bob)
+    rc, _, err = run(capsys, "--data-dir", dd, "advisories", "import", str(d))
+    assert rc == 1 and "permission" in err  # admin only
+    monkeypatch.setenv("YEMENDEV_TOKEN", admin)
+    rc, out, _ = run(capsys, "--data-dir", dd, "advisories", "import", str(d))
+    assert rc == 0 and json.loads(out)["rows_written"] == 1
+    assert json.loads(run(capsys, "--data-dir", dd, "advisories", "status")[1])["advisories"] == {"pypi": 1}
+    root = tmp_path / "p"
+    write(root, "pyproject.toml", '[project]\nname = "p"\ndependencies = ["rich==13.7.1", "click>=8"]\n')
+    pid = json.loads(run(capsys, "--data-dir", dd, "project", "add", "p", str(root))[1])["id"]
+    run(capsys, "--data-dir", dd, "project", "scan", pid)
+    rep = json.loads(run(capsys, "--data-dir", dd, "project", "vulns", pid)[1])
+    assert [f["advisory_id"] for f in rep["findings"]] == ["TEST-PYPI-9"]
+    assert [u["component"] for u in rep["not_checkable"]] == ["pkg:pypi/click"]  # a range is not claimed safe

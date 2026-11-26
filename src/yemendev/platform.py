@@ -519,6 +519,48 @@ class Platform:
         lock = Path(__file__).resolve().parents[2] / "apps" / "web" / "package-lock.json"
         return platform_sbom(lock if lock.is_file() else None)
 
+    # ---- dependency vulnerabilities (offline OSV database) ------------------------------
+    def import_advisories(self, actor: Actor, path: str) -> Any:
+        """Admin, CLI only: the source is a local path (an API taking server paths would expose files)."""
+        from yemendev.security.vulns import import_advisories
+
+        self.guard.require(actor, Action.IMPORT_ADVISORIES, "advisories")
+        s = import_advisories(self.db, Path(path), actor.ref)
+        self.audit.record(actor=actor.ref, action=Action.IMPORT_ADVISORIES.value, target=s.import_id, outcome="ok",
+                          details=s.model_dump())
+        return s
+
+    def advisory_status(self, actor: Actor) -> dict[str, Any]:
+        from yemendev.security.vulns import database_status
+
+        self.guard.require(actor, Action.READ, "advisories")
+        return database_status(self.db)
+
+    def vulnerabilities(self, actor: Actor, project_id: str) -> Any:
+        from yemendev.security.sbom import project_sbom
+        from yemendev.security.vulns import scan_components
+
+        self.require_read(actor, project_id)
+        sid, snap = self.latest_scan(project_id)
+        report = scan_components(self.db, project_sbom(snap, self.project(project_id).name)["components"],
+                                 subject=project_id)
+        last = report.database.get("last_import") or {}
+        self.evidence.record(action="dependencies.vulnerability_scan", actor=actor.ref, target=project_id,
+                             outcome=f"{len(report.findings)} finding(s)",
+                             body=EvidenceBody(details={"scan_id": sid, "checked": report.checked,
+                                                        "findings": [f"{f.component} {f.advisory_id}"
+                                                                     for f in report.findings][:200],
+                                                        "not_checkable": len(report.not_checkable),
+                                                        "advisory_import": last.get("id")},
+                                               limitations=report.limitations))
+        return report
+
+    def platform_vulnerabilities(self, actor: Actor) -> Any:
+        from yemendev.security.vulns import scan_components
+
+        sbom = self.platform_sbom(actor)
+        return scan_components(self.db, sbom["components"], subject="yemendev")
+
     def latest_scan(self, project_id: str) -> tuple[str, ProjectSnapshot]:
         with self.db.read() as conn:
             r = conn.execute("SELECT id, snapshot_json FROM project_scans WHERE project_id = ? ORDER BY created_at"

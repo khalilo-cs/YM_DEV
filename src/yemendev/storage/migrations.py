@@ -281,4 +281,37 @@ MIGRATIONS: list[tuple[int, str, str]] = [
         CREATE INDEX ix_task_events_task ON task_events(task_id, seq)
         """,
     ),
+    (
+        6,
+        "vulnerability_advisories",
+        """
+        -- OSV advisories imported offline (one row per advisory and affected package).
+        CREATE TABLE advisories (
+            id TEXT NOT NULL,
+            ecosystem TEXT NOT NULL,
+            package TEXT NOT NULL,
+            modified TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            aliases_json TEXT NOT NULL,
+            severity TEXT,
+            affected_json TEXT NOT NULL,
+            references_json TEXT NOT NULL,
+            import_id TEXT NOT NULL,
+            PRIMARY KEY (id, ecosystem, package)
+        );
+        CREATE INDEX ix_advisories_package ON advisories(ecosystem, package);
+        CREATE TABLE advisory_imports (
+            id TEXT PRIMARY KEY,
+            imported_at TEXT NOT NULL,
+            imported_by TEXT NOT NULL,
+            source TEXT NOT NULL,
+            source_sha256 TEXT NOT NULL,
+            newest_modified TEXT,
+            records_read INTEGER NOT NULL,
+            rows_written INTEGER NOT NULL,
+            withdrawn_removed INTEGER NOT NULL,
+            skipped INTEGER NOT NULL
+        )
+        """,
+    ),
 ]

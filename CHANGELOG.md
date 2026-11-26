@@ -3,6 +3,10 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 18c: offline dependency vulnerability scanning against imported OSV exports (`security/vulns.py`,
+  migration 6, `yemendev advisories import|status`, `project vulns`, `vulns`, `GET /projects/{id}/vulnerabilities`,
+  `GET /system/vulnerabilities`, `GET /advisories/status`, immune rule `vulnerable-dependency`); new runtime
+  dependency `packaging`.
 - Stage 18b: secret scanning of file contents (`security/secret_scan.py`, immune rule `secret-in-source`)
   and CycloneDX 1.5 SBOMs for projects and the platform (`GET /projects/{id}/sbom`, `GET /system/sbom`,
   `yemendev project sbom`, `yemendev sbom`).

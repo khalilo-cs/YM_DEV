@@ -121,6 +121,8 @@ def cmd_project(args: argparse.Namespace) -> int:
         _print(p.assess_risk(a, args.project_id).model_dump())
     elif args.pcmd == "impact":
         _print(p.impact(a, args.project_id, args.module))
+    elif args.pcmd == "vulns":
+        _print(p.vulnerabilities(a, args.project_id).model_dump())
     elif args.pcmd == "sbom":
         _write_or_print(p.project_sbom(a, args.project_id), args.out)
     elif args.pcmd == "members":
@@ -139,6 +141,22 @@ def _write_or_print(doc: Any, out: str | None) -> None:
         print(f"written: {out}", file=sys.stderr)
     else:
         _print(doc)
+
+
+def cmd_advisories(args: argparse.Namespace) -> int:
+    p = _platform(args)
+    a = _actor(p, args)
+    if args.acmd == "import":
+        _print(p.import_advisories(a, args.path).model_dump())
+    else:
+        _print(p.advisory_status(a))
+    return 0
+
+
+def cmd_vulns(args: argparse.Namespace) -> int:
+    p = _platform(args)
+    _print(p.platform_vulnerabilities(_actor(p, args)).model_dump())
+    return 0
 
 
 def cmd_sbom(args: argparse.Namespace) -> int:
@@ -395,6 +413,8 @@ def build_parser() -> argparse.ArgumentParser:
     x = ps.add_parser("sbom", help="CycloneDX 1.5 software bill of materials of a project (latest scan)")
     x.add_argument("project_id")
     x.add_argument("--out", help="write to this file instead of stdout")
+    ps.add_parser("vulns", help="known vulnerabilities of the project's dependencies (offline OSV database)") \
+        .add_argument("project_id")
     for name in ("scan", "graph", "members", "risks", "immune", "debt"):
         ps.add_parser(name).add_argument("project_id")
     x = ps.add_parser("whatif", help="inject faults into a sandbox copy and run the tests (counterfactual)")
@@ -429,6 +449,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_task)
 
     sub.add_parser("queue", help="background task queue (ORION)").set_defaults(fn=cmd_queue)
+    s = sub.add_parser("advisories", help="offline vulnerability database (OSV exports)")
+    acs = s.add_subparsers(dest="acmd", required=True)
+    acs.add_parser("import", help="import an OSV export: all.zip, a directory of *.json, or one file (admin)") \
+        .add_argument("path")
+    acs.add_parser("status")
+    s.set_defaults(fn=cmd_advisories)
+    sub.add_parser("vulns", help="known vulnerabilities of the platform's own dependencies").set_defaults(fn=cmd_vulns)
     x = sub.add_parser("sbom", help="CycloneDX 1.5 software bill of materials of the platform itself")
     x.add_argument("--out", help="write to this file instead of stdout")
     x.set_defaults(fn=cmd_sbom)

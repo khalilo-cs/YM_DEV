@@ -37,6 +37,7 @@ class Action(StrEnum):
     SYNC_IMPORT = "sync.import"
     RESOLVE_SYNC_CONFLICT = "sync.resolve_conflict"
     TRUST_KEY = "keys.trust"
+    IMPORT_ADVISORIES = "advisories.import"  # replaces the vulnerability database everyone relies on
 
 
 class Sensitivity(StrEnum):
@@ -76,6 +77,7 @@ POLICY: dict[Action, Rule] = {
     Action.SYNC_IMPORT: Rule(min_role=Role.OPERATOR, sensitivity=Sensitivity.LOW, agents_allowed=False),
     Action.RESOLVE_SYNC_CONFLICT: Rule(min_role=Role.OPERATOR, sensitivity=Sensitivity.LOW, agents_allowed=False),
     Action.TRUST_KEY: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
+    Action.IMPORT_ADVISORIES: Rule(min_role=Role.ADMIN, sensitivity=Sensitivity.LOW, agents_allowed=False),
 }
 
 

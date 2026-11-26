@@ -199,3 +199,26 @@ def test_sbom_api_requires_a_scan_and_project_access_and_is_recorded(ctx, tmp_pa
     assert len(ev) == 1 and ev[0].body.details["components"] == 1
     sys_sbom = c.get("/api/v1/system/sbom", headers=viewer)
     assert sys_sbom.status_code == 200 and any(x["name"] == "fastapi" for x in sys_sbom.json()["components"])
+
+
+def test_vulnerability_api_and_advisory_status(ctx, tmp_path):
+    from helpers import write
+
+    p, c, admin, op, viewer, _ = ctx
+    assert "no advisories imported" in c.get("/api/v1/advisories/status", headers=viewer).json()["note"]
+    d = tmp_path / "osv"
+    write(d, "a.json", json.dumps({"id": "TEST-NPM-9", "modified": "2026-01-01T00:00:00Z", "summary": "s",
+                                   "affected": [{"package": {"ecosystem": "npm", "name": "lodash"},
+                                                 "ranges": [{"type": "SEMVER", "events": [{"introduced": "0"},
+                                                                                         {"fixed": "4.17.21"}]}]}]}))
+    alice = p.tokens.authenticate(admin["Authorization"][7:])
+    p.import_advisories(alice, str(d))
+    root = tmp_path / "web"
+    write(root, "package.json", '{"dependencies": {"lodash": "4.17.20"}}')
+    pid = c.post("/api/v1/projects", json={"name": "web", "path": str(root)}, headers=admin).json()["id"]
+    c.post(f"/api/v1/projects/{pid}/scan", headers=admin)
+    r = c.get(f"/api/v1/projects/{pid}/vulnerabilities", headers=admin).json()
+    assert [(f["component"], f["advisory_id"]) for f in r["findings"]] == [("pkg:npm/lodash@4.17.20", "TEST-NPM-9")]
+    assert c.get(f"/api/v1/projects/{pid}/vulnerabilities", headers=viewer).status_code == 403
+    assert c.get("/api/v1/advisories/status", headers=viewer).json()["advisories"] == {"npm": 1}
+    assert c.get("/api/v1/system/vulnerabilities", headers=viewer).json()["findings"] == []

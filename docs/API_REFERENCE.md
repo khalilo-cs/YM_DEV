@@ -11,10 +11,11 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **57**.
+Routes: **60**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
+| GET | `/api/v1/advisories/status` | Advisories Status | - | - |
 | GET | `/api/v1/agents` | Agents | - | - |
 | GET | `/api/v1/agents/{name}/runs` | Agent Runs | - | `limit` |
 | GET | `/api/v1/approvals` | Approvals | - | `status` |
@@ -51,6 +52,7 @@ Routes: **57**.
 | GET | `/api/v1/projects/{project_id}/sync/conflicts` | Sync Conflicts | - | `status` |
 | POST | `/api/v1/projects/{project_id}/sync/export` | Sync Export | - | - |
 | POST | `/api/v1/projects/{project_id}/sync/import` | Sync Import | object | - |
+| GET | `/api/v1/projects/{project_id}/vulnerabilities` | Vulnerabilities | - | - |
 | GET | `/api/v1/queue` | Queue | - | `limit` |
 | GET | `/api/v1/skills` | Skills | - | `status` |
 | POST | `/api/v1/skills` | Propose Skill | `ProposeSkill` | - |
@@ -63,6 +65,7 @@ Routes: **57**.
 | GET | `/api/v1/synchronization/status` | Sync Status | - | - |
 | GET | `/api/v1/system/sbom` | System Sbom | - | - |
 | GET | `/api/v1/system/status` | System Status | - | - |
+| GET | `/api/v1/system/vulnerabilities` | System Vulnerabilities | - | - |
 | GET | `/api/v1/tasks` | Tasks | - | `project_id` |
 | POST | `/api/v1/tasks` | Create Task | `CreateTask` | - |
 | GET | `/api/v1/tasks/{task_id}` | Task | - | - |

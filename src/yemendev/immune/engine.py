@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from yemendev.immune.model import ImmuneFinding, ImmuneReport
 from yemendev.immune.rules import classify_changed_file, classify_new_file, denial_bursts, typosquat_candidates
+from yemendev.security.sbom import project_sbom
+from yemendev.security.vulns import scan_components
 
 if TYPE_CHECKING:
     from yemendev.platform import Platform
@@ -58,6 +60,15 @@ def check(p: Platform, project_id: str, audit_window: int = 1000) -> ImmuneRepor
                                           certainty="inferred", subject=f.path or "?", detail=f.message,
                                           recommended_action="remove it from the code, rotate the credential, "
                                                              "load it from the environment or a secret store"))
+    # Known vulnerabilities of the dependencies as they are *now* (offline OSV database; empty if none imported).
+    vr = scan_components(p.db, project_sbom(current, project_id)["components"], subject=project_id)
+    for v in vr.findings:
+        sev = "high" if (v.severity or "") in ("CRITICAL", "HIGH") else "medium"
+        findings.append(ImmuneFinding(rule="vulnerable-dependency", category="security", severity=sev,
+                                      certainty="observed", subject=f"{v.package}@{v.version}",
+                                      detail=f"{v.advisory_id}: {v.summary[:200]}",
+                                      recommended_action="upgrade to " + (", ".join(v.fixed_in) or
+                                                                          "a version without the advisory")))
     findings += typosquat_candidates(sorted({d.name for d in current.declared_dependencies}))
 
     integ = p.verify_integrity()

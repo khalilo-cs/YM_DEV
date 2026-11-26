@@ -364,6 +364,18 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
     def sbom(project_id: str, a: Who) -> dict[str, Any]:
         return platform.project_sbom(a, project_id)
 
+    @app.get("/api/v1/projects/{project_id}/vulnerabilities")
+    def vulnerabilities(project_id: str, a: Who) -> dict[str, Any]:
+        return dict(platform.vulnerabilities(a, project_id).model_dump())
+
+    @app.get("/api/v1/system/vulnerabilities")
+    def system_vulnerabilities(a: Who) -> dict[str, Any]:
+        return dict(platform.platform_vulnerabilities(a).model_dump())
+
+    @app.get("/api/v1/advisories/status")
+    def advisories_status(a: Who) -> dict[str, Any]:
+        return platform.advisory_status(a)
+
     @app.get("/api/v1/system/sbom")
     def system_sbom(a: Who) -> dict[str, Any]:
         return platform.platform_sbom(a)
