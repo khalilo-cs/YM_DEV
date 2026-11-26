@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **60**.
+Routes: **61**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -29,6 +29,7 @@ Routes: **60**.
 | GET | `/api/v1/integrity/verify` | Integrity Verify | - | - |
 | GET | `/api/v1/keys/self` | Own Key | - | - |
 | POST | `/api/v1/keys/trusted` | Trust Key | `TrustKey` | - |
+| GET | `/api/v1/metrics` | Metrics | - | - |
 | GET | `/api/v1/models` | Models | - | - |
 | POST | `/api/v1/passports/verify` | Passport Verify | object | - |
 | GET | `/api/v1/projects` | Projects | - | - |

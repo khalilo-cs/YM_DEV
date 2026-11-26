@@ -14,15 +14,18 @@ import hashlib
 import json
 import logging
 import math
+import re
 import time
+import uuid
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from opentelemetry.trace import SpanKind
 from pydantic import BaseModel, Field
 
 from yemendev import __version__
@@ -33,6 +36,9 @@ from yemendev.governance.approvals import ApprovalStatus
 from yemendev.governance.policy import Action
 from yemendev.learning.skills import SkillSpec, SkillStatus
 from yemendev.memory.model import MemoryCategory
+from yemendev.observability.logs import request_id_var
+from yemendev.observability.metrics import HTTP_DURATION, HTTP_REQUESTS, REGISTRY
+from yemendev.observability.tracing import extract, inject, tracer
 from yemendev.orion.queue import QueueOptions
 from yemendev.orion.workflow import RepairWorkflow
 from yemendev.platform import Platform
@@ -42,6 +48,8 @@ from yemendev.simulation.counterfactual import Scenario
 from yemendev.twin.graph import DependencyGraph
 
 log = logging.getLogger("yemendev.api")
+access_log = logging.getLogger("yemendev.access")
+_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{8,128}$")
 MAX_BODY_BYTES = 5_000_000
 DEFAULT_WEB_DIR = Path(__file__).resolve().parents[3] / "apps" / "web" / "dist"
 # The UI needs nothing but its own origin. connect-src 'self' also means a compromised page cannot
@@ -202,6 +210,53 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
             auth_failures.allow(client)
         return resp
 
+    # Registered last => outermost: every request (also rate-limited ones) gets an id, a trace span, an access
+    # log line and metrics. Labels use the route *template*, never raw paths or ids.
+    @app.middleware("http")
+    async def observe(request: Request, call_next: Any) -> Any:
+        incoming = request.headers.get("x-request-id", "")
+        rid = incoming if _REQUEST_ID.match(incoming) else uuid.uuid4().hex
+        token = request_id_var.set(rid)
+        start = time.perf_counter()
+        status, route = 500, "unmatched"
+        try:
+            with tracer.start_as_current_span(f"{request.method} {request.url.path}", context=extract(
+                    dict(request.headers)), kind=SpanKind.SERVER) as span:
+                resp = await call_next(request)
+                status = resp.status_code
+                r = request.scope.get("route")
+                route = getattr(r, "path", None) or ("/app/*" if request.url.path.startswith("/app") else "unmatched")
+                span.update_name(f"{request.method} {route}")
+                span.set_attribute("http.request.method", request.method)
+                span.set_attribute("http.route", route)
+                span.set_attribute("http.response.status_code", status)
+                resp.headers["X-Request-ID"] = rid
+                for k, v in inject().items():  # W3C traceparent for correlation by the caller
+                    resp.headers[k] = v
+                return resp
+        finally:
+            dur = time.perf_counter() - start
+            HTTP_REQUESTS.inc(request.method, route, str(status))
+            HTTP_DURATION.observe(dur, request.method, route)
+            access_log.info("request", extra={"method": request.method, "route": route, "status": status,
+                                              "duration_ms": round(dur * 1000, 2),
+                                              "client": request.client.host if request.client else None})
+            request_id_var.reset(token)
+
+    def _state_gauges() -> None:
+        def q(sql: str) -> list[tuple[tuple[str, ...], float]]:
+            with platform.db.read() as conn:
+                return [((str(k),), float(v)) for k, v in conn.execute(sql)]
+        REGISTRY.gauge("yemendev_queue_entries", "ORION queue entries by state", ("state",),
+                       lambda: q("SELECT state, COUNT(*) FROM task_queue GROUP BY state"))
+        REGISTRY.gauge("yemendev_tasks", "Tasks by status", ("status",),
+                       lambda: q("SELECT status, COUNT(*) FROM tasks GROUP BY status"))
+        REGISTRY.gauge("yemendev_approvals", "Approval requests by status", ("status",),
+                       lambda: q("SELECT status, COUNT(*) FROM approval_requests GROUP BY status"))
+        REGISTRY.gauge("yemendev_advisories", "Imported vulnerability advisories by ecosystem", ("ecosystem",),
+                       lambda: q("SELECT ecosystem, COUNT(*) FROM advisories GROUP BY ecosystem"))
+    _state_gauges()
+
     @app.exception_handler(YemenDevError)
     async def _app_error(_: Request, exc: YemenDevError) -> JSONResponse:
         return _err(STATUS_FOR.get(exc.code, 500), exc.code.value, exc.message)
@@ -246,6 +301,11 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
     @app.get("/api/v1/health")
     def health() -> dict[str, Any]:
         return {"status": "ok", "version": __version__, "db": platform.db.integrity_check()}
+
+    @app.get("/api/v1/metrics", response_class=PlainTextResponse)
+    def metrics(a: Who) -> PlainTextResponse:
+        read(a, "system")
+        return PlainTextResponse(REGISTRY.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
     @app.get("/api/v1/system/status")
     def system_status(a: Who) -> dict[str, Any]:

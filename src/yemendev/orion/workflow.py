@@ -53,6 +53,7 @@ from yemendev.governance.policy import Action
 from yemendev.learning.experience import candidate_skill
 from yemendev.learning.skills import SkillStatus
 from yemendev.memory.model import MemoryCategory, MemoryWrite
+from yemendev.observability.tracing import tracer
 from yemendev.orion.queue import QueueEntry, QueueOptions, TaskQueue
 from yemendev.orion.tasks import TERMINAL, StepStatus, Task, TaskStatus, TaskStore
 from yemendev.platform import Platform
@@ -165,7 +166,10 @@ class RepairWorkflow:
                                          message="queue claim lost; stopped before the next step without changes")
                 self.tasks.start_step(task_id, name)
                 try:
-                    out = self._handlers()[name](actor, t)
+                    with tracer.start_as_current_span(f"orion.step {name}") as span:
+                        span.set_attribute("yemendev.task_id", task_id)
+                        span.set_attribute("yemendev.step", name)
+                        out = self._handlers()[name](actor, t)
                 except Stop as s:
                     ran.append(name)
                     if s.status is not TaskStatus.WAITING_APPROVAL:

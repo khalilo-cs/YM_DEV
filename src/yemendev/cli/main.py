@@ -218,6 +218,7 @@ def cmd_worker(args: argparse.Namespace) -> int:
     a = _actor(p, args)
     if not a.has_role(Role.ADMIN):
         raise SystemExit("error: starting workers requires an admin token")
+    _observability()
     sched = Scheduler(p)
     if args.once:
         _print([o.model_dump() for o in sched.drain()])
@@ -349,6 +350,14 @@ def cmd_continuity(args: argparse.Namespace) -> int:
     return 0
 
 
+def _observability() -> None:
+    from yemendev.observability.logs import configure_logging
+    from yemendev.observability.tracing import configure_tracing
+
+    configure_logging(os.environ.get("YEMENDEV_LOG_FORMAT", "json"), os.environ.get("YEMENDEV_LOG_LEVEL", "INFO"))
+    configure_tracing()
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     loopback = {"127.0.0.1", "::1", "localhost"}
     if args.host not in loopback and not args.allow_remote:
@@ -359,6 +368,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     from yemendev.api.app import create_app
     from yemendev.orion.scheduler import Scheduler
 
+    _observability()
     p = _platform(args)
     n = p.settings.orion.workers if args.workers is None else args.workers
     sched = Scheduler(p)
@@ -369,7 +379,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
     if n:
         sched.start(n)
     try:
-        uvicorn.run(create_app(p, workers=workers), host=args.host, port=args.port, log_level="info")
+        # log_config=None: keep our JSON logging; access_log=False: requests are logged by the API middleware
+        uvicorn.run(create_app(p, workers=workers), host=args.host, port=args.port, log_config=None,
+                    access_log=False)
     finally:
         sched.stop()  # runs in progress are handed back to the queue without using an attempt
     return 0

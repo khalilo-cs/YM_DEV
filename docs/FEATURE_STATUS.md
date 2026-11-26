@@ -68,6 +68,7 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 | ORION queue: priority/delay scheduling, inter-task dependencies (cycle check, failed dependency cancels), one run per project + global concurrency limit, re-run after approval, heartbeat claims + recovery, enqueuer's *current* rights | TESTED | `orion/queue.py` | `tests/unit/test_orion_queue.py` (12) | Recurring schedules not implemented; no preemption by priority |
 | ORION workers: one supervised process per run, wall-clock timeouts (process tree + containers killed), retry with exponential backoff, cancellation of running tasks (immediate for non-mutating steps, rollback after execute), fencing, graceful shutdown, CPU/memory accounting | VERIFIED (local) | `orion/scheduler.py`, `orion/runner.py` | `tests/integration/test_orion_scheduler.py` (11, real kills on process and docker backends); mutation check 7/7; browser E2E | Detached grandchildren of a sandboxed test are bounded by rlimits/container lifetime, not by the parent-death signal |
 | Execution trace (`/tasks/{id}/trace`, `yemendev task trace`, task page timeline) | TESTED | `orion/tasks.py`, `orion/workflow.py` | API/CLI tests; browser E2E | Events are per task; no cross-task tracing (OpenTelemetry) |
+| Observability: JSON logs with request/trace correlation and secret redaction; Prometheus metrics (`GET /api/v1/metrics`: HTTP by route template, ORION runs/duration/CPU, queue/task/approval/advisory gauges); OpenTelemetry spans for HTTP requests, background runs and every workflow step, joined across the run process (W3C trace context); `X-Request-ID` | TESTED | `observability/`, `api/app.py`, `orion/` | `tests/unit/test_observability.py` (6, incl. a real SDK in-memory exporter and a real child process exporting into the parent's trace); mutation check 8/8 | Exporters need the optional `otel` extra (OTLP/HTTP or console); metrics are per process (a standalone `yemendev worker` does not expose its own); no logs/metrics export via OTLP |
 | Crash resume (9 fault points, half-written project) | VERIFIED (local) | `orion/workflow.py` | `test_crash_at_any_point_then_resume` + manual probe | Injected exceptions, not real power loss |
 | HTTP API `/api/v1` | VERIFIED (local) | `api/app.py` | `tests/integration/test_api.py`; real `uvicorn` + `curl` | No TLS (loopback by default) |
 | CLI | TESTED | `cli/main.py` | `tests/integration/test_cli.py` | - |
@@ -84,7 +85,7 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 ## Not started
 
 comparative benchmark baselines · desktop/mobile apps · PostgreSQL ·
-OpenTelemetry · LSP integration · JS/TS test execution and repair · VM-level (gVisor/Firecracker) sandboxing.
+LSP integration · JS/TS test execution and repair · VM-level (gVisor/Firecracker) sandboxing.
 
 ## MVP acceptance (directive §20)
 

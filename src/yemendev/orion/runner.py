@@ -39,7 +39,13 @@ def run(job: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
+    from opentelemetry import context as otel_context
+
+    from yemendev.observability.tracing import configure_tracing, extract, flush
+
     job = json.loads(sys.stdin.read())
+    configure_tracing()  # same YEMENDEV_OTEL as the parent (inherited environment)
+    otel_token = otel_context.attach(extract(job.get("trace_context") or {}))
     out = Path(job["result_path"])
     try:
         result = run(job)
@@ -50,6 +56,8 @@ def main() -> int:
     tmp = out.with_suffix(".tmp")
     tmp.write_text(json.dumps(result))
     tmp.replace(out)  # atomic: the scheduler never reads a half-written result
+    otel_context.detach(otel_token)
+    flush()
     return code
 
 

@@ -47,6 +47,11 @@ Fully offline machine: copy the base image (`docker save`/`docker load`) and a d
 
 Projects with third-party dependencies: `yemendev sandbox build-image --project <project_id>` (admin).
 
+## Optional: tracing export
+
+`uv pip install -e '.[otel]'` adds the OpenTelemetry SDK and OTLP exporter; enable with `YEMENDEV_OTEL=otlp`
+(or `console`). Without it the platform still emits logs and metrics and honours incoming `traceparent`.
+
 ## Optional: a local model
 
 Run any OpenAI-compatible server (for example llama.cpp's server or Ollama), then set

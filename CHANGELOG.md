@@ -3,6 +3,10 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 18d: observability - JSON logs with request/trace correlation and redaction, Prometheus metrics
+  (`GET /api/v1/metrics`), OpenTelemetry spans for requests, background runs and workflow steps (joined
+  across the run process), `X-Request-ID`, W3C `traceparent`; optional `otel` extra; new runtime
+  dependency `opentelemetry-api` (already required by FastAPI).
 - Stage 18c: offline dependency vulnerability scanning against imported OSV exports (`security/vulns.py`,
   migration 6, `yemendev advisories import|status`, `project vulns`, `vulns`, `GET /projects/{id}/vulnerabilities`,
   `GET /system/vulnerabilities`, `GET /advisories/status`, immune rule `vulnerable-dependency`); new runtime

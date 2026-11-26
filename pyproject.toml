@@ -20,10 +20,14 @@ dependencies = [
     "tree-sitter-typescript>=0.23,<1",
     # PEP 440 version comparison for vulnerability matching
     "packaging>=23",
+    # tracing API (no-op until an SDK is configured; see the `otel` extra)
+    "opentelemetry-api>=1.20",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5", "mypy>=1.10"]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5", "mypy>=1.10", "opentelemetry-sdk>=1.20"]
+# Export traces: YEMENDEV_OTEL=console|otlp (OTLP endpoint via the standard OTEL_EXPORTER_OTLP_* variables)
+otel = ["opentelemetry-sdk>=1.20", "opentelemetry-exporter-otlp-proto-http>=1.20"]
 
 [project.scripts]
 yemendev = "yemendev.cli.main:main"

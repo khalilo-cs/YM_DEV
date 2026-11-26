@@ -36,6 +36,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from yemendev.core.contracts import ConflictError
+from yemendev.observability.metrics import ORION_RUN_CPU, ORION_RUN_SECONDS, ORION_RUNS
+from yemendev.observability.tracing import inject, tracer
 from yemendev.orion.queue import Claim, QueueState
 from yemendev.orion.tasks import TaskStatus
 from yemendev.orion.workflow import INTERRUPTIBLE_STEPS, RepairWorkflow
@@ -112,7 +114,22 @@ class Scheduler:
 
     def run_once(self, worker: str) -> RunOutcome | None:
         claim = self.queue.claim(worker)
-        return None if claim is None else self._run(claim)
+        if claim is None:
+            return None
+        with tracer.start_as_current_span("orion.run") as span:
+            span.set_attribute("yemendev.task_id", claim.entry.task_id)
+            span.set_attribute("yemendev.run_id", claim.run_id)
+            span.set_attribute("yemendev.attempt", claim.entry.attempts)
+            out = self._run(claim)
+            span.set_attribute("yemendev.outcome", out.outcome)
+            span.set_attribute("yemendev.task_status", out.task_status)
+        ORION_RUNS.inc(out.outcome)
+        ORION_RUN_SECONDS.observe(out.wall_seconds, out.outcome)
+        if out.cpu_seconds:
+            ORION_RUN_CPU.inc(amount=out.cpu_seconds)
+        log.info("run finished", extra={"task_id": out.task_id, "run_id": out.run_id, "outcome": out.outcome,
+                                        "task_status": out.task_status, "wall_seconds": out.wall_seconds})
+        return out
 
     # ---- one run ---------------------------------------------------------------------------
     def _run(self, claim: Claim) -> RunOutcome:
@@ -124,7 +141,8 @@ class Scheduler:
         child = st.model_copy(update={"workspaces_root": ws_dir,
                                       "sandbox": st.sandbox.model_copy(update={"run_label": run_id})})
         job = {"settings": child.model_dump(mode="json"), "entry_id": e.id, "run_id": run_id, "task_id": e.task_id,
-               "actor": claim.actor.model_dump(mode="json"), "result_path": str(run_dir / "result.json")}
+               "actor": claim.actor.model_dump(mode="json"), "result_path": str(run_dir / "result.json"),
+               "trace_context": inject()}
         started = time.monotonic()
         with open(run_dir / "run.log", "wb") as logf:
             proc = subprocess.Popen([self.python, "-m", "yemendev.orion.runner"], stdin=subprocess.PIPE,

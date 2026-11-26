@@ -13,6 +13,16 @@ wall-clock budget (`YEMENDEV_RUN_TIMEOUT`, default 3600 s); stopping a worker ha
 queue without using an attempt.
 State lives in `YEMENDEV_DATA_DIR` (SQLite + audit key + checkpoints).
 
+## Logs, metrics and traces
+
+* Logs: JSON lines on stderr (`YEMENDEV_LOG_FORMAT=json|text`, `YEMENDEV_LOG_LEVEL`), one access line per
+  request with route template, status and duration; every line carries `request_id` and, when tracing is
+  active, `trace_id`/`span_id`. Secrets are redacted before writing.
+* Metrics: `GET /api/v1/metrics` (Prometheus text format; needs a bearer token - configure the scraper's
+  `authorization`). Counters/histograms are per process; state gauges come from the database.
+* Traces: `pip install 'yemendev[otel]'`, then `YEMENDEV_OTEL=otlp` (collector from the standard
+  `OTEL_EXPORTER_OTLP_ENDPOINT`) or `YEMENDEV_OTEL=console`. Incoming `traceparent` is honoured and returned.
+
 ## Recommended setup
 
 1. Dedicated VM or host. Platform user with access to Docker; **set `YEMENDEV_SANDBOX_BACKEND=docker`**
@@ -38,5 +48,5 @@ Migrations run automatically at startup and are append-only. Back up before upgr
 
 ## Not supported yet
 
-PostgreSQL / multi-user scale-out, high availability, workers on several hosts, TLS termination, central
-logging/metrics (OpenTelemetry), Windows hosts.
+PostgreSQL / multi-user scale-out, high availability, workers on several hosts, TLS termination, log/metric
+export over OTLP (traces only), Windows hosts.
