@@ -117,3 +117,6 @@ details { margin-block: 0.25rem; }
 .nowrap { white-space: nowrap; }
 .small { font-size: 0.85em; }
 .timeline-table td { font-size: 0.9rem; }
+tr.selected td { background: var(--neutral-bg); }
+.card h3:first-child { margin-block-start: 0; }
+.card table { margin-block-end: 0.75rem; }

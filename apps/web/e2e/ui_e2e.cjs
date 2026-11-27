@@ -40,6 +40,14 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   const nf = new Intl.NumberFormat("ar");
   check(statText.includes(nf.format(st.counts.projects)) && statText.includes(nf.format(st.counts.evidence_records)), `dashboard numbers match API (projects=${st.counts.projects}, evidence=${st.counts.evidence_records})`);
   check((await page.textContent("main")).includes(st.sandbox.isolation_effective), `dashboard shows effective sandbox backend '${st.sandbox.isolation_effective}'`);
+  const res = st.resources;
+  const resCard = page.locator("main .card", { hasText: "استهلاك الموارد" });
+  check(await resCard.locator("tbody tr").count() === 6 && (await resCard.textContent()).includes(nf.format(st.resources.cpus)),
+    `dashboard shows measured resource usage (db ${res.database_bytes} B, ${res.cpus} CPUs)`);
+  const readyCard = page.locator("main .card", { hasText: "جاهزية الاستعادة" });
+  const readyApi = await api(aliceTok, "/continuity/readiness");
+  await readyCard.locator(".badge").first().waitFor();
+  check((await readyCard.locator(".badge").first().textContent()) === readyApi.overall, `dashboard readiness '${readyApi.overall}' = API`);
   await page.screenshot({ path: shots + "/02-dashboard-ar.png", fullPage: true });
 
   // 2. language switch
@@ -65,7 +73,9 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   await page.screenshot({ path: shots + "/05-graph-ar.png", fullPage: true });
 
   // 3b. every other project tab renders real data without an error box
-  const tabs = { "المخاطر": `/projects/${pid}/risks`, "فحص المناعة": `/projects/${pid}/immune`, "دَين الاستمرارية": `/projects/${pid}/continuity-debt`, "الأعضاء": `/projects/${pid}/members` };
+  const tabs = { "المخاطر": `/projects/${pid}/risks`, "فحص المناعة": `/projects/${pid}/immune`, "دَين الاستمرارية": `/projects/${pid}/continuity-debt`, "الأعضاء": `/projects/${pid}/members`,
+    "الثغرات": `/projects/${pid}/vulnerabilities`, "قائمة المكوّنات": `/projects/${pid}/sbom`, "سجلات الذاكرة": `/projects/${pid}/memory?limit=500`,
+    "السجل": `/tasks?project_id=${pid}`, "نقاط الاستعادة": `/projects/${pid}/checkpoints` };
   for (const [label, path] of Object.entries(tabs)) {
     await page.click(`button[role=tab]:has-text('${label}')`);
     await page.waitForFunction(() => !document.querySelector("main [role=status]"));
@@ -78,6 +88,20 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   await page.waitForSelector("main .notice");
   check((await page.textContent("main .notice")).includes("تجريبي") && (await page.locator("main table tbody tr").count()) === debt.components.length, `continuity debt marked experimental, ${debt.components.length} components`);
   await page.screenshot({ path: shots + "/05b-debt-ar.png", fullPage: true });
+  const sbom = await api(aliceTok, `/projects/${pid}/sbom`);
+  await page.click("button[role=tab]:has-text('قائمة المكوّنات')");
+  await page.waitForSelector("main .stat");
+  check((await page.locator("main .stat-v").textContent()) === nf.format(sbom.components.length), `SBOM tab shows ${sbom.components.length} components = API`);
+  const mem = await api(aliceTok, `/projects/${pid}/memory?limit=500`);
+  await page.click("button[role=tab]:has-text('سجلات الذاكرة')");
+  await page.waitForFunction((n) => document.querySelectorAll("main table tbody tr").length === n || (n === 0 && document.querySelector("main p.empty")), mem.length, { timeout: 10000 }).catch(() => {});
+  check((await page.locator("main table tbody tr").count()) === mem.length && mem.length > 0, `memory tab lists ${mem.length} records = API`);
+  const vul = await api(aliceTok, `/projects/${pid}/vulnerabilities`);
+  await page.click("button[role=tab]:has-text('الثغرات')");
+  await page.waitForSelector("main .stat");
+  check((await page.locator("main .stat").first().locator(".stat-v").textContent()) === nf.format(vul.checked) && (await page.textContent("main")).includes(vul.database.note),
+    `vulnerability tab: ${vul.checked} checked, database state shown honestly ("${vul.database.note}")`);
+  await page.screenshot({ path: shots + "/05e-vulns-ar.png", fullPage: true });
   await page.click("button[role=tab]:has-text('ماذا لو')");
   await page.waitForSelector("main select");
   await page.selectOption("main select", graph.nodes[0]);
@@ -100,6 +124,41 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   const agents = await api(aliceTok, "/agents");
   check(await page.locator("main table").first().locator("tbody tr").count() === agents.length, `AI control lists ${agents.length} agents = API`);
   await page.screenshot({ path: shots + "/05d-agents-ar.png", fullPage: true });
+  // research centre: published reports listed exactly; a comparison shows every arm and B as not run
+  const reports = await api(aliceTok, "/research/benchmarks");
+  await page.goto(base + "/app/#/research");
+  await page.waitForSelector("main table tbody tr");
+  check((await page.locator("main table").first().locator("tbody tr").count()) === reports.length && reports.length > 0, `research lists ${reports.length} stored reports = API`);
+  const cmpRow = reports.find((r) => r.kind === "compare");
+  if (cmpRow) {
+    await page.click(`main button.link:has-text('${cmpRow.name}')`);
+    await page.waitForSelector("main [data-testid=report] table tbody tr");
+    const arms = Object.keys(cmpRow.summary);
+    const card = page.locator("main [data-testid=report]");
+    check((await card.locator("table").first().locator("tbody tr").count()) === arms.length, `comparison shows ${arms.length} arms = report (${arms.join(",")})`);
+    check(!cmpRow.not_run || !cmpRow.not_run.B || (await card.textContent()).includes("لم يُشغَّل"), "arm B shown as not run, with no numbers");
+    await page.screenshot({ path: shots + "/05f-research-compare-ar.png", fullPage: true });
+  } else check(false, "a published comparison report exists");
+  // continuity centre: readiness checks, then a backup created and verified through the UI
+  const ready = await api(aliceTok, "/continuity/readiness");
+  await page.goto(base + "/app/#/continuity");
+  await page.waitForSelector("main table tbody tr");
+  check((await page.locator("main table").first().locator("tbody tr").count()) === ready.checks.length, `readiness shows ${ready.checks.length} checks = API`);
+  await page.click("main button:has-text('إنشاء نسخة احتياطية')");
+  await page.click("dialog[open] button.primary");
+  await page.waitForFunction(() => document.querySelectorAll("main table").length >= 2 && document.querySelector("main table:nth-of-type(2) button"), null, { timeout: 60000 }).catch(() => {});
+  await page.waitForSelector("main button:has-text('تحقق')", { timeout: 60000 });
+  await page.click("main button:has-text('تحقق')");
+  await page.click("dialog[open] .row button >> nth=0");  // the confirm button takes the trigger's kind ("plain")
+  await page.waitForSelector("main .badge.good:has-text('سليمة')", { timeout: 120000 });
+  const backups = await api(aliceTok, "/continuity/backups");
+  check(backups.length === 1 && backups[0].verified_ok === true, `backup created and verified from the UI (API verified_ok=${backups[0] && backups[0].verified_ok})`);
+  const ready2 = await api(aliceTok, "/continuity/readiness");
+  const vb = ready2.checks.find((c) => c.check === "verified backup");
+  await page.waitForFunction((d) => document.querySelector("main table")?.textContent.includes(d), vb.detail, { timeout: 10000 }).catch(() => {});
+  check(vb.status === "ok" && (await page.locator("main table").first().textContent()).includes(vb.detail),
+    `readiness refreshed after the backup: 'verified backup' ${vb.status} (${vb.detail})`);
+  await page.screenshot({ path: shots + "/05g-continuity-ar.png", fullPage: true });
   await page.goto(base + "/app/#/projects/" + pid);
   await page.waitForSelector(".tabs");
 
@@ -175,12 +234,31 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   const done = await api(bobTok, "/tasks/" + tid);
   check(done.status === "succeeded", `task finished: ${done.status}`);
   await page.screenshot({ path: shots + "/10-task-succeeded-ar.png", fullPage: true });
+  const cps = await api(bobTok, `/projects/${pid}/checkpoints`);
+  await page.goto(base + "/app/#/projects/" + pid);
+  await page.waitForSelector(".tabs");
+  await page.click("button[role=tab]:has-text('نقاط الاستعادة')");
+  await page.waitForSelector("main table tbody tr");
+  check(cps.length === 1 && cps[0].task_id === tid && (await page.locator("main table tbody tr").count()) === 1 && (await page.textContent("main table")).includes(cps[0].files[0]),
+    `checkpoint of the applied repair shown (${cps.length}, files ${cps.map((c) => c.files).join()})`);
+  const qv = await api(bobTok, "/queue?limit=100");
+  await page.goto(base + "/app/#/agents");
+  await page.waitForSelector("main label:has-text('إظهار المنتهي')");
+  await page.check("main label:has-text('إظهار المنتهي') input");
+  await page.waitForTimeout(200);
+  const queueRows = await page.locator("main h2:has-text('طابور الخلفية') + p + label + table tbody tr").count();
+  check(queueRows === qv.entries.length && qv.entries.length > 0, `queue view lists ${queueRows} entries = API ${qv.entries.length}`);
 
   // 7. security page: integrity check through UI
   await page.goto(base + "/app/#/security");
   await page.click("main button.primary");
   await page.waitForSelector("main p.ok, main div.error");
   check(await page.locator("main p.ok").count() === 1, "integrity verification reports intact chain");
+  check((await page.textContent("main")).includes("غير مستوردة"), "security centre states that no advisory database is imported");
+  const pv = await api(bobTok, "/system/vulnerabilities");
+  await page.click("main button:has-text('فحص اعتماديات المنصة')");
+  await page.waitForSelector("main .stats .stat");
+  check((await page.locator("main .stats .stat").first().locator(".stat-v").textContent()) === nf.format(pv.checked), `platform dependency check: ${pv.checked} components checked = API`);
   await page.screenshot({ path: shots + "/11-security-ar.png", fullPage: true });
 
   // 8. mobile width: no horizontal page scroll

@@ -254,3 +254,14 @@ def test_research_benchmarks_api(ctx):
         400, 404)
     assert c.get("/api/v1/research/benchmarks/local/missing.json", headers=viewer).status_code == 404
     assert c.get("/api/v1/research/benchmarks/nowhere/x.json", headers=viewer).status_code == 404
+
+
+def test_status_reports_measured_resource_usage(ctx):
+    p, c, admin, op, viewer, _ = ctx
+    r = c.get("/api/v1/system/status", headers=viewer).json()["resources"]
+    db = sum(f.stat().st_size for f in p.settings.data_dir.glob("yemendev.sqlite3*"))
+    assert r["database_bytes"] > 0 and abs(r["database_bytes"] - db) < 1 << 20  # WAL may checkpoint in between
+    assert 0 < r["disk_free_bytes"] <= r["disk_total_bytes"]
+    assert r["process_peak_rss_mb"] > 0 and r["cpus"] >= 1
+    assert r["checkpoints_bytes"] == 0 and r["backups_bytes"] == 0  # fresh installation: nothing stored yet
+    assert r["load_average"] is None or len(r["load_average"]) == 3

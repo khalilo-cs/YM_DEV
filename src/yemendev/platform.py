@@ -813,8 +813,32 @@ class Platform:
                         "privilege_separation_mode": self.settings.sandbox.privilege_separation,
                         **{f"isolation_{k}": v for k, v in isolation_report(self.settings.sandbox).items()}},
             "offline_capable": True,
+            "resources": self._resources(),
             "generated_at": iso(),
         }
+
+    def _resources(self) -> dict[str, Any]:
+        """Measured, not estimated: sizes on disk, this process's memory, the host load average."""
+        import resource as _resource
+        import shutil as _shutil
+
+        def size(path: Path) -> int:
+            try:
+                return sum(f.stat().st_size for f in path.rglob("*") if f.is_file() and not f.is_symlink())
+            except OSError:
+                return 0
+
+        dd = self.settings.data_dir
+        disk = _shutil.disk_usage(dd)
+        db_bytes = sum(f.stat().st_size for f in dd.glob("yemendev.sqlite3*") if f.is_file())
+        try:
+            load: list[float] | None = [round(x, 2) for x in os.getloadavg()]
+        except OSError:
+            load = None
+        return {"database_bytes": db_bytes, "checkpoints_bytes": size(self.settings.checkpoints_dir),
+                "backups_bytes": size(dd / "backups"), "disk_free_bytes": disk.free, "disk_total_bytes": disk.total,
+                "process_peak_rss_mb": round(_resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss / 1024, 1),
+                "load_average": load, "cpus": os.cpu_count()}
 
     def config_digest(self) -> str:
         return canonical_json({"sandbox": self.settings.sandbox.model_dump(), "model_configured":

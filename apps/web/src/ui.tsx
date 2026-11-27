@@ -100,3 +100,11 @@ export const Code = ({ children }: { children: ReactNode }) => <code dir="ltr">{
 
 /** Opaque ids are long; show a stable prefix that never wraps, with the full id on hover/long-press. */
 export const ShortId = ({ v }: { v: string }) => <code dir="ltr" className="id" title={v}>{v.length > 16 ? v.slice(0, 16) + "…" : v}</code>;
+
+/** Byte count in the largest unit that keeps it >= 1 (never shows a non-zero size as 0). */
+export function fmtBytes(n: number, fmtNum: (x: number) => string): string {
+  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+  let v = n, i = 0;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return `${fmtNum(i === 0 ? v : Math.round(v * 10) / 10)} ${units[i]}`;
+}

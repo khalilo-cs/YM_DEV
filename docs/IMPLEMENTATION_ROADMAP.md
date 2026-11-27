@@ -26,5 +26,6 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 18 | JS/TS scanning (Tree-sitter), SBOM, secret and vulnerability scanning, observability (logs, metrics, OpenTelemetry), installer | **Done** |
 | 19 | Continuity: verified backups, restore, checkpoints, recovery readiness | **Done** |
 | 20 | Benchmark: all §15 scenario categories, metrics, comparison arms A-E, results API | **Done (B not run: no model)** |
+| 21 | UI: every required area (dashboard resources/readiness, project memory/history/vulnerabilities/SBOM/checkpoints, security, continuity, research, queue) | **Done - browser E2E 56/56** |
 | blocked | Real-model evaluation, comparative baseline B, Android/desktop builds (no model / SDKs here) | Blocked in this environment |
 | later | Desktop (Tauri) and mobile companion apps, real-model evaluation | Not started |

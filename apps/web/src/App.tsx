@@ -6,7 +6,8 @@ import Dashboard from "./pages/Dashboard";
 import { ProjectDetail, ProjectList } from "./pages/Projects";
 import { Approvals, TaskDetail, TaskList } from "./pages/Recovery";
 import { Agents, Skills } from "./pages/Control";
-import { Continuity, Research, Security } from "./pages/Governance";
+import { Continuity, Security } from "./pages/Governance";
+import { Research } from "./pages/Research";
 
 const LANG_KEY = "ydv.lang";
 
