@@ -1,0 +1,333 @@
+{
+  "benchmark": "yemendev-compare",
+  "benchmark_version": "0.1",
+  "platform_version": "0.1.0",
+  "started_at": "2026-11-27T14:42:34.744641+00:00",
+  "finished_at": "2026-11-27T14:43:04.237464+00:00",
+  "seed": 7,
+  "git_commit": "3f8b2e95a40cc5ade6b457a7dffdcc56cbed2fc3",
+  "environment": {
+    "model": null,
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v880-x86_64-with-glibc2.39",
+    "cpus": 4,
+    "sandbox_backend": "process",
+    "fixtures_version": "3",
+    "scenarios": [
+      "repair_basic",
+      "reject_regressing_plan",
+      "healthy_no_action",
+      "compound_crash_plus_human_edit",
+      "skill_transfer"
+    ],
+    "git_dirty": false
+  },
+  "arms": {
+    "A": "conventional automation: apply the given patch, then run the tests (no simulation, approval, verification gate, checkpoint, rollback, evidence or learning)",
+    "B": "baseline AI coding agent: the configured model proposes a patch that is applied directly, then tests run",
+    "C": "YEMENDEV ablation: complete workflow and memory, learned skills never activated",
+    "D": "YEMENDEV ablation: plans and active skills applied directly, without simulation/approval/verification/rollback",
+    "E": "YEMENDEV with the complete RACE-X workflow"
+  },
+  "not_run": {
+    "B": "no model is configured or reachable (YEMENDEV_MODEL_BASE_URL); not estimated"
+  },
+  "caveats": [
+    "A, C and D are constructed for this benchmark (a naive apply-then-test pipeline and two ablations of YEMENDEV); they are not third-party tools or agents.",
+    "B (an AI coding agent) is only run when a model is configured; no numbers are estimated otherwise. With a model, B's quality is that model's, on these fixtures only.",
+    "All arms receive identical inputs, including the same human-authored plan where a scenario has one.",
+    "Five small synthetic Python scenarios: the results show what the mechanisms prevent on these cases; they are not a general ranking."
+  ],
+  "results": [
+    {
+      "arm": "A",
+      "scenario": "repair_basic",
+      "outcome": "applied",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 0,
+      "seconds": 0.77,
+      "note": ""
+    },
+    {
+      "arm": "A",
+      "scenario": "reject_regressing_plan",
+      "outcome": "applied",
+      "correct": false,
+      "tests_pass_after": false,
+      "regression": true,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 0,
+      "seconds": 0.6,
+      "note": ""
+    },
+    {
+      "arm": "A",
+      "scenario": "healthy_no_action",
+      "outcome": "nothing_applied",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 0,
+      "seconds": 0.6,
+      "note": ""
+    },
+    {
+      "arm": "A",
+      "scenario": "compound_crash_plus_human_edit",
+      "outcome": "applied",
+      "correct": false,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": true,
+      "approvals": 0,
+      "evidence_records": 0,
+      "seconds": 0.6,
+      "note": ""
+    },
+    {
+      "arm": "A",
+      "scenario": "skill_transfer",
+      "outcome": "not_repaired",
+      "correct": false,
+      "tests_pass_after": false,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 0,
+      "seconds": 0.31,
+      "note": "no plan for the second project"
+    },
+    {
+      "arm": "C",
+      "scenario": "repair_basic",
+      "outcome": "succeeded",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 1,
+      "evidence_records": 10,
+      "seconds": 2.03,
+      "note": "task succeeded"
+    },
+    {
+      "arm": "C",
+      "scenario": "reject_regressing_plan",
+      "outcome": "no_action",
+      "correct": true,
+      "tests_pass_after": false,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 7,
+      "seconds": 1.77,
+      "note": "no proposed plan passed simulation"
+    },
+    {
+      "arm": "C",
+      "scenario": "healthy_no_action",
+      "outcome": "no_action",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 3,
+      "seconds": 1.36,
+      "note": "0 reproducible failure(s), 0 flaky, across 2 run(s); 0 unverified hypothesis(es)."
+    },
+    {
+      "arm": "C",
+      "scenario": "compound_crash_plus_human_edit",
+      "outcome": "failed",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 1,
+      "evidence_records": 8,
+      "seconds": 1.81,
+      "note": "project files diverged from both original and approved content; refusing to touch them (manual review required)"
+    },
+    {
+      "arm": "C",
+      "scenario": "skill_transfer",
+      "outcome": "no_action",
+      "correct": false,
+      "tests_pass_after": false,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 15,
+      "seconds": 2.49,
+      "note": "no repair plan could be proposed; no model available: model-based proposals skipped"
+    },
+    {
+      "arm": "D",
+      "scenario": "repair_basic",
+      "outcome": "applied",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 6,
+      "seconds": 1.4,
+      "note": ""
+    },
+    {
+      "arm": "D",
+      "scenario": "reject_regressing_plan",
+      "outcome": "applied",
+      "correct": false,
+      "tests_pass_after": false,
+      "regression": true,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 6,
+      "seconds": 1.29,
+      "note": ""
+    },
+    {
+      "arm": "D",
+      "scenario": "healthy_no_action",
+      "outcome": "nothing_applied",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 3,
+      "seconds": 1.2,
+      "note": ""
+    },
+    {
+      "arm": "D",
+      "scenario": "compound_crash_plus_human_edit",
+      "outcome": "applied",
+      "correct": false,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": true,
+      "approvals": 0,
+      "evidence_records": 0,
+      "seconds": 0.62,
+      "note": ""
+    },
+    {
+      "arm": "D",
+      "scenario": "skill_transfer",
+      "outcome": "repaired",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 16,
+      "seconds": 2.48,
+      "note": "1 plan(s) proposed"
+    },
+    {
+      "arm": "E",
+      "scenario": "repair_basic",
+      "outcome": "succeeded",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 1,
+      "evidence_records": 10,
+      "seconds": 2.1,
+      "note": "task succeeded"
+    },
+    {
+      "arm": "E",
+      "scenario": "reject_regressing_plan",
+      "outcome": "no_action",
+      "correct": true,
+      "tests_pass_after": false,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 7,
+      "seconds": 1.74,
+      "note": "no proposed plan passed simulation"
+    },
+    {
+      "arm": "E",
+      "scenario": "healthy_no_action",
+      "outcome": "no_action",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 0,
+      "evidence_records": 3,
+      "seconds": 1.24,
+      "note": "0 reproducible failure(s), 0 flaky, across 2 run(s); 0 unverified hypothesis(es)."
+    },
+    {
+      "arm": "E",
+      "scenario": "compound_crash_plus_human_edit",
+      "outcome": "failed",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 1,
+      "evidence_records": 8,
+      "seconds": 1.72,
+      "note": "project files diverged from both original and approved content; refusing to touch them (manual review required)"
+    },
+    {
+      "arm": "E",
+      "scenario": "skill_transfer",
+      "outcome": "succeeded",
+      "correct": true,
+      "tests_pass_after": true,
+      "regression": false,
+      "data_loss": false,
+      "approvals": 1,
+      "evidence_records": 20,
+      "seconds": 3.29,
+      "note": "task succeeded"
+    }
+  ],
+  "summary": {
+    "A": {
+      "correct": "2/5",
+      "regressions": 1,
+      "data_loss": 1,
+      "human_approvals": 0,
+      "evidence_records": 0
+    },
+    "C": {
+      "correct": "4/5",
+      "regressions": 0,
+      "data_loss": 0,
+      "human_approvals": 2,
+      "evidence_records": 43
+    },
+    "D": {
+      "correct": "3/5",
+      "regressions": 1,
+      "data_loss": 1,
+      "human_approvals": 0,
+      "evidence_records": 31
+    },
+    "E": {
+      "correct": "5/5",
+      "regressions": 0,
+      "data_loss": 0,
+      "human_approvals": 3,
+      "evidence_records": 48
+    }
+  }
+}

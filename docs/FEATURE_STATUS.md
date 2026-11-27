@@ -38,7 +38,7 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 | Feature | Status | Location | Tests / evidence | Known limitations |
 |---|---|---|---|---|
 | Sandbox `process` backend: copy-on-run, rlimits, process-group kill, netns, scrubbed env, uid drop, runtime-socket refusal | VERIFIED (local) | `sandbox/workspace.py` | `tests/security/test_sandbox.py`, `test_runtime_socket_exposure.py`; attack scripts | Host world-readable files/processes visible; uid drop needs root or `run_as_uid` |
-| Sandbox `docker` backend (ADR-0009) | VERIFIED (local) | `sandbox/docker_backend.py` | `tests/unit/test_docker_backend.py` (no daemon), `tests/security/test_docker_sandbox.py` (real containers, ran); benchmark 15/15 on docker; comparative attacks | Verified with Docker 29 / cgroup v1 / runc in this container only; shares host kernel; projects with third-party deps need a custom image |
+| Sandbox `docker` backend (ADR-0009) | VERIFIED (local) | `sandbox/docker_backend.py` | `tests/unit/test_docker_backend.py` (no daemon), `tests/security/test_docker_sandbox.py` (real containers, ran); benchmark 15/15 on docker; benchmark 24/24 on docker (stage 20); comparative attacks | Verified with Docker 29 / cgroup v1 / runc in this container only; shares host kernel; projects with third-party deps need a custom image |
 | Offline-first sandbox image build | VERIFIED (local) | `sandbox/image.py`, `yemendev sandbox build-image` | built here with `--network none` | Base image must already be present locally |
 | Per-project sandbox images (wheels only, dependency-hash tags, evidence of wheel hashes) | VERIFIED (local) | `sandbox/project_image.py`, `Platform.build_project_image` | `tests/integration/test_project_image.py` (real build with `six`: fails without image, passes with it; reuse; stale-image avoidance; admin-only) | Packages without a wheel unsupported; unpinned deps resolve at build time |
 | Agents: registry with fixed allow-lists, AgentRunner, `agent_runs` (ADR-0011) | VERIFIED (local) | `agents/registry.py`, `agents/runner.py` | `tests/security/test_agents.py`; mutation: removing the allow-list fails a test | Agents are trusted in-process code (use is restricted and recorded, not sandboxed) |
@@ -83,11 +83,13 @@ Last reviewed: 2026-11-21 (stage 11). Statuses:
 
 | Feature | Status | Location | Tests / evidence | Known limitations |
 |---|---|---|---|---|
-| Resilience benchmark harness (15 scenarios incl. 2 compound failures, seeded, JSON reports, `--backend`) | TESTED | `benchmarks/` | `tests/regression/test_benchmark.py`; full run 15/15 on **both** backends; mutation check 3/3 caught | Not comparative; synthetic fixtures; see BENCHMARK_METHODOLOGY |
+| Resilience benchmark (24 scenarios: core, 9 crash points, 2 compound failures, skill transfer, long-horizon maintenance, signed sync, tamper detection, knowledge staleness, sandbox memory limit, legacy project, Arabic project, unauthorized operations; directive §15 metrics; seeded; `git_dirty` recorded) | TESTED | `benchmarks/`, `src/yemendev/benchmarks/{resilience,extended,fixtures}.py` | `tests/regression/test_benchmark.py`; full run 24/24 on **both** backends; benchmark mutation check 8/8 caught | Synthetic fixtures; same author as the system; skills match exact module names; docker CPU inside containers not counted; see BENCHMARK_METHODOLOGY |
+| Comparative benchmark, arms A-E (`yemendev bench --compare`): A apply-then-test, B model-only agent, C no skills, D no gates, E full RACE-X; invariant-based correctness | TESTED (A, C, D, E) · NOT RUN (B) | `benchmarks/compare.py` | `tests/regression/test_compare.py` (7, incl. B against a protocol stub - harness mechanics only) | **B has never been run with a real model** (none reachable here); A/C/D are constructed for this benchmark, not third-party tools; 5 small scenarios |
+| Research centre results API: stored reports listed and served as stored | TESTED | `benchmarks/results.py`; `GET /api/v1/research/benchmarks`, `/research/benchmarks/{source}/{name}` | `tests/unit/test_benchmark_results.py` (hostile names, symlinks, unreadable files; 3 mutations caught), API test | No UI page yet (stage 21) |
 
 ## Not started
 
-comparative benchmark baselines · desktop/mobile apps · PostgreSQL ·
+baseline B with a real model (no model available) · desktop/mobile apps · PostgreSQL ·
 LSP integration · JS/TS test execution and repair · VM-level (gVisor/Firecracker) sandboxing.
 
 ## MVP acceptance (directive §20)

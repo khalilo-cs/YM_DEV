@@ -5,7 +5,7 @@ has been done (directive section 6). That review is the first research task.
 
 | Concept | Research question | Implementation status |
 |---|---|---|
-| Living System Memory | Can project memory stay accurate across long change sequences without stale or contradictory knowledge? | Core built (validity conditions, contradiction handling); long-horizon evaluation not started |
+| Living System Memory | Can project memory stay accurate across long change sequences without stale or contradictory knowledge? | Core built (validity conditions, contradiction handling); small-scale evaluation only: benchmark scenarios `long_horizon_6_changes` (6 successive changes) and `knowledge_staleness`; long-horizon evaluation on real projects not started |
 | Proof-carrying skills | Do skills that carry test evidence transfer more safely than unvalidated ones? | Built (validation history, field outcomes) |
 | Compound failure testing | How well does recovery hold under simultaneous failures? | 2 compound benchmark scenarios + compound counterfactual scenarios |
 | Counterfactual future engine | Does simulating failures before risky changes reduce real failures? | Engine built (sandboxed fault injection, blind spots, static-analysis precision/recall); effect on real failures not evaluated |
@@ -18,9 +18,16 @@ has been done (directive section 6). That review is the first research task.
 Compare (A) conventional automated tooling, (B) a baseline AI coding agent, (C) agent + memory,
 (D) agent + skills, (E) full RACE-X, on the same versioned set of projects and injected failures.
 Metrics: recovery success, time to recovery, data loss, regressions, false positives/negatives,
-evidence completeness, approval frequency. Baselines A-D are **not implemented**, so no comparison
-is claimed. Every run must store configuration, dataset version, environment, seed and outputs
-(the current benchmark already does - see [BENCHMARK_METHODOLOGY.md](BENCHMARK_METHODOLOGY.md)).
+evidence completeness, approval frequency. Every run must store configuration, dataset version,
+environment, seed and outputs (see [BENCHMARK_METHODOLOGY.md](BENCHMARK_METHODOLOGY.md)).
+
+**Status (stage 20):** `yemendev bench --compare` implements the arms as follows, on 5 small synthetic
+scenarios - A: a naive apply-then-test pipeline written for the benchmark; B: the configured model's
+patch applied directly (**not run yet: no model available**, and never estimated); C: YEMENDEV without
+learned skills (stands in for "agent + memory"); D: YEMENDEV's plans and skills applied without the
+safety gates (stands in for "agent + skills"); E: the full workflow. This is an ablation study of this
+system plus a naive baseline, not a comparison with third-party tools or agents; that still needs a
+model, a versioned set of real projects, and ideally an independent evaluator.
 
 ## Data
 
