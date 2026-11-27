@@ -235,3 +235,22 @@ def test_backup_and_readiness_api(ctx):
     r = c.get("/api/v1/continuity/readiness", headers=viewer).json()
     assert {x["check"]: x["status"] for x in r["checks"]}["verified backup"] == "ok"
     assert r["overall"] in ("ok", "warn")
+
+
+def test_research_benchmarks_api(ctx):
+    from yemendev.benchmarks.compare import CompareReport
+    from yemendev.benchmarks.results import save_report
+
+    p, c, admin, op, viewer, _ = ctx
+    assert c.get("/api/v1/research/benchmarks").status_code == 401
+    rep = CompareReport(started_at="2026-11-27T10:00:00Z", finished_at="2026-11-27T10:01:00Z", seed=7,
+                        git_commit=None, environment={}, arms={}, not_run={}, caveats=[], results=[], summary={})
+    path = save_report(rep, p.settings)
+    rows = c.get("/api/v1/research/benchmarks", headers=viewer).json()
+    assert path.name in {r["name"] for r in rows if r["source"] == "local"}
+    r = c.get(f"/api/v1/research/benchmarks/local/{path.name}", headers=viewer)
+    assert r.status_code == 200 and r.json()["report"]["seed"] == 7
+    assert c.get("/api/v1/research/benchmarks/local/..%2F..%2Fyemendev.sqlite3", headers=viewer).status_code in (
+        400, 404)
+    assert c.get("/api/v1/research/benchmarks/local/missing.json", headers=viewer).status_code == 404
+    assert c.get("/api/v1/research/benchmarks/nowhere/x.json", headers=viewer).status_code == 404

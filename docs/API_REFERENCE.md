@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **66**.
+Routes: **68**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -60,6 +60,8 @@ Routes: **66**.
 | POST | `/api/v1/projects/{project_id}/sync/import` | Sync Import | object | - |
 | GET | `/api/v1/projects/{project_id}/vulnerabilities` | Vulnerabilities | - | - |
 | GET | `/api/v1/queue` | Queue | - | `limit` |
+| GET | `/api/v1/research/benchmarks` | Research Benchmarks | - | - |
+| GET | `/api/v1/research/benchmarks/{source}/{name}` | Research Benchmark | - | - |
 | GET | `/api/v1/skills` | Skills | - | `status` |
 | POST | `/api/v1/skills` | Propose Skill | `ProposeSkill` | - |
 | POST | `/api/v1/skills/activate/{approval_id}` | Activate | - | - |

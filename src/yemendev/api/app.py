@@ -452,6 +452,14 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
     def system_vulnerabilities(a: Who) -> dict[str, Any]:
         return dict(platform.platform_vulnerabilities(a).model_dump())
 
+    @app.get("/api/v1/research/benchmarks")
+    def research_benchmarks(a: Who) -> list[dict[str, Any]]:
+        return platform.benchmark_reports(a)
+
+    @app.get("/api/v1/research/benchmarks/{source}/{name}")
+    def research_benchmark(source: str, name: str, a: Who) -> dict[str, Any]:
+        return platform.benchmark_report(a, source, name)
+
     @app.get("/api/v1/advisories/status")
     def advisories_status(a: Who) -> dict[str, Any]:
         return platform.advisory_status(a)

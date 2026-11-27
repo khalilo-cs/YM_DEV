@@ -3,6 +3,7 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 20: benchmark completed - 9 new scenarios (skill transfer, 6-change long horizon, signed sync with a hash-recomputing attacker, tamper detection, knowledge staleness, 256 MB sandbox memory limit, legacy project, Arabic project, unauthorized operations) and the directive §15 metrics (`benchmark_version` 0.2, fixtures 3); comparative benchmark `yemendev bench --compare` with arms A-E (B runs only with a configured model and is otherwise reported as not run); reports saved to `<data dir>/benchmarks/` by default and served by `GET /api/v1/research/benchmarks[/{source}/{name}]`; reports record `git_dirty`; benchmark mutation check extended to 8 mutants.
 - Stage 19: verified backups (`yemendev backup create|list|verify|restore`, `/api/v1/continuity/backups`),
   recovery readiness (`yemendev readiness`, `/api/v1/continuity/readiness`), checkpoint listing
   (`/api/v1/projects/{id}/checkpoints`); migration 7; policy action `backups.manage`.

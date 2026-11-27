@@ -1,10 +1,12 @@
-"""YEMENDEV Resilience Benchmark (initial harness).
+"""YEMENDEV Resilience Benchmark.
 
 Runs scripted scenarios through the *real* platform (real sandbox, real tests, real files) and
-measures what happened. Nothing is simulated except the failures being injected.
+measures what happened. Nothing is simulated except the failures being injected. Scenario categories
+follow directive section 15 (see ``extended.py`` for the stage-20 additions); comparative arms are in
+``compare.py``.
 
 Honesty rules baked into the output:
-* only this system is measured - no comparative baselines are implemented, and the report says so;
+* this report measures this system only; comparisons are a separate report with their own caveats;
 * approvals are granted by the harness acting as a second human; recorded in the report;
 * injected crashes are in-process exceptions, not real power loss.
 """
@@ -13,6 +15,7 @@ from __future__ import annotations
 
 import os
 import platform as pyplatform
+import resource
 import shutil
 import socket
 import subprocess
@@ -21,14 +24,14 @@ import tempfile
 import time
 from collections.abc import Callable
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 
 from yemendev import __version__
-from yemendev.benchmarks.fixtures import renamed_api_project
+from yemendev.benchmarks.fixtures import FIXTURES_VERSION, renamed_api_project
 from yemendev.core.config import SandboxSettings, Settings
 from yemendev.core.contracts import iso, sha256_bytes
 from yemendev.core.faults import FaultInjector, InjectedFault
@@ -59,11 +62,14 @@ class ScenarioResult(BaseModel):
     approvals_requested: int
     seconds_to_terminal: float
     detail: str
+    cpu_seconds: float | None = None
+    unauthorized_denials: int | None = None
+    metrics: dict[str, Any] = {}
 
 
 class BenchmarkReport(BaseModel):
     benchmark: str = "yemendev-resilience"
-    benchmark_version: str = "0.1"
+    benchmark_version: str = "0.2"
     platform_version: str = __version__
     started_at: str
     finished_at: str
@@ -81,12 +87,27 @@ class Ctx:
     meta: dict[str, str]
     settings: Settings
     faults: FaultInjector
+    seed: int = 0
+    metrics: dict[str, Any] = field(default_factory=dict)
 
     def platform(self, with_faults: bool = True) -> Platform:
         return Platform(self.settings, self.faults if with_faults else FaultInjector())
 
     def read(self, rel: str) -> bytes:
         return (self.root / rel).read_bytes()
+
+    def with_root(self, root: Path, meta: dict[str, str]) -> Ctx:
+        """Another project on the same installation (shares settings, faults and metrics)."""
+        return replace(self, root=root, meta=meta)
+
+    @staticmethod
+    def operator() -> Actor:
+        return OPERATOR
+
+
+def project_id_for(p: Platform, root: Path) -> str | None:
+    want = str(root.resolve())
+    return next((x.id for x in p.visible_projects(OPERATOR) if x.root_path == want), None)
 
 
 def _plan(ctx: Ctx, correct: bool = True, touch_extra: bool = False) -> RepairPlan:
@@ -112,12 +133,16 @@ def _approve(p: Platform, task_id: str) -> int:
 
 
 def _run_to_end(ctx: Ctx, plan: RepairPlan | None, crash_point: str | None = None,
-                between: Callable[[Ctx], None] | None = None) -> tuple[TaskStatus, str, Platform, str]:
-    p = ctx.platform()
+                between: Callable[[Ctx], None] | None = None, platform: Platform | None = None,
+                task_id: str | None = None, approve: bool = True) -> tuple[TaskStatus, str, Platform, str]:
+    p = platform or ctx.platform()
     wf = RepairWorkflow(p)
-    proj = p.register_project(OPERATOR, "bench", str(ctx.root))
-    p.grant_member(OPERATOR, proj.id, APPROVER.ref, Role.OPERATOR)
-    t = wf.create(OPERATOR, proj.id, human_plan=plan)
+    pid = project_id_for(p, ctx.root)
+    if pid is None:
+        pid = p.register_project(OPERATOR, "bench", str(ctx.root)).id
+    if APPROVER.ref not in {m.actor_ref for m in p.list_members(OPERATOR, pid)}:
+        p.grant_member(OPERATOR, pid, APPROVER.ref, Role.OPERATOR)
+    t = wf.tasks.get(task_id) if task_id else wf.create(OPERATOR, pid, human_plan=plan)
     if crash_point:
         ctx.faults.arm(crash_point)
     msg = ""
@@ -125,7 +150,7 @@ def _run_to_end(ctx: Ctx, plan: RepairPlan | None, crash_point: str | None = Non
         try:
             r = wf.advance(OPERATOR, t.id)
             msg = r.message
-            if r.task.status is TaskStatus.WAITING_APPROVAL:
+            if r.task.status is TaskStatus.WAITING_APPROVAL and approve:
                 _approve(p, t.id)
                 continue
             return r.task.status, msg, p, t.id
@@ -250,6 +275,9 @@ def scenarios(full: bool = False) -> list[Scenario]:
     ]
     for pt in (ALL_CRASH_POINTS if full else QUICK_CRASH_POINTS):
         out.append((f"crash_resume@{pt}", "power_interruption", _sc_crash(pt)))
+    from yemendev.benchmarks.extended import EXTENDED
+
+    out += EXTENDED
     return out
 
 
@@ -260,6 +288,16 @@ def _git_commit() -> str | None:
         return r.stdout.strip() or None
     except (OSError, subprocess.SubprocessError):
         return None
+
+
+def _git_dirty() -> bool | None:
+    """True when tracked source files differ from ``git_commit`` (the run is then not reproducible from it)."""
+    try:
+        r = subprocess.run(["git", "status", "--porcelain", "--untracked-files=normal", "--", "src"],
+                           capture_output=True, text=True, timeout=10, cwd=Path(__file__).resolve().parent)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return bool(r.stdout.strip()) if r.returncode == 0 else None
 
 
 def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = None,
@@ -274,21 +312,27 @@ def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = No
             meta = renamed_api_project(base / "proj", sc_seed)
             settings = Settings(data_dir=base / "data", workspaces_root=base / "ws",
                                 sandbox=SandboxSettings(timeout_seconds=60, backend=backend))
-            ctx = Ctx(root=base / "proj", meta=meta, settings=settings, faults=FaultInjector())
+            ctx = Ctx(root=base / "proj", meta=meta, settings=settings, faults=FaultInjector(), seed=sc_seed)
             t0 = time.monotonic()
+            cpu0 = _cpu()
             try:
                 expected, st, msg, p, tid, notes = fn(ctx)
                 elapsed = time.monotonic() - t0
-                ev = {e.action for e in p.evidence.list(task_id=tid, limit=1000)}
+                ev = {e.action for e in p.evidence.list(task_id=tid, limit=1000)} if tid else \
+                    {e.action for e in p.evidence.list(limit=1000)}
                 integ = p.verify_integrity()
                 # a healthy project legitimately stops after diagnosis
-                req_ev = HEALTHY_EVIDENCE if name == "healthy_no_action" else REQUIRED_EVIDENCE
+                req_ev = set(ctx.metrics.pop("required_evidence", None) or (
+                    HEALTHY_EVIDENCE if name == "healthy_no_action" else REQUIRED_EVIDENCE))
+                audit_ok = bool(integ["valid"]) or bool(ctx.metrics.pop("skip_audit_valid", False))
+                denials = sum(1 for e in p.audit.list(limit=5000) if e.outcome == "denied")
                 results.append(ScenarioResult(
                     scenario=name, category=category, seed=sc_seed, expected_status=expected,
                     actual_status=st.value, correct=st.value == expected and not notes, data_integrity=not notes,
-                    integrity_notes=notes, evidence_complete=req_ev <= ev, audit_valid=bool(integ["valid"]),
-                    approvals_requested=len(p.approvals.for_task(tid)), seconds_to_terminal=round(elapsed, 2),
-                    detail=msg[:300]))
+                    integrity_notes=notes, evidence_complete=req_ev <= ev, audit_valid=audit_ok,
+                    approvals_requested=len(p.approvals.for_task(tid)) if tid else 0,
+                    seconds_to_terminal=round(elapsed, 2), detail=msg[:300], cpu_seconds=round(_cpu() - cpu0, 2),
+                    unauthorized_denials=denials, metrics=ctx.metrics))
             except Exception as exc:  # noqa: BLE001 - a crashing scenario is a measured failure, not a harness abort
                 results.append(ScenarioResult(
                     scenario=name, category=category, seed=sc_seed, expected_status="?", actual_status="harness_error",
@@ -297,7 +341,7 @@ def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = No
                     seconds_to_terminal=round(time.monotonic() - t0, 2), detail="scenario raised"))
     n = len(results)
     rec = [r for r in results if r.category in ("power_interruption", "compound_failure")]
-    summary = {
+    summary = _summary(results) | {
         "scenarios": n,
         "correct": sum(r.correct for r in results),
         "task_success_rate": round(sum(r.correct for r in results) / n, 3) if n else None,
@@ -310,17 +354,68 @@ def run_benchmark(seed: int = 7, full: bool = False, only: list[str] | None = No
     return BenchmarkReport(
         started_at=started, finished_at=iso(), seed=seed, git_commit=_git_commit(),
         environment={"python": sys.version.split()[0], "platform": pyplatform.platform(), "cpus": os.cpu_count(),
-                     "sandbox_backend": backend,
-                     "euid": os.geteuid()},
+                     "sandbox_backend": backend, "euid": os.geteuid(), "fixtures_version": FIXTURES_VERSION,
+                     "git_dirty": _git_dirty(),
+                     "full": full, "only": only, "peak_rss_mb_self": round(_maxrss(resource.RUSAGE_SELF), 1),
+                     "peak_rss_mb_children": round(_maxrss(resource.RUSAGE_CHILDREN), 1)},
         caveats=[
-            "Only YEMENDEV itself is measured; no comparative baselines (conventional tooling, other agents) "
-            "are implemented, so no comparison is claimed.",
+            "This report measures YEMENDEV only; comparisons with other approaches are a separate report "
+            "(`yemendev bench --compare`) with its own caveats.",
             "Approvals were granted automatically by the harness acting as a second human.",
             "Crashes are injected in-process exceptions, not real power loss.",
             "Fixture projects are small synthetic Python projects; results do not generalize to real codebases.",
+            "Learned skills match on the exact module and symbol names in their preconditions: skill_transfer "
+            "shows reuse on a second project with the same module, not generalisation to differently named code.",
+            "CPU seconds are this process and its child processes; under the docker backend, CPU used inside the "
+            "containers is accounted to the docker daemon and is NOT included.",
         ],
         results=results, summary=summary,
     )
+
+
+def _cpu() -> float:
+    s, c = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
+    return s.ru_utime + s.ru_stime + c.ru_utime + c.ru_stime
+
+
+def _maxrss(who: int) -> float:
+    return resource.getrusage(who).ru_maxrss / 1024  # KiB on Linux
+
+
+def _rate(num: float, den: float) -> float | None:
+    return round(num / den, 3) if den else None
+
+
+def _summary(results: list[ScenarioResult]) -> dict[str, Any]:
+    """Directive section 15 metrics, each computed only from scenarios that measure it."""
+    by = {r.category: [x for x in results if x.category == r.category] for r in results}
+    m = [r.metrics for r in results]
+    recovery = [r for r in results if r.category in ("safe_recovery", "power_interruption", "compound_failure")]
+    crash = by.get("power_interruption", [])
+    problems = [r for r in results if r.expected_status in ("succeeded", "rolled_back", "failed", "detected",
+                                                            "blocked")]
+    healthy = [r for r in results if r.expected_status == "no_action"]
+    lh = next((x for x in m if "iterations" in x), None)
+    integ = next((x for x in m if "tampering_attempts" in x), None)
+    stale = next((x for x in m if "marked_stale" in x), None)
+    unauth = next((x for x in m if "unauthorized_attempts" in x), None)
+    tasks = [r for r in results if r.approvals_requested or r.expected_status in ("succeeded", "rolled_back")]
+    return {
+        "recovery_success_rate": _rate(sum(r.correct for r in recovery), len(recovery)),
+        "mean_time_to_recovery_seconds": round(sum(r.seconds_to_terminal for r in crash) / len(crash), 2)
+        if crash else None,
+        "data_loss_incidents": sum(any("overwritten" in n or "lost" in n for n in r.integrity_notes) for r in results),
+        "regression_rate": _rate(lh["regressions"], lh["iterations"]) if lh else None,
+        "skill_transfer_success": next((x["skill_transfer_success"] for x in m if "skill_transfer_success" in x), None),
+        "knowledge_retention": lh["knowledge_retention"] if lh else None,
+        "knowledge_staleness_detected": (stale["marked_stale"] > 0 and stale["false_stale"] == 0) if stale else None,
+        "false_positive_rate": _rate(sum(not r.correct for r in healthy), len(healthy)),
+        "false_negative_rate": _rate(sum(r.actual_status in ("no_action", "missed") for r in problems), len(problems)),
+        "tamper_detection": f"{integ['tampering_detected']}/{integ['tampering_attempts']}" if integ else None,
+        "unauthorized_operations_blocked": f"{unauth['blocked']}/{unauth['unauthorized_attempts']}" if unauth else None,
+        "human_approval_frequency": _rate(sum(r.approvals_requested for r in tasks), len(tasks)),
+        "cpu_seconds_total": round(sum(r.cpu_seconds or 0 for r in results), 1),
+    }
 
 
 @contextmanager

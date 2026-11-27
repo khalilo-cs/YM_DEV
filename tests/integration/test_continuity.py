@@ -105,14 +105,21 @@ def test_sync_roundtrip_conflicts_idempotency_and_resolution(two):
     assert [w.value for w in current] == ["fridays only"] and current[0].evidence_ids
 
 
-def test_tampered_bundle_rejected(two):
+@pytest.mark.parametrize("rehash", [False, True])
+def test_tampered_bundle_rejected(two, rehash):
+    """``rehash``: the attacker also recomputes the per-record hash, so only the signature can catch it."""
     a, pa, b, pb = two
     from yemendev.continuity.signing import public_hex
+    from yemendev.continuity.sync import _record_hash
     b.trust_key(ALICE, public_hex(a.signing_key))
     body = json.loads(a.sync_export(ALICE, pa.id)[0].model_dump_json())
-    body["body"]["memory"][0]["value"] = "injected"
+    rec = body["body"]["memory"][0]
+    rec["value"] = "injected"
+    if rehash:
+        rec["record_hash"] = _record_hash(rec["category"], rec["subject"], rec["key"], rec["value"])
     with pytest.raises(PermissionDeniedError, match="invalid signature"):
         b.sync_import(ALICE, pb.id, json.dumps(body))
+    assert not [r for r in b.memory.query(pb.id, limit=5000) if r.value == "injected"]
 
 
 def test_only_admins_trust_keys_and_api_routes(two):

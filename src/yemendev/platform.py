@@ -172,7 +172,12 @@ class Platform:
         eff = self.guard.effective(actor, pid) if pid else actor
         if eff is None:  # unreachable after require(); explicit so it survives python -O
             raise PermissionDeniedError("no access to this project")
-        r = self.approvals.decide(approval_id, eff, approve, reason)
+        try:
+            r = self.approvals.decide(approval_id, eff, approve, reason)
+        except PermissionDeniedError as exc:  # e.g. self-approval: refused attempts are audited like guard denials
+            self.audit.record(actor=actor.ref, action=Action.DECIDE_APPROVAL.value, target=approval_id,
+                              outcome="denied", details={"reason": exc.message, "project_id": pid})
+            raise
         self.audit.record(actor=actor.ref, action=Action.DECIDE_APPROVAL.value, target=approval_id,
                           outcome=r.status.value, details={"reason": reason, "project_id": pid})
         return r
@@ -686,6 +691,18 @@ class Platform:
         self.audit.record(actor=actor.ref, action=Action.IMPORT_ADVISORIES.value, target=s.import_id, outcome="ok",
                           details=s.model_dump())
         return s
+
+    def benchmark_reports(self, actor: Actor) -> list[dict[str, Any]]:
+        from yemendev.benchmarks.results import list_reports
+
+        self.guard.require(actor, Action.READ, "benchmarks")
+        return list_reports(self.settings)
+
+    def benchmark_report(self, actor: Actor, source: str, name: str) -> dict[str, Any]:
+        from yemendev.benchmarks.results import load_report
+
+        self.guard.require(actor, Action.READ, "benchmarks")
+        return load_report(self.settings, source, name)
 
     def advisory_status(self, actor: Actor) -> dict[str, Any]:
         from yemendev.security.vulns import database_status

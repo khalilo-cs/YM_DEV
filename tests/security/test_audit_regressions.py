@@ -101,3 +101,20 @@ def test_evidence_deletion_and_tampering_detected(platform, wf, tmp_path):
     probs = platform.verify_integrity()["problems"]
     assert any("missing (deleted)" in p for p in probs)
     assert any("modified" in p for p in probs)
+
+
+def test_refused_self_approval_attempt_is_audited(platform, wf, tmp_path):
+    """Regression (stage 20, found by the unauthorized_operations benchmark): a self-approval attempt passed the
+    guard (the requester has the role) and was refused by the approval store, but left no audit record, unlike
+    every other refused operation."""
+    root = make_renamed_api_project(tmp_path / "p")
+    proj = platform.register_project(ALICE, "p", str(root))
+    t = wf.create(ALICE, proj.id, human_plan=fix_plan(root))
+    wf.advance(ALICE, t.id)
+    [apr] = platform.approvals.for_task(t.id)
+    with pytest.raises(PermissionDeniedError, match="own approval"):
+        platform.decide_approval(ALICE, apr.id, approve=True, reason="mine")
+    [e] = [e for e in platform.audit.list(limit=500) if e.target == apr.id and e.action == "approval.decide"]
+    assert e.outcome == "denied" and e.actor == ALICE.ref and "own approval" in e.details["reason"]
+    assert platform.approvals.get(apr.id).status is ApprovalStatus.PENDING
+    assert platform.audit.verify().valid

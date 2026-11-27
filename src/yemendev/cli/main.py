@@ -309,19 +309,29 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
 
 def cmd_bench(args: argparse.Namespace) -> int:
+    from yemendev.benchmarks.results import save_report
+
+    settings = Settings.from_env(Path(args.data_dir) if args.data_dir else None)
+    if args.compare:
+        from yemendev.benchmarks.compare import run_compare
+
+        cmp = run_compare(seed=args.seed, backend=args.backend, arms=args.arms, model=settings.model)
+        for c in cmp.results:
+            print(f"{c.arm}  {c.scenario:34s} {'correct' if c.correct else 'WRONG  '} outcome={c.outcome:16s} "
+                  f"regression={c.regression!s:5s} data_loss={c.data_loss!s:5s} {c.seconds:6.2f}s")
+        _print({"summary": cmp.summary, "not_run": cmp.not_run})
+        saved = save_report(cmp, settings, Path(args.out) if args.out else None)
+        print(f"report written to {saved}")
+        return 0
     from yemendev.benchmarks.resilience import run_benchmark
 
     rep = run_benchmark(seed=args.seed, full=args.full, only=args.only or None, backend=args.backend)
-    out = Path(args.out) if args.out else None
-    if out:
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(rep.model_dump_json(indent=2))
     for r in rep.results:
         print(f"{'PASS' if r.correct else 'FAIL'}  {r.scenario:55s} expected={r.expected_status:12s} "
               f"actual={r.actual_status:12s} {r.seconds_to_terminal:6.2f}s")
     _print(rep.summary)
-    if out:
-        print(f"report written to {out}")
+    saved = save_report(rep, settings, Path(args.out) if args.out else None)
+    print(f"report written to {saved}")
     return 0 if rep.summary["correct"] == rep.summary["scenarios"] else 3
 
 
@@ -551,7 +561,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--backend", choices=["process", "docker", "auto"], default="process")
     s.add_argument("--full", action="store_true", help="all 9 crash points (default: 3)")
     s.add_argument("--only", nargs="*", help="scenario names to run")
-    s.add_argument("--out", help="write JSON report here")
+    s.add_argument("--compare", action="store_true",
+                   help="comparative run: arms A-E on shared scenarios (B only with a configured model)")
+    s.add_argument("--arms", default="ABCDE", help="arms for --compare (default ABCDE)")
+    s.add_argument("--out", help="write the JSON report here (default: <data dir>/benchmarks/)")
     s.set_defaults(fn=cmd_bench)
 
     s = sub.add_parser("sandbox", help="sandbox backend status / build the container image")
