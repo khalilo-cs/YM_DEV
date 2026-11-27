@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -49,6 +49,12 @@ class Project(BaseModel):
     root_path: str
     created_at: str
     created_by: str
+
+
+def iso_from_mtime(p: Path) -> str:
+    from datetime import UTC, datetime
+
+    return datetime.fromtimestamp(p.stat().st_mtime, UTC).isoformat(timespec="microseconds")
 
 
 class Platform:
@@ -518,6 +524,157 @@ class Platform:
         self.guard.require(actor, Action.READ, "system")
         lock = Path(__file__).resolve().parents[2] / "apps" / "web" / "package-lock.json"
         return platform_sbom(lock if lock.is_file() else None)
+
+    # ---- continuity: backups, checkpoints, recovery readiness ---------------------------
+    @property
+    def backups_dir(self) -> Path:
+        return self.settings.data_dir / "backups"
+
+    def create_backup(self, actor: Actor) -> dict[str, Any]:
+        import hashlib
+
+        from yemendev.continuity.backup import create_backup
+
+        self.guard.require(actor, Action.MANAGE_BACKUPS, "backups")
+        archive, m = create_backup(self.settings.data_dir, self.db, self.settings.keys_dir,
+                                   self.settings.checkpoints_dir, self.backups_dir, actor.ref)
+        h = hashlib.sha256(archive.read_bytes()).hexdigest()
+        with self.db.transaction() as conn:
+            conn.execute("INSERT INTO backups(id, created_at, created_by, path, size_bytes, archive_sha256,"
+                         " schema_version, audit_head) VALUES (?,?,?,?,?,?,?,?)",
+                         (m.backup_id, m.created_at, actor.ref, str(archive), archive.stat().st_size, h,
+                          m.schema_version, m.audit_head))
+        self.audit.record(actor=actor.ref, action=Action.MANAGE_BACKUPS.value, target=m.backup_id, outcome="created",
+                          details={"archive_sha256": h, "files": len(m.files), "audit_events": m.audit_events})
+        return self.backup(actor, m.backup_id)
+
+    def backup(self, actor: Actor, backup_id: str) -> dict[str, Any]:
+        self.guard.require(actor, Action.READ, "backups")
+        with self.db.read() as conn:
+            r = conn.execute("SELECT * FROM backups WHERE id = ?", (backup_id,)).fetchone()
+        if r is None:
+            raise NotFoundError("backup not found")
+        return self._backup_row(r)
+
+    def list_backups(self, actor: Actor) -> list[dict[str, Any]]:
+        self.guard.require(actor, Action.READ, "backups")
+        with self.db.read() as conn:
+            return [self._backup_row(r) for r in conn.execute("SELECT * FROM backups ORDER BY created_at DESC")]
+
+    @staticmethod
+    def _backup_row(r: Any) -> dict[str, Any]:
+        d = dict(r)
+        d["verified_ok"] = None if d["verified_ok"] is None else bool(d["verified_ok"])
+        d["verify_report"] = json.loads(d.pop("verify_report_json")) if d["verify_report_json"] else None
+        d["file_present"] = Path(d["path"]).is_file()
+        return d
+
+    def verify_backup(self, actor: Actor, backup_id: str) -> dict[str, Any]:
+        """Full verification on a temporary copy; the result is stored and audited."""
+        import hashlib
+
+        from yemendev.continuity.backup import Check, verify_backup
+        from yemendev.continuity.signing import public_hex
+
+        self.guard.require(actor, Action.MANAGE_BACKUPS, backup_id)
+        row = self.backup(actor, backup_id)
+        if not row["file_present"]:
+            raise NotFoundError("backup archive is no longer on disk")
+        known = {public_hex(self.signing_key), *self.trusted_public_keys()}
+        rep = verify_backup(Path(row["path"]), known)
+        # The archive holds the keys, so whoever has the file could re-sign a forged one. What it cannot change
+        # is the SHA-256 this database recorded at creation: compare against it.
+        now = hashlib.sha256(Path(row["path"]).read_bytes()).hexdigest()
+        rep.checks.insert(0, Check(name="archive unchanged since creation", ok=now == row["archive_sha256"],
+                                   detail="sha256 matches the value recorded when it was created" if
+                                   now == row["archive_sha256"] else "archive was REPLACED or modified on disk"))
+        rep.ok = all(c.ok for c in rep.checks)
+        with self.db.transaction() as conn:
+            conn.execute("UPDATE backups SET verified_at = ?, verified_ok = ?, verify_report_json = ? WHERE id = ?",
+                         (iso(), int(rep.ok), rep.model_dump_json(), backup_id))
+        self.audit.record(actor=actor.ref, action=Action.MANAGE_BACKUPS.value, target=backup_id,
+                          outcome="verified" if rep.ok else "verification_failed",
+                          details={"failed": [c.name for c in rep.checks if not c.ok]})
+        return self.backup(actor, backup_id)
+
+    def list_checkpoints(self, actor: Actor, project_id: str) -> list[dict[str, Any]]:
+        from yemendev.recovery.checkpoint import CheckpointManifest
+
+        self.require_read(actor, project_id)
+        root = str(self.project_root(project_id))
+        out = []
+        base = self.settings.checkpoints_dir
+        for d in sorted(base.iterdir()) if base.is_dir() else []:
+            try:
+                m = CheckpointManifest.model_validate_json((d / "manifest.json").read_bytes())
+            except (OSError, ValueError):
+                continue
+            if m.project_root != root:
+                continue
+            task_id = m.id.removeprefix("ckpt_")
+            with self.db.read() as conn:
+                t = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+                rb = conn.execute("SELECT status FROM task_steps WHERE task_id = ? AND name = 'rollback'",
+                                  (task_id,)).fetchone()
+            out.append({"id": m.id, "task_id": task_id, "task_status": t["status"] if t else None,
+                        "files": [e.path for e in m.entries], "rolled_back": bool(rb and rb["status"] == "done"),
+                        "created_at": iso_from_mtime(d / "manifest.json")})
+        return out
+
+    def recovery_readiness(self, actor: Actor) -> dict[str, Any]:
+        """Independent checks with explanations - deliberately no combined score."""
+        import shutil as _shutil
+        from datetime import UTC, datetime
+
+        self.guard.require(actor, Action.READ, "system")
+        checks: list[dict[str, str]] = []
+
+        def add(name: str, status: str, detail: str) -> None:
+            checks.append({"check": name, "status": status, "detail": detail})
+
+        with self.db.read() as conn:
+            last = conn.execute("SELECT * FROM backups ORDER BY created_at DESC LIMIT 1").fetchone()
+            last_ok = conn.execute("SELECT * FROM backups WHERE verified_ok = 1 ORDER BY created_at DESC LIMIT 1"
+                                   ).fetchone()
+            quick = conn.execute("PRAGMA quick_check").fetchone()[0]
+            queue = {r[0]: r[1] for r in conn.execute("SELECT state, COUNT(*) FROM task_queue GROUP BY state")}
+            conflicts = conn.execute("SELECT COUNT(*) FROM sync_conflicts WHERE status = 'open'").fetchone()[0]
+            stuck = conn.execute("SELECT COUNT(*) FROM tasks WHERE status = 'running' AND lease_expires_at < ?",
+                                 (iso(),)).fetchone()[0]
+        if last_ok is None:
+            add("verified backup", "fail" if last is None else "warn",
+                "no backup yet" if last is None else "backups exist but none has passed verification")
+        else:
+            age = (datetime.now(UTC) - datetime.fromisoformat(last_ok["created_at"])).total_seconds() / 86400
+            add("verified backup", "ok" if age <= 7 else "warn",
+                f"newest verified backup is {age:.1f} day(s) old ({last_ok['id']})")
+        integ = self.verify_integrity()
+        add("audit and evidence", "ok" if integ["valid"] else "fail",
+            f"{integ['audit_events']} audit events, {integ['evidence_records']} evidence records"
+            + ("" if integ["valid"] else f"; {integ['problems'][:3]}"))
+        add("database", "ok" if quick == "ok" else "fail", f"PRAGMA quick_check: {quick}")
+        free = _shutil.disk_usage(self.settings.data_dir).free
+        add("free disk space", "ok" if free > 1 << 30 else "warn" if free > 200 << 20 else "fail",
+            f"{free / (1 << 30):.1f} GiB free on the data directory's filesystem")
+        pending = sum(queue.get(s, 0) for s in ("queued", "running", "waiting"))
+        add("pending work preserved", "warn" if stuck else "ok",
+            f"{pending} queued/running/waiting task(s) persisted" + (f"; {stuck} running task(s) with an expired "
+                                                                     "lease (resume them)" if stuck else ""))
+        add("synchronization conflicts", "warn" if conflicts else "ok", f"{conflicts} open conflict(s)")
+        from yemendev.sandbox.docker_backend import isolation_report
+
+        iso_rep = isolation_report(self.settings.sandbox)
+        iso_warnings = list(cast(list[str], iso_rep["warnings"]))
+        first_warning = f"; {iso_warnings[0]}" if iso_warnings else ""
+        add("sandbox", "warn" if iso_warnings else "ok",
+            f"effective backend {iso_rep['effective']}{first_warning}")
+        from yemendev.continuity.backup import _checkpoints_ok
+
+        cp_ok, cp_detail = _checkpoints_ok(self.settings.checkpoints_dir)
+        add("checkpoints restorable", "ok" if cp_ok else "fail", cp_detail)
+        rank = {"ok": 0, "warn": 1, "fail": 2}
+        overall = max((c["status"] for c in checks), key=lambda s: rank[s])
+        return {"overall": overall, "checks": checks, "generated_at": iso()}
 
     # ---- dependency vulnerabilities (offline OSV database) ------------------------------
     def import_advisories(self, actor: Actor, path: str) -> Any:

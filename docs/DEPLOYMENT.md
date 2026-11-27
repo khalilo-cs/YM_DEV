@@ -34,13 +34,18 @@ State lives in `YEMENDEV_DATA_DIR` (SQLite + audit key + checkpoints).
 
 ## Backups
 
-Back up the **whole** data directory, including `keys/audit.key`: without the key the audit chain
-cannot be verified. Use SQLite's online backup (e.g. `sqlite3 yemendev.sqlite3 ".backup backup.sqlite3"`)
-rather than copying a live WAL database. Record the audit head hash
-(`yemendev audit` → `head_hash`) outside the host to detect truncation later
-(`yemendev audit --expected-head <hash>`).
+```bash
+yemendev backup create                 # admin: DB snapshot + keys + checkpoints -> data_dir/backups/*.tar.gz (0600)
+yemendev backup verify <backup_id>     # full check on a temporary copy; result stored and audited
+yemendev backup restore <archive> --to /new/data/dir   # verifies first; only into a new or empty directory
+yemendev readiness                     # recovery readiness checks (backup age, integrity, disk, conflicts, ...)
+```
 
-A built-in backup/restore command and backup verification are **not implemented yet**.
+The database is copied with SQLite's online backup API (consistent while the platform runs). A backup
+contains `keys/audit.key` (needed to verify the audit chain) and the signing key, so **store it like a
+secret**: anyone holding the archive could also produce a consistent forged one. Verification therefore also
+compares the archive with the SHA-256 this installation recorded when it created it. For off-host copies, also
+keep the audit head hash (`yemendev audit` → `head_hash`) somewhere else to detect truncation later.
 
 ## Upgrades
 

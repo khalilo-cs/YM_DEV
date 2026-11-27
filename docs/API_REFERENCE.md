@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **61**.
+Routes: **66**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -23,6 +23,10 @@ Routes: **61**.
 | POST | `/api/v1/approvals/{approval_id}` | Decide | `Decide` | - |
 | GET | `/api/v1/audit` | Audit | - | `after_seq`, `limit` |
 | GET | `/api/v1/audit/verify` | Audit Verify | - | - |
+| GET | `/api/v1/continuity/backups` | Backups | - | - |
+| POST | `/api/v1/continuity/backups` | Create Backup | - | - |
+| POST | `/api/v1/continuity/backups/{backup_id}/verify` | Verify Backup | - | - |
+| GET | `/api/v1/continuity/readiness` | Readiness | - | - |
 | GET | `/api/v1/evidence` | Evidence | - | `task_id`, `limit` |
 | GET | `/api/v1/evidence/{evidence_id}` | Evidence One | - | - |
 | GET | `/api/v1/health` | Health | - | - |
@@ -35,6 +39,7 @@ Routes: **61**.
 | GET | `/api/v1/projects` | Projects | - | - |
 | POST | `/api/v1/projects` | Register | `RegisterProject` | - |
 | GET | `/api/v1/projects/{project_id}` | Project | - | - |
+| GET | `/api/v1/projects/{project_id}/checkpoints` | Checkpoints | - | - |
 | GET | `/api/v1/projects/{project_id}/continuity-debt` | Continuity Debt | - | - |
 | POST | `/api/v1/projects/{project_id}/counterfactual` | Counterfactual | `Scenario` | - |
 | GET | `/api/v1/projects/{project_id}/graph` | Graph | - | - |

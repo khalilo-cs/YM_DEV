@@ -314,4 +314,23 @@ MIGRATIONS: list[tuple[int, str, str]] = [
         )
         """,
     ),
+    (
+        7,
+        "backups",
+        """
+        CREATE TABLE backups (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            path TEXT NOT NULL,
+            size_bytes INTEGER NOT NULL,
+            archive_sha256 TEXT NOT NULL,
+            schema_version INTEGER NOT NULL,
+            audit_head TEXT NOT NULL,
+            verified_at TEXT,
+            verified_ok INTEGER,
+            verify_report_json TEXT
+        )
+        """,
+    ),
 ]

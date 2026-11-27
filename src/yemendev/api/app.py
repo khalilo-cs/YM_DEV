@@ -424,6 +424,26 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
     def sbom(project_id: str, a: Who) -> dict[str, Any]:
         return platform.project_sbom(a, project_id)
 
+    @app.get("/api/v1/continuity/backups")
+    def backups(a: Who) -> list[dict[str, Any]]:
+        return platform.list_backups(a)
+
+    @app.post("/api/v1/continuity/backups", status_code=201)
+    def create_backup(a: Who) -> dict[str, Any]:
+        return platform.create_backup(a)
+
+    @app.post("/api/v1/continuity/backups/{backup_id}/verify")
+    def verify_backup(backup_id: str, a: Who) -> dict[str, Any]:
+        return platform.verify_backup(a, backup_id)
+
+    @app.get("/api/v1/continuity/readiness")
+    def readiness(a: Who) -> dict[str, Any]:
+        return platform.recovery_readiness(a)
+
+    @app.get("/api/v1/projects/{project_id}/checkpoints")
+    def checkpoints(project_id: str, a: Who) -> list[dict[str, Any]]:
+        return platform.list_checkpoints(a, project_id)
+
     @app.get("/api/v1/projects/{project_id}/vulnerabilities")
     def vulnerabilities(project_id: str, a: Who) -> dict[str, Any]:
         return dict(platform.vulnerabilities(a, project_id).model_dump())

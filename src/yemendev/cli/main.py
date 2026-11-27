@@ -121,6 +121,8 @@ def cmd_project(args: argparse.Namespace) -> int:
         _print(p.assess_risk(a, args.project_id).model_dump())
     elif args.pcmd == "impact":
         _print(p.impact(a, args.project_id, args.module))
+    elif args.pcmd == "checkpoints":
+        _print(p.list_checkpoints(a, args.project_id))
     elif args.pcmd == "vulns":
         _print(p.vulnerabilities(a, args.project_id).model_dump())
     elif args.pcmd == "sbom":
@@ -141,6 +143,39 @@ def _write_or_print(doc: Any, out: str | None) -> None:
         print(f"written: {out}", file=sys.stderr)
     else:
         _print(doc)
+
+
+def cmd_backup(args: argparse.Namespace) -> int:
+    if args.bcmd == "restore":  # filesystem operation into a NEW directory; no running installation needed
+        from yemendev.continuity.backup import restore_backup
+        from yemendev.continuity.signing import public_hex
+
+        known: set[str] = set()
+        here = Settings.from_env(Path(args.data_dir) if args.data_dir else None)
+        if (here.keys_dir / "ed25519.pem").is_file():
+            p = Platform(here)
+            known = {public_hex(p.signing_key), *p.trusted_public_keys()}
+        rep = restore_backup(Path(args.archive), Path(args.to).resolve(), known, args.allow_unknown_signer)
+        _print({"restored_to": str(Path(args.to).resolve()), "verification": rep.model_dump()})
+        return 0
+    p = _platform(args)
+    a = _actor(p, args)
+    if args.bcmd == "create":
+        _print(p.create_backup(a))
+    elif args.bcmd == "list":
+        _print(p.list_backups(a))
+    elif args.bcmd == "verify":
+        out = p.verify_backup(a, args.backup_id)
+        _print(out)
+        return 0 if out["verified_ok"] else 1
+    return 0
+
+
+def cmd_readiness(args: argparse.Namespace) -> int:
+    p = _platform(args)
+    rep = p.recovery_readiness(_actor(p, args))
+    _print(rep)
+    return 0 if rep["overall"] != "fail" else 1
 
 
 def cmd_advisories(args: argparse.Namespace) -> int:
@@ -425,6 +460,8 @@ def build_parser() -> argparse.ArgumentParser:
     x = ps.add_parser("sbom", help="CycloneDX 1.5 software bill of materials of a project (latest scan)")
     x.add_argument("project_id")
     x.add_argument("--out", help="write to this file instead of stdout")
+    ps.add_parser("checkpoints", help="repair checkpoints (original file contents) of a project") \
+        .add_argument("project_id")
     ps.add_parser("vulns", help="known vulnerabilities of the project's dependencies (offline OSV database)") \
         .add_argument("project_id")
     for name in ("scan", "graph", "members", "risks", "immune", "debt"):
@@ -461,6 +498,18 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_task)
 
     sub.add_parser("queue", help="background task queue (ORION)").set_defaults(fn=cmd_queue)
+    s = sub.add_parser("backup", help="verified backups of the platform state (admin)")
+    bcs = s.add_subparsers(dest="bcmd", required=True)
+    bcs.add_parser("create", help="snapshot DB, keys and checkpoints into data_dir/backups (signed manifest)")
+    bcs.add_parser("list")
+    bcs.add_parser("verify", help="full verification on a temporary copy").add_argument("backup_id")
+    x = bcs.add_parser("restore", help="verify, then restore into a NEW or empty directory")
+    x.add_argument("archive")
+    x.add_argument("--to", required=True, help="target data directory (must not exist or be empty)")
+    x.add_argument("--allow-unknown-signer", action="store_true",
+                   help="accept a backup signed by a key this installation does not know (check the fingerprint)")
+    s.set_defaults(fn=cmd_backup)
+    sub.add_parser("readiness", help="recovery readiness checks").set_defaults(fn=cmd_readiness)
     s = sub.add_parser("advisories", help="offline vulnerability database (OSV exports)")
     acs = s.add_subparsers(dest="acmd", required=True)
     acs.add_parser("import", help="import an OSV export: all.zip, a directory of *.json, or one file (admin)") \

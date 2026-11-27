@@ -147,3 +147,17 @@ def test_cli_advisories_import_status_and_project_vulns(cli, tmp_path, capsys, m
     rep = json.loads(run(capsys, "--data-dir", dd, "project", "vulns", pid)[1])
     assert [f["advisory_id"] for f in rep["findings"]] == ["TEST-PYPI-9"]
     assert [u["component"] for u in rep["not_checkable"]] == ["pkg:pypi/click"]  # a range is not claimed safe
+
+
+def test_cli_backup_verify_and_restore(cli, tmp_path, capsys):
+    dd, admin, bob = cli
+    b = json.loads(run(capsys, "--data-dir", dd, "backup", "create")[1])
+    rc, out, _ = run(capsys, "--data-dir", dd, "backup", "verify", b["id"])
+    assert rc == 0 and json.loads(out)["verified_ok"] is True
+    target = tmp_path / "restored"
+    rc, out, _ = run(capsys, "--data-dir", dd, "backup", "restore", b["path"], "--to", str(target))
+    assert rc == 0 and json.loads(out)["verification"]["signer_known"] is True
+    rc, out, _ = run(capsys, "--data-dir", str(target), "health")
+    assert rc == 0 and json.loads(out)["db"] == "ok"
+    rc, _, err = run(capsys, "--data-dir", dd, "backup", "restore", b["path"], "--to", str(target))
+    assert rc == 1 and "not empty" in err

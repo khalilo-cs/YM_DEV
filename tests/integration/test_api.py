@@ -222,3 +222,16 @@ def test_vulnerability_api_and_advisory_status(ctx, tmp_path):
     assert c.get(f"/api/v1/projects/{pid}/vulnerabilities", headers=viewer).status_code == 403
     assert c.get("/api/v1/advisories/status", headers=viewer).json()["advisories"] == {"npm": 1}
     assert c.get("/api/v1/system/vulnerabilities", headers=viewer).json()["findings"] == []
+
+
+def test_backup_and_readiness_api(ctx):
+    p, c, admin, op, viewer, _ = ctx
+    assert c.post("/api/v1/continuity/backups", headers=op).status_code == 403
+    b = c.post("/api/v1/continuity/backups", headers=admin)
+    assert b.status_code == 201 and b.json()["verified_ok"] is None
+    v = c.post(f"/api/v1/continuity/backups/{b.json()['id']}/verify", headers=admin).json()
+    assert v["verified_ok"] is True
+    assert [x["id"] for x in c.get("/api/v1/continuity/backups", headers=viewer).json()] == [b.json()["id"]]
+    r = c.get("/api/v1/continuity/readiness", headers=viewer).json()
+    assert {x["check"]: x["status"] for x in r["checks"]}["verified backup"] == "ok"
+    assert r["overall"] in ("ok", "warn")

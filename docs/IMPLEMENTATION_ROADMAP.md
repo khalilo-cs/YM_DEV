@@ -24,5 +24,6 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 16 | Web UI, Arabic/English (16, 17) | **Done - 256 tests; browser E2E 34/34 (`scripts/ui_e2e.py`)** |
 | 17 | ORION queue, scheduling, retries (5.2) | **Done - see ADR-0014; browser E2E 36/36** |
 | 18 | JS/TS scanning (Tree-sitter), SBOM, secret and vulnerability scanning, observability (logs, metrics, OpenTelemetry), installer | **Done** |
+| 19 | Continuity: verified backups, restore, checkpoints, recovery readiness | **Done** |
 | blocked | Real-model evaluation, comparative baseline B, Android/desktop builds (no model / SDKs here) | Blocked in this environment |
 | later | Desktop (Tauri) and mobile companion apps, real-model evaluation | Not started |
