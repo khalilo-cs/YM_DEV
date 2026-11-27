@@ -16,3 +16,6 @@
 | [0012](adr/0012-signed-offline-sync-and-passports.md) | Signed offline sync bundles and continuity passports | Accepted |
 | [0013](adr/0013-web-ui-static-same-origin.md) | Web UI as a static, same-origin client of the public API | Accepted |
 | [0014](adr/0014-orion-queue-process-per-run.md) | ORION queue with one supervised process per run | Accepted |
+| [0015](adr/0015-tree-sitter-js-ts-understanding.md) | Tree-sitter for JavaScript/TypeScript understanding | Accepted |
+| [0016](adr/0016-offline-supply-chain-security.md) | Offline supply-chain security: secrets, SBOM, OSV advisories | Accepted |
+| [0017](adr/0017-observability-without-mandatory-infrastructure.md) | Observability without mandatory infrastructure | Accepted |
