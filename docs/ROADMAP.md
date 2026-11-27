@@ -24,5 +24,5 @@ Two views of the same plan:
 | 10 Research & benchmarking | Partial (benchmark, no baselines) |
 | 11 Product readiness | Not started |
 
-Next engineering stage: JavaScript/TypeScript scanning, SBOM, structured logging and a one-command
-installer.
+Next engineering work: real-model evaluation and comparative baselines (need a model), JS/TS test execution
+and repair, desktop and mobile apps, PostgreSQL for multi-user deployments.

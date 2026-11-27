@@ -81,6 +81,10 @@ _LAUNCHER = (
 )
 
 
+# (interpreter, (uid, gid)) -> "" if the sandbox uid can run it with pytest, else the failure detail
+_INTERPRETER_PROBES: dict[tuple[str, tuple[int, int]], str] = {}
+
+
 @lru_cache(maxsize=1)
 def network_namespace_available() -> bool:
     exe = shutil.which("unshare")
@@ -182,6 +186,7 @@ class Workspace:
         if self.backend == "process":
             self._check_reachable()
             self._check_runtime_sockets()
+            self._check_interpreter()
 
     def _select_backend(self) -> tuple[str, str | None, DockerAvailability | None]:
         mode = self.settings.backend
@@ -232,6 +237,29 @@ class Workspace:
                 self.cleanup()
                 raise UnavailableError(f"sandbox uid {uid} cannot traverse workspace parent directory {anc}; "
                                        "configure a workspaces directory that is traversable (mode o+x)")
+
+    def _check_interpreter(self) -> None:
+        """Fail clearly if the sandbox uid cannot run the interpreter with pytest.
+
+        Found by installing into a private (0700) directory: the uid-dropped launcher could not exec the
+        venv's python and every run ended as an opaque "pytest produced no report". Probed once per
+        (interpreter, uid) by actually running it the way tests are run."""
+        if self.identity is None:
+            return
+        key = (self.settings.python_executable, self.identity)
+        if key not in _INTERPRETER_PROBES:
+            r = self._run_process([self.settings.python_executable, "-c", "import pytest"], timeout=60)
+            detail = (r.stderr or r.stdout).strip().splitlines()[-1:] if r.returncode != 0 else []
+            _INTERPRETER_PROBES[key] = detail[0][:300] if detail else ("" if r.returncode == 0 else "no output")
+        problem = _INTERPRETER_PROBES[key]
+        if problem:
+            uid = self.identity[0]
+            self.cleanup()
+            raise UnavailableError(
+                f"the sandbox user (uid {uid}) cannot run {self.settings.python_executable} with pytest: {problem}. "
+                "Install the platform where other users can read and execute it (every parent directory needs "
+                "o+x), set YEMENDEV_PYTHON to an interpreter with pytest that this uid can run, or use the docker "
+                "backend.")
 
     def _chown_tree(self) -> None:
         if self.identity is None:

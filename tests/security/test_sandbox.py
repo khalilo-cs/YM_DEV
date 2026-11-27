@@ -6,6 +6,7 @@ import pytest
 from helpers import make_passing_project, write
 
 from yemendev.core.config import SandboxSettings
+from yemendev.core.contracts import UnavailableError
 from yemendev.sandbox.workspace import Workspace, network_namespace_available
 
 
@@ -135,3 +136,19 @@ def test_privilege_separation_required_refuses_when_unavailable(tmp_path, monkey
     monkeypatch.setattr(SandboxSettings, "sandbox_identity", lambda self: None)
     with pytest.raises(UnavailableError):
         Workspace(make_passing_project(tmp_path / "p"), s)
+
+
+@pytest.mark.skipif(os.geteuid() != 0, reason="needs root: only a uid-dropping process sandbox can hit this")
+def test_interpreter_the_sandbox_user_cannot_run_is_reported_clearly(tmp_path):
+    """Regression (stage 18e installer test): a platform installed in a private (0700) directory made every
+    process-sandbox run fail as an opaque 'pytest produced no report'."""
+    from yemendev.sandbox import workspace as ws_mod
+
+    private = tmp_path / "private"  # pytest's tmp_path is 0700: the sandbox uid cannot traverse it
+    private.mkdir()
+    (private / "python").symlink_to(sys.executable)
+    root = make_passing_project(tmp_path / "proj")
+    s = SandboxSettings(backend="process", python_executable=str(private / "python"), timeout_seconds=30)
+    ws_mod._INTERPRETER_PROBES.clear()
+    with pytest.raises(UnavailableError, match=r"sandbox user \(uid \d+\) cannot run .*python with pytest"):
+        Workspace(root, s)

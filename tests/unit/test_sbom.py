@@ -96,4 +96,4 @@ def test_platform_sbom_lists_the_installed_environment(tmp_path):
     assert {"fastapi", "pydantic", "cryptography", "tree-sitter"} <= names
     direct = {r.split("/")[1].split("@")[0] for r in doc["dependencies"][0]["dependsOn"]}
     assert {"fastapi", "pydantic", "uvicorn", "cryptography", "tree-sitter"} <= direct
-    assert "pytest" not in direct  # dev extra, not a runtime dependency
+    assert "ruff" not in direct and "mypy" not in direct  # dev extra, not runtime dependencies

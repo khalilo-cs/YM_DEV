@@ -3,6 +3,11 @@
 ## 0.1.0 — 2026-11-17 (unreleased)
 
 ### Added
+- Stage 18e: one-command installer `scripts/install.sh` (idempotent, dry-run, token file 0600, sandbox
+  reachability warning); `pytest` is now a runtime dependency (the process sandbox runs project tests with
+  the platform's interpreter); the process sandbox probes once whether the sandbox user can run the
+  interpreter with pytest and explains how to fix it instead of failing as "pytest produced no report";
+  verified on Python 3.11.
 - Stage 18d: observability - JSON logs with request/trace correlation and redaction, Prometheus metrics
   (`GET /api/v1/metrics`), OpenTelemetry spans for requests, background runs and workflow steps (joined
   across the run process), `X-Request-ID`, W3C `traceparent`; optional `otel` extra; new runtime

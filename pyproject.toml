@@ -22,6 +22,8 @@ dependencies = [
     "packaging>=23",
     # tracing API (no-op until an SDK is configured; see the `otel` extra)
     "opentelemetry-api>=1.20",
+    # the process sandbox runs project test suites with the platform's interpreter (`python -m pytest`)
+    "pytest>=8",
 ]
 
 [project.optional-dependencies]

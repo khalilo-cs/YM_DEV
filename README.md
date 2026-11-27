@@ -23,10 +23,9 @@ For a local Python project, YEMENDEV AI can:
 ## Quick start
 
 ```bash
-uv venv && uv pip install -e ".[dev]"
+scripts/install.sh --actor alice --token-file ~/.alice.token   # one command: venv, deps, UI, data dir, admin token
 export YEMENDEV_DATA_DIR=$PWD/.yemendev
-.venv/bin/yemendev init --actor alice              # prints an admin token once
-export YEMENDEV_TOKEN=ydv_...                       # alice's token
+export YEMENDEV_TOKEN=$(cat ~/.alice.token)         # alice's token
 .venv/bin/yemendev token issue bob --role operator  # a second human, to approve alice's plans (90-day token)
 .venv/bin/yemendev project add myproj /abs/path/to/project
 .venv/bin/yemendev project grant <project_id> human:bob --role operator   # access is per project

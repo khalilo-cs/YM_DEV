@@ -12,7 +12,24 @@
 | Internet | Not required at runtime | needed once to install packages / build the sandbox image / build the UI |
 | Node.js | 20+ to build the web UI | not needed at runtime; the built UI is static files |
 
-## Install
+## One-command install
+
+```bash
+git clone <repository> && cd YM_DEV
+scripts/install.sh --token-file ~/.yemendev-admin.token     # see scripts/install.sh --help
+```
+
+It checks the requirements, creates `.venv` (uv if present, else venv + pip), installs the platform, builds
+the web UI when Node.js is available, initialises the data directory with the first admin token (written to
+the file with mode 0600, or printed once) and runs a health check. Running it again updates dependencies and
+never re-initialises an existing data directory or issues another token. Options: `--data-dir`, `--actor`,
+`--python`, `--no-ui`, `--with-sandbox-image` (needs Docker; pulls `python:3.13-slim`), `--otel`, `--dev`,
+`--dry-run`. As root it warns if the sandbox user (uid 65534) cannot reach the installation.
+
+Verified: a fresh clone on Python 3.11.18 (the minimum supported version) installed, built the UI and passed
+the full test suite; a second run issued no new token. `--with-sandbox-image` was not exercised by that test.
+
+## Manual install
 
 ```bash
 git clone <repository> && cd YM_DEV

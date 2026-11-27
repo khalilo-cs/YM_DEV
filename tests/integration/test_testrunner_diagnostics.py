@@ -1,3 +1,4 @@
+import pytest
 from helpers import make_passing_project, make_renamed_api_project, write
 
 from yemendev.core.config import SandboxSettings
@@ -78,11 +79,25 @@ def test_timeout_is_not_success(tmp_path):
     assert not diagnose([r]).reproducible_problem
 
 
-def test_runner_error_when_pytest_missing(tmp_path):
+def test_runner_error_when_pytest_missing(tmp_path, monkeypatch):
+    """A missing pytest is never mistaken for failing project tests."""
+    from yemendev.core.contracts import UnavailableError
+    from yemendev.sandbox.workspace import ExecutionResult
+
     s = SandboxSettings(backend="process", python_executable="/usr/bin/false")
-    with Workspace(make_passing_project(tmp_path / "p"), s) as ws:
-        r = run_pytest(ws)
-    assert r.status is RunStatus.RUNNER_ERROR
+    if s.sandbox_identity() is None:  # no uid drop: the run itself is classified
+        with Workspace(make_passing_project(tmp_path / "p"), s) as ws:
+            assert run_pytest(ws).status is RunStatus.RUNNER_ERROR
+        return
+    # uid-dropping sandbox: refused up front with an explanation (stage 18e interpreter probe) ...
+    with pytest.raises(UnavailableError, match="cannot run /usr/bin/false with pytest"):
+        Workspace(make_passing_project(tmp_path / "p"), s)
+    # ... and the runner still classifies a run that produced no report as a runner error
+    with Workspace(make_passing_project(tmp_path / "q"), SandboxSettings(backend="process")) as ws:
+        monkeypatch.setattr(ws, "run", lambda argv, timeout=None: ExecutionResult(
+            argv=argv, returncode=1, stdout="", stderr="No module named pytest", duration_seconds=0.0,
+            timed_out=False, network_isolated=True, run_as_uid=65534, limits={}, output_truncated=False))
+        assert run_pytest(ws).status is RunStatus.RUNNER_ERROR
 
 
 def test_hostile_junit_with_entities_rejected():
