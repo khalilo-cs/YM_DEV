@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The shell page needs no native commands; the platform UI (a remote http://127.0.0.1 page) gets none either.",
+  "windows": ["main"],
+  "permissions": []
+}

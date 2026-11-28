@@ -19,3 +19,5 @@
 | [0015](adr/0015-tree-sitter-js-ts-understanding.md) | Tree-sitter for JavaScript/TypeScript understanding | Accepted |
 | [0016](adr/0016-offline-supply-chain-security.md) | Offline supply-chain security: secrets, SBOM, OSV advisories | Accepted |
 | [0017](adr/0017-observability-without-mandatory-infrastructure.md) | Observability without mandatory infrastructure | Accepted |
+| [0018](adr/0018-javascript-typescript-test-execution.md) | JavaScript/TypeScript test execution and repair with node:test | Accepted |
+| [0019](adr/0019-desktop-shell-tauri.md) | Desktop app as a Tauri shell around the platform's own web UI | Accepted |

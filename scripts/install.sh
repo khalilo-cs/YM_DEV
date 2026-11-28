@@ -2,7 +2,7 @@
 # One-command installer for YEMENDEV AI (single Linux/macOS host).
 #
 #   scripts/install.sh [--data-dir DIR] [--actor NAME] [--token-file FILE] [--python PY]
-#                      [--no-ui] [--with-sandbox-image] [--otel] [--dev] [--dry-run]
+#                      [--no-ui] [--with-sandbox-image] [--with-desktop] [--otel] [--dev] [--dry-run]
 #
 # Safe to run again: dependencies are updated, an existing data directory is never re-initialised and
 # no new admin token is issued. Network is needed only for packages (PyPI, npm) and, with
@@ -16,6 +16,7 @@ TOKEN_FILE=""
 PYTHON=""
 UI=1
 SANDBOX_IMAGE=0
+DESKTOP=0
 EXTRAS=""
 DRY=0
 
@@ -32,6 +33,7 @@ while [ $# -gt 0 ]; do
     --python) PYTHON="${2:?--python needs a value}"; shift 2 ;;
     --no-ui) UI=0; shift ;;
     --with-sandbox-image) SANDBOX_IMAGE=1; shift ;;
+    --with-desktop) DESKTOP=1; shift ;;
     --otel) EXTRAS="${EXTRAS:+$EXTRAS,}otel"; shift ;;
     --dev) EXTRAS="${EXTRAS:+$EXTRAS,}dev"; shift ;;
     --dry-run) DRY=1; shift ;;
@@ -55,6 +57,10 @@ echo "    python: $("$PYTHON" -V 2>&1) ($PYTHON)"
 if [ "$UI" = 1 ] && ! command -v npm >/dev/null 2>&1; then
   echo "    node/npm: not found - the web UI will not be built (the API and CLI work without it)"
   UI=0
+fi
+if [ "$DESKTOP" = 1 ]; then
+  [ "$UI" = 1 ] || die "--with-desktop needs the web UI and npm (do not combine with --no-ui)"
+  command -v cargo >/dev/null 2>&1 || die "--with-desktop needs Rust (cargo) and the WebKitGTK libraries; see docs/DESKTOP.md"
 fi
 HAVE_DOCKER=0
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then HAVE_DOCKER=1; fi
@@ -133,7 +139,23 @@ if [ "$SANDBOX_IMAGE" = 1 ]; then
   fi
 fi
 
-# ---- 6. verify ------------------------------------------------------------------------------------
+# ---- 6. desktop shell (optional) -------------------------------------------------------------------
+if [ "$DESKTOP" = 1 ]; then
+  step "building the desktop shell (Tauri)"
+  run npm --prefix "$REPO/apps/desktop" ci --no-audit --no-fund
+  run npm --prefix "$REPO/apps/desktop" run build:binary
+  CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/yemendev"
+  if [ "$DRY" = 1 ]; then echo "    would write: $CONF_DIR/desktop.json"
+  else
+    mkdir -p "$CONF_DIR"
+    "$PYTHON" -c 'import json,sys; print(json.dumps({"bin": sys.argv[1], "data_dir": sys.argv[2]}, indent=2))' \
+      "$YD" "$DATA_DIR" > "$CONF_DIR/desktop.json"
+    echo "    wrote $CONF_DIR/desktop.json (the shell starts this platform with this data directory)"
+  fi
+  echo "    app: $REPO/apps/desktop/src-tauri/target/release/yemendev-desktop"
+fi
+
+# ---- 7. verify ------------------------------------------------------------------------------------
 step "verifying"
 if [ "$DRY" = 1 ]; then
   echo "    would run: $YD health"

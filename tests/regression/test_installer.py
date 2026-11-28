@@ -17,7 +17,8 @@ def test_installer_parses_and_documents_its_options():
     assert subprocess.run(["bash", "-n", str(INSTALL)]).returncode == 0
     r = run("--help")
     assert r.returncode == 0
-    for opt in ("--data-dir", "--actor", "--token-file", "--python", "--no-ui", "--with-sandbox-image", "--dry-run"):
+    for opt in ("--data-dir", "--actor", "--token-file", "--python", "--no-ui", "--with-sandbox-image",
+                "--with-desktop", "--dry-run"):
         assert opt in r.stdout
 
 
@@ -36,3 +37,16 @@ def test_bad_input_is_rejected_before_doing_anything(tmp_path):
     assert r.returncode == 1 and "Python 3.11 or newer is required" in r.stderr
     r = run("--frobnicate")
     assert r.returncode == 1 and "unknown option" in r.stderr
+
+
+def test_desktop_option_checks_requirements_first_and_writes_nothing_in_a_dry_run(tmp_path):
+    r = run("--dry-run", "--with-desktop", "--no-ui", "--data-dir", str(tmp_path / "d"))
+    assert r.returncode == 1 and "--with-desktop needs the web UI" in r.stderr
+    assert "would run:" not in r.stdout  # refused before any step
+    conf = tmp_path / "conf"
+    r = run("--dry-run", "--with-desktop", "--data-dir", str(tmp_path / "d"), env={"XDG_CONFIG_HOME": str(conf)})
+    if r.returncode == 1 and "needs Rust" in r.stderr:
+        return  # no cargo on this machine: the refusal itself is the expected behaviour
+    assert r.returncode == 0, r.stderr
+    assert "apps/desktop run build:binary" in r.stdout and f"would write: {conf}/yemendev/desktop.json" in r.stdout
+    assert not conf.exists()

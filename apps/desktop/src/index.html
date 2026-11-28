@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YEMENDEV AI</title>
+  <link rel="stylesheet" href="shell.css">
+  <script src="shell.js" defer></script>
+</head>
+<body>
+  <main id="starting">
+    <h1>YEMENDEV AI</h1>
+    <p>جارٍ تشغيل المنصة المحلية…</p>
+    <p lang="en" dir="ltr">Starting the local platform…</p>
+  </main>
+  <main id="failed" hidden>
+    <h1>تعذّر تشغيل المنصة المحلية</h1>
+    <p lang="en" dir="ltr">The local platform could not be started.</p>
+    <pre id="reason" dir="ltr"></pre>
+    <p>الحلول: ثبّت المنصة بـ <code dir="ltr">scripts/install.sh</code> أو اضبط <code dir="ltr">YEMENDEV_BIN</code> و<code dir="ltr">YEMENDEV_DATA_DIR</code>، ثم أعد فتح التطبيق.</p>
+    <p lang="en" dir="ltr">Install with <code>scripts/install.sh</code>, or set <code>YEMENDEV_BIN</code> and <code>YEMENDEV_DATA_DIR</code> (or <code>~/.config/yemendev/desktop.json</code>), then reopen the app.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,9 @@
+:root { --bg: #f5f6f8; --text: #1c2430; --muted: #5b6573; --accent: #0b6e4f; --bad: #b42318; }
+@media (prefers-color-scheme: dark) { :root { --bg: #14181f; --text: #e6e9ee; --muted: #9aa4b2; --accent: #4cc38a; --bad: #f97066; } }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, "Noto Naskh Arabic", sans-serif; }
+main { max-width: 42rem; margin: 18vh auto 0; padding: 0 1.25rem; }
+h1 { color: var(--accent); margin: 0 0 0.5rem; }
+#failed h1 { color: var(--bad); }
+p { color: var(--muted); }
+pre { white-space: pre-wrap; background: rgba(127, 127, 127, 0.12); padding: 0.75rem; border-radius: 6px; }
+code { font-family: ui-monospace, monospace; }
