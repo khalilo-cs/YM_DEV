@@ -21,3 +21,4 @@
 | [0017](adr/0017-observability-without-mandatory-infrastructure.md) | Observability without mandatory infrastructure | Accepted |
 | [0018](adr/0018-javascript-typescript-test-execution.md) | JavaScript/TypeScript test execution and repair with node:test | Accepted |
 | [0019](adr/0019-desktop-shell-tauri.md) | Desktop app as a Tauri shell around the platform's own web UI | Accepted |
+| [0020](adr/0020-recurring-schedules.md) | Recurring schedules act as their creator, inside ORION | Accepted |

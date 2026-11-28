@@ -50,6 +50,8 @@ class RepairPlan(BaseModel):
     hypothesis_id: str | None = None
     patches: list[FilePatch] = Field(min_length=1, max_length=50)
     rationale: str = Field(default="", max_length=4000)
+    # Text that looks like instructions found in what the model was shown (possible prompt injection).
+    untrusted_input_signals: list[str] = Field(default_factory=list, max_length=50)
 
     @field_validator("patches")
     @classmethod

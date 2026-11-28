@@ -59,7 +59,7 @@ def test_b_arm_runs_against_a_configured_model(stub_factory):  # noqa: F811
 
     def reply(req):
         prompt = req["body"]["messages"][1]["content"]
-        m = re.search(r"--- (\S+)\n(.*)$", prompt, re.DOTALL)
+        m = re.search(r"--- (\S+)\n(.*)\n</untrusted-[0-9a-f]{16}>$", prompt, re.DOTALL)  # stage 24 fenced prompt
         path, text = m.group(1), m.group(2)
         fixed = text.replace(f"core.{meta['old']}", f"core.{meta['new']}")
         return json.dumps({"rationale": "renamed API", "files": [{"path": path, "new_content": fixed}]})

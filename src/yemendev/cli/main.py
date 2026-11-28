@@ -171,6 +171,30 @@ def cmd_backup(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_schedule(args: argparse.Namespace) -> int:
+    from yemendev.orion.schedules import ScheduleCreate, ScheduleKind, is_overdue, parse_interval
+
+    p = _platform(args)
+    if args.scmd == "run-due":  # a manual tick, e.g. from cron when no `serve`/`worker` is running
+        _print(p.schedules.run_due(limit=args.limit))
+        return 0
+    a = _actor(p, args)
+    if args.scmd == "add":
+        first = parse_interval(args.first_in) if args.first_in else 0
+        s = p.schedules.create(a, ScheduleCreate(kind=ScheduleKind(args.kind), project_id=args.project,
+                                                 interval_seconds=parse_interval(args.every),
+                                                 first_run_in_seconds=first))
+        _print(s.model_dump())
+    elif args.scmd == "list":
+        _print([{**x.model_dump(), "overdue": is_overdue(x)} for x in p.schedules.visible(a)])
+    elif args.scmd in ("enable", "disable"):
+        _print(p.schedules.set_enabled(a, args.schedule_id, args.scmd == "enable").model_dump())
+    elif args.scmd == "delete":
+        p.schedules.delete(a, args.schedule_id)
+        print(f"deleted {args.schedule_id}")
+    return 0
+
+
 def cmd_readiness(args: argparse.Namespace) -> int:
     p = _platform(args)
     rep = p.recovery_readiness(_actor(p, args))
@@ -527,6 +551,19 @@ def build_parser() -> argparse.ArgumentParser:
                    help="accept a backup signed by a key this installation does not know (check the fingerprint)")
     s.set_defaults(fn=cmd_backup)
     sub.add_parser("readiness", help="recovery readiness checks").set_defaults(fn=cmd_readiness)
+    s = sub.add_parser("schedule", help="recurring scans, repair runs, vulnerability checks, backups, readiness")
+    scs = s.add_subparsers(dest="scmd", required=True)
+    x = scs.add_parser("add", help="runs as you, with your rights, re-checked at every run")
+    x.add_argument("kind", choices=["scan", "repair", "vulnerabilities", "backup", "readiness"])
+    x.add_argument("--project", help="project id (scan, repair, vulnerabilities)")
+    x.add_argument("--every", required=True, help="interval, e.g. 30m, 6h, 1d (at least 5 minutes)")
+    x.add_argument("--first-in", help="delay before the first run (default: as soon as a worker is running)")
+    scs.add_parser("list")
+    for name in ("enable", "disable", "delete"):
+        scs.add_parser(name).add_argument("schedule_id")
+    scs.add_parser("run-due", help="run due schedules now (for cron, when no serve/worker runs)").add_argument(
+        "--limit", type=int, default=10)
+    s.set_defaults(fn=cmd_schedule)
     s = sub.add_parser("advisories", help="offline vulnerability database (OSV exports)")
     acs = s.add_subparsers(dest="acmd", required=True)
     acs.add_parser("import", help="import an OSV export: all.zip, a directory of *.json, or one file (admin)") \

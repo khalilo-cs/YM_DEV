@@ -248,6 +248,17 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); log((cond ? "PASS " :
   await page.waitForTimeout(200);
   const queueRows = await page.locator("main h2:has-text('طابور الخلفية') + p + label + table tbody tr").count();
   check(queueRows === qv.entries.length && qv.entries.length > 0, `queue view lists ${queueRows} entries = API ${qv.entries.length}`);
+  // recurring schedules: created and disabled from the UI, acting as the signed-in human (bob)
+  await page.click("main button:has-text('إضافة جدول')");
+  await page.click("dialog[open] button.primary");
+  await page.waitForSelector("main table tr:has-text('readiness')");
+  const scheds = await api(bobTok, "/schedules");
+  check(scheds.length === 1 && scheds[0].kind === "readiness" && scheds[0].created_by === "human:bob" && scheds[0].interval_seconds === 86400,
+    `schedule created from the UI acts as bob (API: ${scheds.map((x) => x.kind + "/" + x.created_by).join()})`);
+  await page.click("main tr:has-text('readiness') button:has-text('تعطيل')");
+  await page.waitForSelector("main tr:has-text('readiness') .badge:has-text('معطّل')");
+  check((await api(bobTok, "/schedules"))[0].enabled === false, "schedule disabled from the UI");
+  await page.screenshot({ path: shots + "/10b-schedules-ar.png", fullPage: true });
 
   // 7. security page: integrity check through UI
   await page.goto(base + "/app/#/security");

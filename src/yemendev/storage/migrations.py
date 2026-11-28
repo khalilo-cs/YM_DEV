@@ -333,4 +333,28 @@ MIGRATIONS: list[tuple[int, str, str]] = [
         )
         """,
     ),
+    (
+        8,
+        "recurring schedules",
+        """
+        CREATE TABLE schedules (
+            id TEXT PRIMARY KEY,
+            kind TEXT NOT NULL CHECK (kind IN ('scan', 'repair', 'vulnerabilities', 'backup', 'readiness')),
+            project_id TEXT REFERENCES projects(id),
+            interval_seconds INTEGER NOT NULL CHECK (interval_seconds >= 300),
+            next_run_at TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            created_by TEXT NOT NULL,
+            created_role TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_run_at TEXT,
+            last_status TEXT,
+            last_detail TEXT,
+            runs INTEGER NOT NULL DEFAULT 0,
+            failures INTEGER NOT NULL DEFAULT 0,
+            disabled_reason TEXT
+        );
+        CREATE INDEX schedules_due ON schedules(enabled, next_run_at);
+        """,
+    ),
 ]

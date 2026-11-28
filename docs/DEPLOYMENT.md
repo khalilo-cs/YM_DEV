@@ -47,6 +47,14 @@ secret**: anyone holding the archive could also produce a consistent forged one.
 compares the archive with the SHA-256 this installation recorded when it created it. For off-host copies, also
 keep the audit head hash (`yemendev audit` → `head_hash`) somewhere else to detect truncation later.
 
+## Recurring work
+
+`yemendev schedule add scan --project <id> --every 6h`, `... add backup --every 1d` (admin),
+`... add vulnerabilities --project <id> --every 1d`, `... add readiness --every 1h`, `... add repair --project <id>
+--every 1d` (queues a task; changes still need an approval). Schedules run inside `yemendev serve` / `yemendev worker`.
+Without a resident process, run `yemendev schedule run-due` from cron, e.g. `*/10 * * * *`. Every run acts as the
+person who created the schedule; revoking their tokens disables it. Overdue schedules appear in `yemendev readiness`.
+
 ## Upgrades
 
 Migrations run automatically at startup and are append-only. Back up before upgrading.

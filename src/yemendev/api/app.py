@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, Query, Request
+from fastapi import Depends, FastAPI, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -40,6 +40,7 @@ from yemendev.observability.logs import request_id_var
 from yemendev.observability.metrics import HTTP_DURATION, HTTP_REQUESTS, REGISTRY
 from yemendev.observability.tracing import extract, inject, tracer
 from yemendev.orion.queue import QueueOptions
+from yemendev.orion.schedules import ScheduleCreate
 from yemendev.orion.workflow import RepairWorkflow
 from yemendev.platform import Platform
 from yemendev.recovery.model import RepairPlan
@@ -451,6 +452,29 @@ def create_app(platform: Platform, clock: Callable[[], float] = time.monotonic,
     @app.get("/api/v1/system/vulnerabilities")
     def system_vulnerabilities(a: Who) -> dict[str, Any]:
         return dict(platform.platform_vulnerabilities(a).model_dump())
+
+    @app.get("/api/v1/schedules")
+    def schedules_list(a: Who) -> list[dict[str, Any]]:
+        from yemendev.orion.schedules import is_overdue
+
+        return [{**x.model_dump(), "overdue": is_overdue(x)} for x in platform.schedules.visible(a)]
+
+    @app.post("/api/v1/schedules", status_code=201)
+    def schedules_create(body: ScheduleCreate, a: Who) -> dict[str, Any]:
+        return dict(platform.schedules.create(a, body).model_dump())
+
+    @app.post("/api/v1/schedules/{schedule_id}/enable")
+    def schedules_enable(schedule_id: str, a: Who) -> dict[str, Any]:
+        return dict(platform.schedules.set_enabled(a, schedule_id, True).model_dump())
+
+    @app.post("/api/v1/schedules/{schedule_id}/disable")
+    def schedules_disable(schedule_id: str, a: Who) -> dict[str, Any]:
+        return dict(platform.schedules.set_enabled(a, schedule_id, False).model_dump())
+
+    @app.delete("/api/v1/schedules/{schedule_id}", status_code=204)
+    def schedules_delete(schedule_id: str, a: Who) -> Response:
+        platform.schedules.delete(a, schedule_id)
+        return Response(status_code=204)
 
     @app.get("/api/v1/research/benchmarks")
     def research_benchmarks(a: Who) -> list[dict[str, Any]]:

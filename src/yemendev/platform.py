@@ -626,6 +626,14 @@ class Platform:
                         "created_at": iso_from_mtime(d / "manifest.json")})
         return out
 
+    @property
+    def schedules(self) -> Any:
+        from yemendev.orion.schedules import Schedules
+
+        if getattr(self, "_schedules", None) is None:
+            self._schedules = Schedules(self)
+        return self._schedules
+
     def recovery_readiness(self, actor: Actor) -> dict[str, Any]:
         """Independent checks with explanations - deliberately no combined score."""
         import shutil as _shutil
@@ -677,6 +685,18 @@ class Platform:
 
         cp_ok, cp_detail = _checkpoints_ok(self.settings.checkpoints_dir)
         add("checkpoints restorable", "ok" if cp_ok else "fail", cp_detail)
+        from yemendev.orion.schedules import Schedule, is_overdue
+
+        with self.db.read() as conn:
+            scheds = [Schedule(**{**dict(r), "enabled": bool(r["enabled"])})
+                      for r in conn.execute("SELECT * FROM schedules")]
+        overdue = [x for x in scheds if is_overdue(x)]
+        dropped = [x for x in scheds if not x.enabled and x.last_status in ("dropped", "denied")]
+        add("scheduled work", "warn" if overdue or dropped else "ok",
+            f"{sum(x.enabled for x in scheds)} enabled schedule(s)"
+            + (f"; {len(overdue)} overdue (is a worker running? `yemendev serve` or `yemendev worker`)" if overdue
+               else "")
+            + (f"; {len(dropped)} disabled because their creator lost access" if dropped else ""))
         rank = {"ok": 0, "warn": 1, "fail": 2}
         overall = max((c["status"] for c in checks), key=lambda s: rank[s])
         return {"overall": overall, "checks": checks, "generated_at": iso()}

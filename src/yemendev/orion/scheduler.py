@@ -92,12 +92,16 @@ class Scheduler:
         return any(t.is_alive() for t in self._threads)
 
     def _loop(self, worker: str) -> None:
-        last_recovery = 0.0
+        last_recovery = last_schedules = 0.0
         while not self._stop.is_set():
             try:
                 if time.monotonic() - last_recovery >= min(5.0, self.settings.heartbeat_seconds / 2):
                     self.queue.recover_stale()
                     last_recovery = time.monotonic()
+                if time.monotonic() - last_schedules >= 5.0:  # each due schedule is claimed by exactly one worker
+                    last_schedules = time.monotonic()
+                    for r in self.p.schedules.run_due():
+                        log.info("schedule ran", extra=r)
                 if self.run_once(worker) is not None:
                     continue
             except Exception:  # noqa: BLE001 - a worker must survive unexpected errors; they are logged

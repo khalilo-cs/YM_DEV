@@ -29,5 +29,6 @@ Working in independently verifiable stages. "Done" = acceptance tests pass in CI
 | 21 | UI: every required area (dashboard resources/readiness, project memory/history/vulnerabilities/SBOM/checkpoints, security, continuity, research, queue) | **Done - browser E2E 56/56** |
 | 22 | JS/TS test execution and repair (node:test, both backends) | **Done - see ADR-0018** |
 | 23 | Desktop app (Tauri 2) around the web UI | **Done (Linux) - desktop E2E 17/17, ADR-0019** |
+| 24 | ORION recurring schedules; prompt-injection defences; JS/TS plan review | **Done - ADR-0020** |
 | blocked | Real-model evaluation, comparative baseline B, Android/desktop builds (no model / SDKs here) | Blocked in this environment |
 | later | Desktop (Tauri) and mobile companion apps, real-model evaluation | Not started |

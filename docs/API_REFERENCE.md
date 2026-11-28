@@ -11,7 +11,7 @@ Authorization is per action and, for project resources, per project membership (
 `invalid_input` (413/422), `rate_limited` (429, with `Retry-After`), `unavailable` (503),
 `internal` (500, no internals exposed).
 
-Routes: **68**.
+Routes: **73**.
 
 | Method | Path | Operation | Request body | Query parameters |
 |---|---|---|---|---|
@@ -62,6 +62,11 @@ Routes: **68**.
 | GET | `/api/v1/queue` | Queue | - | `limit` |
 | GET | `/api/v1/research/benchmarks` | Research Benchmarks | - | - |
 | GET | `/api/v1/research/benchmarks/{source}/{name}` | Research Benchmark | - | - |
+| GET | `/api/v1/schedules` | Schedules List | - | - |
+| POST | `/api/v1/schedules` | Schedules Create | `ScheduleCreate` | - |
+| DELETE | `/api/v1/schedules/{schedule_id}` | Schedules Delete | - | - |
+| POST | `/api/v1/schedules/{schedule_id}/disable` | Schedules Disable | - | - |
+| POST | `/api/v1/schedules/{schedule_id}/enable` | Schedules Enable | - | - |
 | GET | `/api/v1/skills` | Skills | - | `status` |
 | POST | `/api/v1/skills` | Propose Skill | `ProposeSkill` | - |
 | POST | `/api/v1/skills/activate/{approval_id}` | Activate | - | - |
@@ -145,6 +150,15 @@ Routes: **68**.
 |---|---|---|
 | `faults` | array | yes |
 | `name` | string |  |
+
+### `ScheduleCreate`
+
+| Field | Type | Required |
+|---|---|---|
+| `first_run_in_seconds` | integer |  |
+| `interval_seconds` | integer | yes |
+| `kind` | `ScheduleKind` | yes |
+| `project_id` | string or null |  |
 
 ### `TrustKey`
 

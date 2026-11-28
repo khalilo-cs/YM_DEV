@@ -2,23 +2,29 @@
 
 **Global Autonomous Digital Resilience & Evolution Platform** — *Understand. Predict. Protect. Recover. Evolve.*
 
-> Status: **early core (v0.1.0)**. The MVP repair workflow works locally and offline and is covered
-> by automated tests. Most of the long-term vision is **not started** — see
-> [docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md) for exactly what is implemented and verified.
+> Status: **v0.1.0, pre-release**. Everything listed below runs locally and offline and is covered by automated
+> tests; what is *not* done (e.g. a real-model evaluation, a mobile app, an external audit) is listed honestly in
+> [docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md).
 
 ## What works today
 
-For a local Python project, YEMENDEV AI can:
+For a local Python or JavaScript/TypeScript project, YEMENDEV AI can:
 
-1. scan it (files, languages, import graph, declared dependencies) without executing any code;
-2. run its test suite twice in an isolated sandbox (a Docker container, or a restricted process: no network, unprivileged);
+1. scan it (files, languages, import graph, declared dependencies, secrets, SBOM, known vulnerabilities from an
+   imported OSV database) without executing any code;
+2. run its test suite (pytest, `node:test`) twice in an isolated sandbox (a Docker container, or a restricted
+   process: no network, unprivileged);
 3. diagnose reproducible failures and record *unverified* hypotheses;
-4. propose repairs from a human-authored plan, from validated skills, or (if configured) from a model;
+4. propose repairs from a human-authored plan, from validated skills, or (if configured) from a model - with
+   prompt-injection defences and a static security review of every plan;
 5. simulate each repair in a fresh sandbox and reject any that fixes nothing or breaks a passing test;
 6. ask a **different human** for an approval bound to the exact file changes;
 7. apply the change with a checkpoint, re-run tests, and **roll back byte-exactly** if verification fails;
-8. record hash-chained evidence for every step, learn a candidate skill from verified repairs, and
-   resume after a crash at any step.
+8. record hash-chained evidence for every step, learn a candidate skill from verified repairs, resume after a
+   crash at any step, run work in background workers, and make verified backups.
+
+Clients: CLI, HTTP API, an Arabic/English web UI (`/app`) and a Linux desktop app (`apps/desktop`, Tauri).
+A resilience benchmark (24 scenarios) and an A-E comparison are in [docs/BENCHMARK_METHODOLOGY.md](docs/BENCHMARK_METHODOLOGY.md).
 
 ## Quick start
 
@@ -47,7 +53,7 @@ Optional model (any OpenAI-compatible server, e.g. llama.cpp / Ollama / vLLM):
 ## Development
 
 ```bash
-.venv/bin/python -m pytest          # full suite (~1 min)
+.venv/bin/python -m pytest          # full suite (~4 min; Docker tests run when a daemon is available)
 .venv/bin/ruff check src tests
 .venv/bin/mypy                      # strict
 ```
@@ -57,6 +63,7 @@ Optional model (any OpenAI-compatible server, e.g. llama.cpp / Ollama / vLLM):
 [Overview](docs/PROJECT_OVERVIEW.md) · [Architecture](docs/ARCHITECTURE.md) · [Installation](docs/INSTALLATION.md) ·
 [Feature status](docs/FEATURE_STATUS.md) · [Audit report](docs/AUDIT_REPORT.md) · [API](docs/API_REFERENCE.md) ·
 [Threat model](docs/THREAT_MODEL.md) · [Roadmap](docs/IMPLEMENTATION_ROADMAP.md) ·
-[Risk register](docs/RISK_REGISTER.md) · [ADRs](docs/ARCHITECTURE_DECISIONS.md) · [Security](SECURITY.md)
+[Risk register](docs/RISK_REGISTER.md) · [ADRs](docs/ARCHITECTURE_DECISIONS.md) · [Security](SECURITY.md) ·
+[Desktop app](docs/DESKTOP.md) · [Benchmarks](docs/BENCHMARK_METHODOLOGY.md)
 
 License: **pending the owner's decision** (`pyproject.toml` declares Apache-2.0 provisionally; no `LICENSE` file yet).

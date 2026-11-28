@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api";
-import { Async, Badge, Code, ConfirmButton, ShortId, useApi, useI18n } from "../ui";
+import { Async, Badge, Code, ConfirmButton, ErrorBox, ShortId, useApi, useI18n } from "../ui";
 
 type Agent = { name: string; responsibility: string; actor: string; allowed_actions: string[] };
 type Run = { agent: string; operation: string; status: string; started_at: string; project_id: string | null };
@@ -20,6 +20,7 @@ export function Agents() {
           <tbody>{agents.map((a) => <tr key={a.name}><td><Code>{a.name}</Code></td><td><bdi>{a.responsibility}</bdi></td><td>{a.allowed_actions.map((x) => <Code key={x}>{x} </Code>)}</td></tr>)}</tbody></table>
       )}</Async>
       <Queue />
+      <Schedules />
       <h2>{t("agent_runs")}</h2>
       <Async q={reg}>{(agents) => <RecentRuns names={agents.map((a) => a.name)} fmtDate={fmtDate} />}</Async>
     </section>
@@ -55,6 +56,61 @@ function Queue() {
           </>
         );
       }}</Async>
+    </>
+  );
+}
+
+type Schedule = { id: string; kind: string; project_id: string | null; interval_seconds: number; next_run_at: string; enabled: boolean;
+  created_by: string; last_run_at: string | null; last_status: string | null; last_detail: string | null; runs: number; failures: number;
+  disabled_reason: string | null; overdue: boolean };
+const KINDS = ["scan", "repair", "vulnerabilities", "backup", "readiness"];
+const PROJECT_KINDS = ["scan", "repair", "vulnerabilities"];
+const INTERVALS: [number, string][] = [[1800, "30m"], [3600, "1h"], [21600, "6h"], [86400, "1d"], [604800, "7d"]];
+
+function Schedules() {
+  const { t, fmtDate } = useI18n();
+  const q = useApi<Schedule[]>("/schedules");
+  const projects = useApi<{ id: string; name: string }[]>("/projects");
+  const [kind, setKind] = useState("readiness");
+  const [project, setProject] = useState("");
+  const [every, setEvery] = useState(86400);
+  const [err, setErr] = useState<Error | null>(null);
+  const needsProject = PROJECT_KINDS.includes(kind);
+  const act = (f: () => Promise<unknown>) => async () => { setErr(null); try { await f(); } catch (e) { setErr(e as Error); } q.reload(); };
+  const label = (secs: number) => INTERVALS.find(([s]) => s === secs)?.[1] ?? `${Math.round(secs / 60)}m`;
+  return (
+    <>
+      <h2>{t("schedules")}</h2>
+      <p className="muted small">{t("schedules_note")}</p>
+      <div className="row">
+        <label>{t("kind")} <select value={kind} onChange={(e) => setKind(e.target.value)}>{KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select></label>
+        {needsProject && <Async q={projects}>{(ps) => (
+          <label>{t("project")} <select value={project} onChange={(e) => setProject(e.target.value)}>
+            <option value="">—</option>{ps.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+        )}</Async>}
+        <label>{t("every")} <select value={every} onChange={(e) => setEvery(Number(e.target.value))}>{INTERVALS.map(([s, l]) => <option key={s} value={s}>{l}</option>)}</select></label>
+        <ConfirmButton label={t("add_schedule")} question={t("add_schedule_q")} disabled={needsProject && !project}
+          onConfirm={act(() => api("/schedules", { method: "POST", body: { kind, project_id: needsProject ? project : null, interval_seconds: every } }))} />
+      </div>
+      {err && <ErrorBox error={err} />}
+      <Async q={q} empty={(d) => d.length === 0}>{(d) => (
+        <table><thead><tr><th>{t("kind")}</th><th>{t("every")}</th><th>{t("next_run")}</th><th>{t("last_result")}</th><th>{t("created_by")}</th><th /></tr></thead>
+          <tbody>{d.map((x) => (
+            <tr key={x.id}>
+              <td><Badge v={x.kind} />{x.project_id && <div className="small"><ShortId v={x.project_id} /></div>}</td>
+              <td>{label(x.interval_seconds)}</td>
+              <td>{x.enabled ? fmtDate(x.next_run_at) : <Badge v={t("disabled")} tone="warn" />}{x.overdue && <> <Badge v={t("overdue")} tone="bad" /></>}
+                {x.disabled_reason && <div className="muted small"><bdi>{x.disabled_reason}</bdi></div>}</td>
+              <td>{x.last_status ? <><Badge v={x.last_status} tone={x.last_status === "ok" ? "good" : x.last_status === "skipped" ? undefined : "warn"} />
+                <div className="muted small"><bdi>{x.last_detail}</bdi></div><div className="muted small">{fmtDate(x.last_run_at)} · {x.runs}/{x.failures}</div></> : "—"}</td>
+              <td><Code>{x.created_by}</Code></td>
+              <td className="row">
+                <button className="plain" onClick={act(() => api(`/schedules/${x.id}/${x.enabled ? "disable" : "enable"}`, { method: "POST" }))}>{x.enabled ? t("disable") : t("enable")}</button>
+                <ConfirmButton label={t("delete")} question={t("delete_schedule_q")} kind="danger" onConfirm={act(() => api(`/schedules/${x.id}`, { method: "DELETE" }))} />
+              </td>
+            </tr>
+          ))}</tbody></table>
+      )}</Async>
     </>
   );
 }

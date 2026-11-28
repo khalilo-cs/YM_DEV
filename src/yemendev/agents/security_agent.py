@@ -10,7 +10,9 @@ Verdict: any HIGH finding -> BLOCK; any MEDIUM -> CAUTION; otherwise ALLOW.
 from __future__ import annotations
 
 import difflib
+import io
 import re
+import tokenize
 from enum import StrEnum
 from pathlib import PurePosixPath
 
@@ -57,8 +59,41 @@ _RULES: list[tuple[str, str, re.Pattern[str], str]] = [
      "adds file deletion"),
     ("permission-change", "medium", re.compile(r"\bos\.(chmod|chown)\s*\(|setuid|setgid"), "changes permissions"),
 ]
+# JavaScript/TypeScript (stage 24; JS/TS repairs exist since stage 22 and were reviewed with Python rules only)
+_JS_RULES: list[tuple[str, str, re.Pattern[str], str]] = [
+    ("dynamic-code-execution", "high", re.compile(r"\b(eval\s*\(|new\s+Function\s*\(|vm\.(runIn\w*|compileFunction|"
+                                                  r"Script)\b|setTimeout\s*\(\s*['\"`])"),
+     "adds dynamic code execution"),
+    ("process-execution", "high",
+     re.compile(r"\bchild_process\b|\b(exec|execSync|execFile|execFileSync|spawn|spawnSync|fork)\s*\(|"
+                r"process\.binding\s*\(|\bworker_threads\b"), "adds operating-system command execution"),
+    ("network-access", "medium",
+     re.compile(r"\bfetch\s*\(|\b(node:)?(https?|net|tls|dgram|http2)['\"]|\b(http|https|net|tls|dgram)\."
+                r"(request|get|connect|createConnection|createSocket)\b|\bXMLHttpRequest\b|\bWebSocket\b"),
+     "adds network access"),
+    ("file-deletion", "medium", re.compile(r"\bfs(\.promises)?\.(rm|rmSync|rmdir|rmdirSync|unlink|unlinkSync)\b|"
+                                           r"\b(rm|rmSync|unlink|unlinkSync|rmdir)\s*\("), "adds file deletion"),
+    ("permission-change", "medium", re.compile(r"\bfs(\.promises)?\.(chmod|chown|lchown)\w*\b|process\.set[ug]id"),
+     "changes permissions"),
+    ("environment-access", "medium", re.compile(r"\bprocess\.env\b"), "reads environment variables (credentials)"),
+]
+_JS_SUFFIXES = (".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".jsx", ".tsx")
 _SENSITIVE_FILES = re.compile(r"(^|/)(setup\.py|setup\.cfg|pyproject\.toml|requirements[^/]*\.txt|Dockerfile|"
-                              r"Makefile|\.pre-commit-config\.yaml|MANIFEST\.in)$|(^|/)\.github/|(^|/)\.gitlab-ci")
+                              r"Makefile|\.pre-commit-config\.yaml|MANIFEST\.in|package\.json|package-lock\.json|"
+                              r"npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|\.npmrc|\.yarnrc(\.yml)?|tsconfig[^/]*\.json)$"
+                              r"|(^|/)\.github/|(^|/)\.gitlab-ci|(^|/)\.husky/")
+
+
+def _without_python_comment(line: str) -> str:
+    """Drop a trailing comment using the tokenizer, so ``"#"`` inside a string cannot hide the rest of the line
+    (regression: ``x = "#"; os.system(...)`` passed the review). Unparseable fragments are scanned whole."""
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(line).readline):
+            if tok.type == tokenize.COMMENT:
+                return line[:tok.start[1]]
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return line
+    return line
 
 
 def review_plan(plan: RepairPlan, originals: dict[str, str]) -> PlanReview:
@@ -76,9 +111,11 @@ def review_plan(plan: RepairPlan, originals: dict[str, str]) -> PlanReview:
                 added.extend((j + 1, new[j]) for j in range(j1, j2))
             if op in ("replace", "delete"):
                 removed += i2 - i1
+        js = PurePosixPath(p.path).suffix in _JS_SUFFIXES
         for lineno, text in added:
-            code = text.split("#", 1)[0]
-            for rule, sev, pat, detail in _RULES:
+            # JS: comments are not stripped - `"//"` inside a string would otherwise hide the rest of the line
+            code = text if js else _without_python_comment(text)
+            for rule, sev, pat, detail in _JS_RULES if js else _RULES:
                 if pat.search(code):
                     findings.append(SecurityFinding(rule=rule, severity=sev, path=p.path, line=lineno, detail=detail))
             if redact_text(text) != text:
@@ -90,6 +127,13 @@ def review_plan(plan: RepairPlan, originals: dict[str, str]) -> PlanReview:
         if PurePosixPath(p.path).suffix in (".so", ".pyd", ".dll", ".exe"):
             findings.append(SecurityFinding(rule="binary-file", severity="high", path=p.path, line=None,
                                             detail="writes a native binary"))
+    for signal in plan.untrusted_input_signals[:10]:
+        where, _, text = signal.partition(": ")
+        path, _, line = where.rpartition(":")
+        findings.append(SecurityFinding(
+            rule="prompt-injection-in-model-input", severity="medium", path=path or where,
+            line=int(line) if line.isdigit() else None,
+            detail=f"the model was shown text that looks like instructions to it: {text[:120]}"))
     verdict = Verdict.BLOCK if any(f.severity == "high" for f in findings) else (
         Verdict.CAUTION if findings else Verdict.ALLOW)
     return PlanReview(plan_id=plan.id, verdict=verdict, findings=findings)
