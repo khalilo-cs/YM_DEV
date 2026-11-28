@@ -8,6 +8,7 @@ model API keys are referenced by *environment variable name* only.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -25,6 +26,12 @@ class SandboxSettings(BaseModel):
     # "disabled": do not isolate (recorded in evidence).
     network_isolation: str = Field(default="best_effort")
     python_executable: str = Field(default=sys.executable)
+    # Node.js for JavaScript/TypeScript test suites (process backend; the docker backend uses the image's
+    # `node`). None = not available: JS/TS suites are reported as not runnable, never as passing.
+    node_executable: str | None = Field(default_factory=lambda: shutil.which("node"))
+    # A project's top-level node_modules is copied into each workspace (never linked: sandboxed code must not
+    # be able to change the real dependencies) up to this size; above it, it is left out and that is recorded.
+    max_node_modules_mb: int = Field(default=1024, ge=0)
     # Run untrusted code as this uid/gid. None = auto: 65534 (nobody) when the platform runs as root.
     run_as_uid: int | None = None
     run_as_gid: int | None = None
@@ -145,6 +152,7 @@ class Settings(BaseModel):
             network_isolation=env.get("YEMENDEV_NETWORK_ISOLATION", "best_effort"),
             timeout_seconds=float(env.get("YEMENDEV_SANDBOX_TIMEOUT", "120")),
             python_executable=env.get("YEMENDEV_PYTHON", sys.executable),
+            node_executable=env.get("YEMENDEV_NODE") or shutil.which("node"),
             backend=env.get("YEMENDEV_SANDBOX_BACKEND", "auto"),
             docker_image=env.get("YEMENDEV_SANDBOX_IMAGE", "yemendev-sandbox:py3.13"),
         )

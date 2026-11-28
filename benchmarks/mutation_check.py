@@ -49,7 +49,8 @@ check("revalidation never marks anything stale", MemoryEngine,
       {"revalidate": lambda self, pid, root: {"checked": 0, "marked_stale": 0}}, "knowledge_staleness")
 check("sync accepts any signature", S, {"verify": lambda *a, **k: True}, "distributed_sync")
 check("sandbox memory limit not applied", W,
-      {"_LAUNCHER": W._LAUNCHER.replace("resource.setrlimit(resource.RLIMIT_AS,(mem,mem))\n", "")},
+      {"_LAUNCHER": W._LAUNCHER.replace(
+          "resource.setrlimit(resource.RLIMIT_DATA if kind=='data' else resource.RLIMIT_AS,(mem,mem))\n", "")},
       "sandbox_memory_limit")
 print(f"{'all mutants caught' if not missed else f'{missed} mutant(s) MISSED'}")
 sys.exit(1 if missed else 0)

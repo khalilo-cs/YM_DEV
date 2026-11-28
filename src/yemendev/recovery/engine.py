@@ -19,7 +19,8 @@ from yemendev.core.faults import NO_FAULTS, FaultInjector
 from yemendev.learning.skills import is_test_path
 from yemendev.recovery.checkpoint import CheckpointStore, atomic_write, safe_target
 from yemendev.recovery.model import RepairPlan, TestComparison
-from yemendev.sandbox.testrunner import Outcome, RunStatus, TestRunReport, run_pytest
+from yemendev.sandbox.suites import run_tests
+from yemendev.sandbox.testrunner import Outcome, RunStatus, TestRunReport
 from yemendev.sandbox.workspace import Workspace
 
 TEST_CONFIG_FILES = {"pytest.ini", "tox.ini", "setup.cfg", "conftest.py", "noxfile.py"}
@@ -41,12 +42,22 @@ class PhaseResult(BaseModel):
 def compare(baseline: TestRunReport, after: TestRunReport) -> TestComparison:
     b, a = baseline.outcomes(), after.outcomes()
     failing = (Outcome.FAILED, Outcome.ERROR)
+    # A test file that failed to load is one failing entry (``tests.test_x`` / ``test/x.test.js``); once it
+    # loads, its tests appear as ``<entry>::<test>``. The entry is fixed only if every one of them passes,
+    # still failing if any fails - not "removed" (regression, stage 22: correct fixes of import errors were
+    # rejected as "1 test(s) disappeared").
+    expanded: dict[str, Outcome] = {}
+    for t, o in b.items():
+        kids = [a[x] for x in a if x.startswith(f"{t}::")] if o in failing and t not in a else []
+        if kids:
+            expanded[t] = Outcome.PASSED if all(k is Outcome.PASSED for k in kids) else Outcome.FAILED
+    seen = {**a, **expanded}
     return TestComparison(
-        fixed=sorted(t for t, o in b.items() if o in failing and a.get(t) is Outcome.PASSED),
+        fixed=sorted(t for t, o in b.items() if o in failing and seen.get(t) is Outcome.PASSED),
         regressed=sorted(t for t, o in b.items() if o is Outcome.PASSED and t in a and a[t] is not Outcome.PASSED),
-        still_failing=sorted(t for t, o in b.items() if o in failing and a.get(t) in failing),
+        still_failing=sorted(t for t, o in b.items() if o in failing and seen.get(t) in failing),
         newly_added=sorted(set(a) - set(b)),
-        removed=sorted(set(b) - set(a)),
+        removed=sorted(set(b) - set(seen)),
         baseline_failing=sum(1 for o in b.values() if o in failing),
         after_failing=sum(1 for o in a.values() if o in failing),
     )
@@ -87,7 +98,7 @@ class RecoveryEngine:
         with Workspace(root, sandbox or self.sandbox, base_dir=self.workspaces_dir) as ws:
             for p in plan.patches:
                 ws.write(p.path, p.new_content.encode("utf-8"))
-            report = run_pytest(ws)
+            report = run_tests(ws)
         return self._judge(baseline, report)
 
     def _judge(self, baseline: TestRunReport, report: TestRunReport) -> PhaseResult:
@@ -142,7 +153,7 @@ class RecoveryEngine:
             return PhaseResult(passed=False, report=None, comparison=None,
                                problems=["patched files do not match the approved content"])
         with Workspace(root, sandbox or self.sandbox, base_dir=self.workspaces_dir) as ws:
-            report = run_pytest(ws)
+            report = run_tests(ws)
         return self._judge(baseline, report)
 
     def rollback(self, checkpoint_id: str) -> list[str]:

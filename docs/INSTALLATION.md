@@ -64,6 +64,8 @@ Fully offline machine: copy the base image (`docker save`/`docker load`) and a d
 
 Projects with third-party dependencies: `yemendev sandbox build-image --project <project_id>` (admin).
 
+JavaScript/TypeScript projects (stage 22) need Node.js 22.18 or newer: on the host for the process backend (`YEMENDEV_NODE` to choose one), and in the image for the docker backend - `yemendev sandbox build-image --with-node` copies the host's `node` into the image without network access. Install the project's dependencies (`npm ci`) before registering it: the sandbox copies `node_modules` but never installs anything.
+
 ## Optional: tracing export
 
 `uv pip install -e '.[otel]'` adds the OpenTelemetry SDK and OTLP exporter; enable with `YEMENDEV_OTEL=otlp`

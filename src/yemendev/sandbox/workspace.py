@@ -61,8 +61,9 @@ class ExecutionResult(BaseModel):
 # Used instead of ``preexec_fn``, which is unsafe in multi-threaded parents (API server).
 _LAUNCHER = (
     "import os,resource,sys\n"
-    "mem,cpu,fsz=(int(x) for x in sys.argv[1:4])\n"
-    "resource.setrlimit(resource.RLIMIT_AS,(mem,mem))\n"
+    "kind,_,m=sys.argv[1].rpartition(':');mem=int(m);cpu,fsz=(int(x) for x in sys.argv[2:4])\n"
+    # address space by default; 'data' for V8/WebAssembly, which reserve far more address space than they use
+    "resource.setrlimit(resource.RLIMIT_DATA if kind=='data' else resource.RLIMIT_AS,(mem,mem))\n"
     "resource.setrlimit(resource.RLIMIT_CPU,(cpu,cpu))\n"
     "resource.setrlimit(resource.RLIMIT_FSIZE,(fsz,fsz))\n"
     "resource.setrlimit(resource.RLIMIT_CORE,(0,0))\n"
@@ -161,6 +162,10 @@ def _ignore(src: str, names: list[str]) -> set[str]:
     return out
 
 
+def _ignore_links(src: str, names: list[str]) -> set[str]:
+    return {n for n in names if (Path(src) / n).is_symlink()}
+
+
 class Workspace:
     """A disposable copy of a project. Use as a context manager."""
 
@@ -175,6 +180,7 @@ class Workspace:
         self.home = self._tmp / "home"
         self.home.mkdir()
         shutil.copytree(self.source, self.root, symlinks=False, ignore=_ignore)
+        self.dependency_note = self._copy_node_modules()
         self.identity = settings.sandbox_identity()
         self.backend, self.backend_note, self._docker = self._select_backend()
         # A container provides privilege separation even when the platform cannot switch users.
@@ -187,6 +193,26 @@ class Workspace:
             self._check_reachable()
             self._check_runtime_sockets()
             self._check_interpreter()
+
+    def _copy_node_modules(self) -> str | None:
+        """Copy the project's own node_modules (JS/TS tests need their dependencies; there is no network to
+        install them). Symlinked entries (``.bin``, pnpm/workspace links) are not followed."""
+        src = self.source / "node_modules"
+        if src.is_symlink() or not src.is_dir():
+            return None
+        limit = self.settings.max_node_modules_mb * 1024 * 1024
+        total = 0
+        for dirpath, _dirs, files in os.walk(src):
+            for f in files:
+                try:
+                    total += os.lstat(os.path.join(dirpath, f)).st_size
+                except OSError:
+                    continue
+            if total > limit:
+                return (f"node_modules not copied into the sandbox: larger than max_node_modules_mb "
+                        f"({self.settings.max_node_modules_mb} MB); tests that import dependencies will fail")
+        shutil.copytree(src, self.root / "node_modules", symlinks=False, ignore=_ignore_links)
+        return f"node_modules copied into the sandbox ({total // (1024 * 1024)} MB, symlinks not followed)"
 
     def _select_backend(self) -> tuple[str, str | None, DockerAvailability | None]:
         mode = self.settings.backend
@@ -225,6 +251,38 @@ class Workspace:
     def python_executable(self) -> str:
         """Interpreter to use for this backend (the container's own python for docker)."""
         return "python" if self.backend == "docker" else self.settings.python_executable
+
+    @property
+    def node_executable(self) -> str | None:
+        """Node.js for this backend (the image's own ``node`` for docker), or None if not configured."""
+        return "node" if self.backend == "docker" else self.settings.node_executable
+
+    def node_problem(self) -> str | None:
+        """Why JavaScript/TypeScript suites cannot run in this workspace, or None.
+
+        Process backend: probed once per (node, uid) by starting node exactly as tests are started (same
+        launcher, rlimits and identity). V8 reserves a large address space, so node does not start at all under
+        a small ``max_memory_mb``; that must surface as a reason, not as failing or passing tests. Docker: the
+        image may lack node; that is detected from the run itself."""
+        if self.backend == "docker":
+            return None
+        exe = self.settings.node_executable
+        if not exe:
+            return "Node.js is not available (install it or set YEMENDEV_NODE)"
+        key = (f"node:{exe}", self.identity or (-1, -1))
+        if key not in _INTERPRETER_PROBES:
+            r = self._run_process([exe, "-e", "process.exit(0)"], timeout=60, memory_limit="data")
+            if r.returncode == 0:
+                _INTERPRETER_PROBES[key] = ""
+            elif r.returncode is not None and r.returncode < 0:
+                _INTERPRETER_PROBES[key] = (
+                    f"node was killed by signal {-r.returncode} at start-up under the sandbox limits "
+                    f"(max_memory_mb={self.settings.max_memory_mb}); raise max_memory_mb or use the docker backend")
+            else:
+                detail = (r.stderr or r.stdout).strip().splitlines()[-1:]
+                _INTERPRETER_PROBES[key] = (f"the sandbox user cannot run {exe}: "
+                                            f"{detail[0][:300] if detail else f'exit code {r.returncode}'}")
+        return _INTERPRETER_PROBES[key] or None
 
     def _check_reachable(self) -> None:
         """Fail clearly if the sandbox uid cannot traverse to its workspace (instead of an opaque test failure)."""
@@ -302,27 +360,34 @@ class Workspace:
                 out[p.relative_to(self.root).as_posix()] = sha256_bytes(p.read_bytes())
         return out
 
-    def run(self, argv: list[str], timeout: float | None = None) -> ExecutionResult:
+    def run(self, argv: list[str], timeout: float | None = None,
+            memory_limit: str = "address_space") -> ExecutionResult:
+        """``memory_limit`` (process backend): ``address_space`` (RLIMIT_AS, the default) or ``data``
+        (RLIMIT_DATA: private writable memory - for runtimes such as Node/V8 whose WebAssembly and heap
+        reservations exceed any useful address-space limit without being used). Docker uses a cgroup either way."""
         if not argv or not all(isinstance(a, str) for a in argv):
             raise InvalidInputError("argv must be a non-empty list of strings")
+        if memory_limit not in ("address_space", "data"):
+            raise InvalidInputError("memory_limit must be 'address_space' or 'data'")
         timeout = timeout or self.settings.timeout_seconds
         if self.backend == "docker":
             if self._docker is None:
                 raise UnavailableError("docker backend selected without availability information")
             return run_in_container(self, argv, timeout, self._docker)
-        r = self._run_process(argv, timeout)
+        r = self._run_process(argv, timeout, memory_limit)
         if self.backend_note:
             r.backend_note = self.backend_note
         return r
 
-    def _run_process(self, argv: list[str], timeout: float) -> ExecutionResult:
+    def _run_process(self, argv: list[str], timeout: float, memory_limit: str = "address_space") -> ExecutionResult:
         s = self.settings
         isolate = s.network_isolation != "disabled" and network_namespace_available()
         if s.network_isolation == "required" and not isolate:
             raise UnavailableError("network isolation is required but not available on this host")
         uid, gid = self.identity if self.identity is not None else (-1, -1)
         launcher = [
-            sys.executable, "-I", "-c", _LAUNCHER, str(s.max_memory_mb * 1024 * 1024),
+            sys.executable, "-I", "-c", _LAUNCHER,
+            f"{'data' if memory_limit == 'data' else 'as'}:{s.max_memory_mb * 1024 * 1024}",
             str(int(timeout) + 5), str(s.max_file_size_mb * 1024 * 1024), str(uid), str(gid), str(os.getpid()), "--",
         ]
         full = [*(_unshare_prefix(self.identity is not None) if isolate else []), *launcher, *argv]
@@ -337,7 +402,7 @@ class Workspace:
             "NO_COLOR": "1",
         }
         limits = {
-            "address_space_mb": s.max_memory_mb,
+            ("data_mb" if memory_limit == "data" else "address_space_mb"): s.max_memory_mb,
             "cpu_seconds": int(timeout) + 5,
             "file_size_mb": s.max_file_size_mb,
             "wall_timeout_seconds": timeout,

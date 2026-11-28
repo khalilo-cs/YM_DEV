@@ -61,7 +61,8 @@ from yemendev.recovery.engine import PhaseResult
 from yemendev.recovery.model import PlanSource, RepairPlan
 from yemendev.recovery.model_proposer import propose_with_model
 from yemendev.recovery.proposers import propose_from_skills
-from yemendev.sandbox.testrunner import TestRunReport, run_pytest
+from yemendev.sandbox.suites import run_tests
+from yemendev.sandbox.testrunner import TestRunReport
 from yemendev.sandbox.workspace import Workspace
 from yemendev.twin.causal import root_cause_candidates
 
@@ -399,7 +400,7 @@ class RepairWorkflow:
         sandbox, image_note = self.p.sandbox_for(t.project_id)
         for _ in range(BASELINE_RUNS):
             with Workspace(self._root(t), sandbox, base_dir=self.p.settings.workspaces_dir) as ws:
-                runs.append(run_pytest(ws))
+                runs.append(run_tests(ws))
         r = runs[-1]
         self.p.evidence.record(
             action="tests.baseline", actor=actor.ref, target=t.project_id, outcome=r.status.value, task_id=t.id,

@@ -26,6 +26,14 @@ _OBJ_ATTR = re.compile(r"'(?P<obj>\w+)' object has no attribute '(?P<attr>\w+)'"
 _NO_MODULE = re.compile(r"No module named '(?P<mod>[\w.]+)'")
 _NAME_ERR = re.compile(r"name '(?P<name>\w+)' is not defined")
 _CANNOT_IMPORT = re.compile(r"cannot import name '(?P<name>\w+)' from '(?P<mod>[\w.]+)'")
+# JavaScript / TypeScript (node:test). Locations are made project-relative by the node runner.
+_JS_LOCATION = re.compile(r"(?<![\w/.:-])(?P<path>(?:[\w@.-]+/)*[\w@.-]+\.(?:[cm]?[jt]s|[jt]sx)):(?P<line>\d+)")
+_JS_EXC_LINE = re.compile(r"^(?:Uncaught )?(?P<type>(?:[A-Z]\w*)?(?:Error|Exception))(?: \[[A-Z_]+\])?:\s*(?P<msg>.*)$",
+                          re.MULTILINE)
+_JS_NO_EXPORT = re.compile(r"The requested module '(?P<mod>[^']+)' does not provide an export named '(?P<name>[\w$]+)'")
+_JS_NOT_FUNCTION = re.compile(r"(?:(?P<obj>[\w$]+(?:\.[\w$]+)*)\.)?(?P<attr>[\w$]+) is not a function")
+_JS_NO_MODULE = re.compile(r"Cannot find (?:module|package) '(?P<mod>[^']+)'")
+_JS_NOT_DEFINED = re.compile(r"^(?P<name>[\w$]+) is not defined$")
 
 
 class Reproducibility(StrEnum):
@@ -75,9 +83,16 @@ def _analyse(case_text: str) -> tuple[str | None, str | None, list[Location]]:
         m = matches[-1]
         exc_type = m.group("type").split(".")[-1]
         exc_msg = (m.group("msg") or "").strip()[:1000] or None
+    elif (js := list(_JS_EXC_LINE.finditer(case_text))):
+        m = js[0]  # the thrown error comes first in a JS stack; later lines are frames
+        exc_type = m.group("type")
+        exc_msg = (m.group("msg") or "").strip()[:1000] or None
     locs: list[Location] = []
-    for m in _LOCATION.finditer(case_text):
-        loc = Location(path=m.group("path").strip(), line=int(m.group("line")))
+    for m in [*_LOCATION.finditer(case_text), *_JS_LOCATION.finditer(case_text)]:
+        path = m.group("path").strip()
+        if path.startswith(("node:", "/")) or "node_modules/" in path:
+            continue  # runtime internals and dependencies are not project locations
+        loc = Location(path=path, line=int(m.group("line")))
         if loc not in locs:
             locs.append(loc)
     return exc_type, exc_msg, locs[:20]
@@ -112,6 +127,22 @@ def _hypothesize(failures: list[FailureAnalysis]) -> list[Hypothesis]:
             add("api_mismatch", f"{m['mod']}.{m['name']}",
                 f"'{m['name']}' cannot be imported from '{m['mod']}' (renamed/removed or circular import).",
                 f.test_id, 0.6, module=m["mod"], attribute=m["name"])
+        elif (m := _JS_NO_EXPORT.search(msg)):
+            add("api_mismatch", f"{m['mod']}.{m['name']}",
+                f"'{m['name']}' is imported from '{m['mod']}', which does not export it (renamed/removed export).",
+                f.test_id, 0.7, module=m["mod"], attribute=m["name"], language="javascript")
+        elif et == "TypeError" and (m := _JS_NOT_FUNCTION.search(msg)):
+            add("api_mismatch", f"{m['obj'] or ''}.{m['attr']}",
+                f"'{m['attr']}' is called as a function but is not one" + (f" on '{m['obj']}'" if m["obj"] else "")
+                + " (renamed/removed API or wrong import).", f.test_id, 0.6, object=m["obj"] or "",
+                attribute=m["attr"], language="javascript")
+        elif (m := _JS_NO_MODULE.search(msg)):
+            add("missing_dependency", m["mod"],
+                f"Module '{m['mod']}' cannot be resolved: missing dependency (node_modules) or wrong import path.",
+                f.test_id, 0.7, module=m["mod"], language="javascript")
+        elif et == "ReferenceError" and (m := _JS_NOT_DEFINED.search(msg)):
+            add("undefined_name", m["name"], f"Name '{m['name']}' is used but never defined or imported.",
+                f.test_id, 0.7, name=m["name"], language="javascript")
         elif (m := _NO_MODULE.search(msg)):
             add("missing_dependency", m["mod"],
                 f"Module '{m['mod']}' is not importable: missing dependency in the environment or wrong module path.",
@@ -134,7 +165,7 @@ def diagnose(runs: list[TestRunReport]) -> DiagnosticReport:
         raise ValueError("at least one test run is required")
     limitations = [
         "Hypotheses are rule-based and unverified; they are not proven root causes.",
-        "Static pytest output only; no runtime tracing was performed.",
+        "Static test-runner output only (pytest, node:test); no runtime tracing was performed.",
     ]
     last = runs[-1]
     if last.status in (RunStatus.RUNNER_ERROR, RunStatus.TIMED_OUT, RunStatus.NO_TESTS):

@@ -118,11 +118,17 @@ class ValidationResult(BaseModel):
     created_at: str
 
 
+_JS_TEST = re.compile(r"^(test(-[^/]*)?|[^/]*[._-](test|spec))\.[cm]?[jt]sx?$")
+
+
 def is_test_path(path: str) -> bool:
+    """Tests are never edited by a repair plan. Python and JavaScript/TypeScript conventions (stage 22:
+    co-located ``*.test.ts`` / ``*.spec.js`` and ``__tests__/`` were not recognised before)."""
     p = PurePosixPath(path)
     name = p.name
     return (name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py"
-            or "tests" in p.parts or "test" in p.parts)
+            or "tests" in p.parts or "test" in p.parts or "__tests__" in p.parts
+            or bool(_JS_TEST.search(name)))
 
 
 def apply_token_rename(params: TokenRenameParams, text: str) -> tuple[str, int]:

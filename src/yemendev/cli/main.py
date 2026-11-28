@@ -353,8 +353,15 @@ def cmd_sandbox(args: argparse.Namespace) -> int:
         img = p.build_project_image(a, args.project, wheels_dir=Path(args.wheels) if args.wheels else None)
         _print(img.model_dump())
         return 0
+    node = None
+    if args.with_node is not None:
+        found = args.with_node or settings.sandbox.node_executable
+        if not found:
+            print("no node binary found: pass --with-node /path/to/node", file=sys.stderr)
+            return 2
+        node = Path(found)
     res = build_sandbox_image(settings.sandbox, base_image=args.base, pytest_version=args.pytest,
-                              wheels_dir=Path(args.wheels) if args.wheels else None)
+                              wheels_dir=Path(args.wheels) if args.wheels else None, node_binary=node)
     _print(res.model_dump())
     return 0
 
@@ -575,6 +582,9 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("--pytest", default="9.2.0")
     x.add_argument("--wheels", help="directory of pre-downloaded wheels (fully offline)")
     x.add_argument("--project", help="build the dependency image for this project id (needs an admin token)")
+    x.add_argument("--with-node", nargs="?", const="", default=None, metavar="NODE",
+                   help="copy a Node.js binary into the image for JavaScript/TypeScript suites "
+                        "(default: the node on PATH / YEMENDEV_NODE)")
     s.set_defaults(fn=cmd_sandbox)
 
     s = sub.add_parser("continuity", help="passports, offline sync bundles and trusted keys")

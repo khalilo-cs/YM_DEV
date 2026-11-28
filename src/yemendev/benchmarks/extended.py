@@ -30,7 +30,8 @@ from yemendev.orion.tasks import TaskStatus
 from yemendev.orion.workflow import RepairWorkflow
 from yemendev.platform import Platform
 from yemendev.recovery.model import FilePatch, PlanSource, RepairPlan
-from yemendev.sandbox.testrunner import RunStatus, run_pytest
+from yemendev.sandbox.suites import run_tests
+from yemendev.sandbox.testrunner import RunStatus
 from yemendev.sandbox.workspace import Workspace
 
 
@@ -50,7 +51,7 @@ def rename_plan(root: Any, rel: str, old: str, new: str, description: str = "ren
 
 def tests_pass(p: Platform, root: Any) -> bool:
     with Workspace(root, p.settings.sandbox, base_dir=p.settings.workspaces_dir) as ws:
-        return run_pytest(ws).status is RunStatus.ALL_PASSED
+        return run_tests(ws).status is RunStatus.ALL_PASSED
 
 
 def learn_and_activate(p: Platform, ctx: Any, task_id: str) -> str | None:

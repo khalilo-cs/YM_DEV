@@ -123,10 +123,13 @@ if [ "$SANDBOX_IMAGE" = 1 ]; then
   [ "$HAVE_DOCKER" = 1 ] || die "--with-sandbox-image needs a running Docker daemon"
   step "building the container sandbox image"
   run docker pull python:3.13-slim
-  if [ "$DRY" = 1 ]; then echo "    would run: $YD sandbox build-image"
-  elif [ -n "${token:-}" ]; then YEMENDEV_TOKEN="$token" "$YD" sandbox build-image
-  elif [ -n "${YEMENDEV_TOKEN:-}" ]; then "$YD" sandbox build-image
-  else echo "    skipped: set YEMENDEV_TOKEN (an admin token) and run: $YD sandbox build-image"
+  # include Node.js when it is installed, so JavaScript/TypeScript suites can also run in containers
+  NODE_ARG=""
+  if command -v node >/dev/null 2>&1; then NODE_ARG="--with-node"; fi
+  if [ "$DRY" = 1 ]; then echo "    would run: $YD sandbox build-image $NODE_ARG"
+  elif [ -n "${token:-}" ]; then YEMENDEV_TOKEN="$token" "$YD" sandbox build-image $NODE_ARG
+  elif [ -n "${YEMENDEV_TOKEN:-}" ]; then "$YD" sandbox build-image $NODE_ARG
+  else echo "    skipped: set YEMENDEV_TOKEN (an admin token) and run: $YD sandbox build-image $NODE_ARG"
   fi
 fi
 
